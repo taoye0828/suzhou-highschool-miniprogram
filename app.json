@@ -1,0 +1,35 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/schools/schools",
+    "pages/school-detail/school-detail",
+    "pages/favorites/favorites",
+    "pages/targets/targets",
+    "pages/data-info/data-info",
+    "pages/privacy/privacy",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#0f766e",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "苏州高中目标查询助手",
+    "backgroundColor": "#f5f7f6",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "color": "#64748b",
+    "selectedColor": "#0f766e",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/home/home", "text": "首页" },
+      { "pagePath": "pages/schools/schools", "text": "学校库" },
+      { "pagePath": "pages/favorites/favorites", "text": "收藏" },
+      { "pagePath": "pages/targets/targets", "text": "目标" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

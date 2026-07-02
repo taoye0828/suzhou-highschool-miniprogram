@@ -1,0 +1,53 @@
+<view class="page">
+  <view class="card library-note">
+    <view class="card-title">本地学校库</view>
+    <view class="muted small">含少量公开来源基础样本与明显虚构的演示数据；不展示真实分数线。</view>
+  </view>
+
+  <input class="input" value="{{keyword}}" placeholder="搜索学校名称、区域或类型" bindinput="onKeywordInput" />
+
+  <view class="filter-grid">
+    <picker range="{{districts}}" value="{{districtIndex}}" bindchange="onDistrictChange">
+      <view class="filter-control">区域：{{districts[districtIndex]}}</view>
+    </picker>
+    <picker range="{{schoolTypes}}" value="{{schoolTypeIndex}}" bindchange="onSchoolTypeChange">
+      <view class="filter-control">类型：{{schoolTypes[schoolTypeIndex]}}</view>
+    </picker>
+    <picker range="{{boardingTypes}}" value="{{boardingTypeIndex}}" bindchange="onBoardingTypeChange">
+      <view class="filter-control">住宿：{{boardingTypes[boardingTypeIndex]}}</view>
+    </picker>
+  </view>
+
+  <view class="row between result-line">
+    <view class="muted small">共 {{results.length}} 条结果</view>
+    <button class="button ghost small-button" bindtap="resetFilters">重置筛选</button>
+  </view>
+
+  <view wx:if="{{results.length === 0}}" class="card empty">
+    <view class="card-title">没有找到匹配学校</view>
+    <view class="muted small">请调整名称、区域、类型或住宿筛选条件。</view>
+  </view>
+
+  <view
+    class="card school-card"
+    wx:for="{{results}}"
+    wx:key="id"
+    data-id="{{item.id}}"
+    bindtap="openDetail"
+  >
+    <view class="row between">
+      <view class="card-title grow">{{item.name}}</view>
+      <button
+        class="button secondary small-button favorite-button"
+        data-id="{{item.id}}"
+        catchtap="toggleFavorite"
+      >{{item.isFavorite ? '取消收藏' : '收藏'}}</button>
+    </view>
+    <view class="tag-line">
+      <text class="badge {{item.dataKind === 'demo' ? 'demo' : ''}}">{{item.dataStatus}}</text>
+      <text class="badge">{{item.district}}</text>
+    </view>
+    <view class="muted small">{{item.schoolType}} · {{item.boardingType}}</view>
+    <view class="intro">{{item.intro}}</view>
+  </view>
+</view>

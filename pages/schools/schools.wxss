@@ -1,0 +1,8 @@
+.library-note { border-left: 8rpx solid #0f766e; }
+.filter-grid { display: grid; gap: 14rpx; margin-top: 18rpx; }
+.filter-control { padding: 20rpx 22rpx; background: #ffffff; border: 2rpx solid #dbe5e2; border-radius: 16rpx; }
+.result-line { margin: 22rpx 0; }
+.favorite-button { flex-shrink: 0; margin-left: 14rpx; }
+.tag-line { margin-top: 18rpx; }
+.intro { margin-top: 12rpx; color: #475569; line-height: 1.65; }
+.school-card:active { background: #f0f8f6; }

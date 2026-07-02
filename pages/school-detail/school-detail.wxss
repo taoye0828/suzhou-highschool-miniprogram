@@ -1,0 +1,8 @@
+.detail-hero { margin-bottom: 24rpx; }
+.detail-badges { margin-top: 22rpx; }
+.detail-card { margin-top: 0; }
+.section-heading { margin-bottom: 14rpx; font-size: 30rpx; font-weight: 700; }
+.tag-line { margin: 20rpx 0 8rpx; }
+.boundary-item { padding: 13rpx 0; color: #475569; }
+.boundary-item::before { content: "✓"; margin-right: 14rpx; color: #0f766e; font-weight: 700; }
+.map-keyword { margin-top: 22rpx; }

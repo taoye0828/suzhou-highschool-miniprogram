@@ -1,0 +1,5 @@
+.favorite-note { border-left: 8rpx solid #0f766e; }
+.favorite-card:active { background: #f0f8f6; }
+.favorite-meta { margin-top: 8rpx; }
+.empty-symbol { margin-bottom: 12rpx; color: #0f766e; font-size: 64rpx; }
+.tag-line { margin-top: 16rpx; }

@@ -1,0 +1,26 @@
+<view class="page">
+  <view class="hero compact-hero">
+    <view class="hero-title">数据说明</view>
+    <view class="hero-subtitle">本地数据范围、来源状态与展示边界</view>
+  </view>
+
+  <view class="card info-card">
+    <view class="card-title">当前数据范围</view>
+    <view class="notice">当前为本地小程序版，学校库包含明显虚构的演示数据和少量经人工核对的公开来源基础样本。</view>
+    <view class="notice">当前不展示真实分数线，也不展示 pending_review 状态的数据。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">当前功能边界</view>
+    <view class="boundary-item">当前不提供录取预测</view>
+    <view class="boundary-item">当前不接 AI</view>
+    <view class="boundary-item">当前不接后台或远程 API</view>
+    <view class="boundary-item">当前不上传用户数据</view>
+    <view class="boundary-item">收藏和目标记录仅保存在本机</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">后续版本</view>
+    <view class="notice">后续如接入后台或展示经核验的真实分数线，将重新审核数据来源、展示规则和隐私说明；未经人工核验的数据不会直接进入正式页面。</view>
+  </view>
+</view>

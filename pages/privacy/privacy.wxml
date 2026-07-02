@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="hero compact-hero">
+    <view class="hero-title">隐私说明</view>
+    <view class="hero-subtitle">版本：MP1 本地版 · 更新日期：2026-07-02</view>
+  </view>
+
+  <view class="card privacy-card">
+    <view class="card-title">本地存储</view>
+    <view class="notice">当前无需登录，不上传数据。收藏、目标记录和输入草稿仅保存在微信小程序本地缓存中，可在“我的”页面清除。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">当前不收集</view>
+    <view class="privacy-item">不收集姓名</view>
+    <view class="privacy-item">不收集手机号</view>
+    <view class="privacy-item">不收集身份证信息</view>
+    <view class="privacy-item">不收集定位信息</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">当前不接入</view>
+    <view class="privacy-item">不接广告</view>
+    <view class="privacy-item">不接支付</view>
+    <view class="privacy-item">不接推送</view>
+    <view class="privacy-item">不接第三方统计 SDK</view>
+    <view class="privacy-item">不接账号或远程同步</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">用户控制</view>
+    <view class="notice">用户可随时取消单个收藏、删除单条目标记录，或在“我的”页面一次性清除本地演示数据。</view>
+  </view>
+</view>

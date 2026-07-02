@@ -1,0 +1,27 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-title">苏州高中目标查询助手</view>
+    <view class="hero-subtitle">本地演示版 · 无需登录 · 用户记录仅保存在本机</view>
+  </view>
+
+  <view class="card safety-card">
+    <view class="card-title">当前版本边界</view>
+    <view class="notice">当前不展示真实分数线，不提供录取预测，不接 AI，不连接后台，也不需要登录。</view>
+  </view>
+
+  <view class="section-title">快捷入口</view>
+  <view
+    class="card entry"
+    wx:for="{{entries}}"
+    wx:key="title"
+    data-route="{{item.route}}"
+    data-tab="{{item.tab}}"
+    bindtap="openEntry"
+  >
+    <view class="grow">
+      <view class="card-title">{{item.title}}</view>
+      <view class="muted small entry-subtitle">{{item.subtitle}}</view>
+    </view>
+    <view class="list-arrow">›</view>
+  </view>
+</view>

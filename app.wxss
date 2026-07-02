@@ -1,0 +1,12 @@
+@import "styles/common.wxss";
+
+page {
+  background: #f5f7f6;
+  color: #17242b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 28rpx;
+}
+
+button::after {
+  border: none;
+}

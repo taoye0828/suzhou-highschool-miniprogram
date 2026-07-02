@@ -1,0 +1,47 @@
+<view class="page">
+  <view class="card target-note">
+    <view class="card-title">本地学习目标</view>
+    <view class="muted small">用于记录阶段目标和学习差距，不代表录取判断，不输出学校推荐。</view>
+  </view>
+
+  <view class="card">
+    <view class="section-heading">新增目标记录</view>
+    <text class="field-label">当前分数</text>
+    <input class="input" type="number" maxlength="3" value="{{currentScore}}" placeholder="请输入当前学习测评分数" bindinput="onCurrentInput" />
+    <text class="field-label">目标分数</text>
+    <input class="input" type="number" maxlength="3" value="{{targetScore}}" placeholder="请输入本阶段学习目标" bindinput="onTargetInput" />
+    <text class="field-label">备注</text>
+    <textarea class="input textarea" maxlength="200" value="{{note}}" placeholder="可记录复盘重点、科目或下阶段计划" bindinput="onNoteInput"></textarea>
+
+    <view class="summary-box">
+      <view class="summary-title">{{gapText}}</view>
+      <view class="muted small">{{reminder}}</view>
+    </view>
+
+    <view class="button-row">
+      <button class="button" bindtap="saveRecord">保存目标记录</button>
+      <button class="button ghost" bindtap="clearInputs">清空输入</button>
+    </view>
+  </view>
+
+  <view class="row between section-row">
+    <view class="section-title records-title">目标记录（{{records.length}}）</view>
+    <button wx:if="{{records.length > 0}}" class="button danger small-button" bindtap="clearAllRecords">清空全部</button>
+  </view>
+
+  <view wx:if="{{records.length === 0}}" class="card empty">
+    <view class="card-title">暂无目标记录</view>
+    <view class="muted small">填写当前分数与目标分数后即可保存在本机。</view>
+  </view>
+
+  <view class="card record-card" wx:for="{{records}}" wx:key="id">
+    <view class="row between">
+      <view class="card-title">当前 {{item.currentScore}} / 目标 {{item.targetScore}}</view>
+      <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
+    </view>
+    <view class="gap-line">{{item.gapText}}</view>
+    <view class="muted small">{{item.reminder}}</view>
+    <view wx:if="{{item.note}}" class="record-note">备注：{{item.note}}</view>
+    <view class="muted small record-time">{{item.displayTime}}</view>
+  </view>
+</view>

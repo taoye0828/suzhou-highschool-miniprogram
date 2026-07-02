@@ -1,0 +1,29 @@
+<view class="page">
+  <view class="card favorite-note">
+    <view class="card-title">本地收藏</view>
+    <view class="muted small">收藏仅保存在本机微信小程序本地缓存，不上传，也不需要登录。</view>
+  </view>
+
+  <view wx:if="{{favorites.length === 0}}" class="card empty">
+    <view class="empty-symbol">☆</view>
+    <view class="card-title">暂无收藏学校</view>
+    <view class="muted small">可前往学校库，收藏公开来源基础样本或演示学校。</view>
+  </view>
+
+  <view
+    class="card favorite-card"
+    wx:for="{{favorites}}"
+    wx:key="id"
+    data-id="{{item.id}}"
+    bindtap="openDetail"
+  >
+    <view class="row between">
+      <view class="grow">
+        <view class="card-title">{{item.name}}</view>
+        <view class="muted small favorite-meta">{{item.district}} · {{item.schoolType}}</view>
+      </view>
+      <button class="button danger small-button" data-id="{{item.id}}" catchtap="removeFavorite">取消收藏</button>
+    </view>
+    <view class="tag-line"><text class="badge {{item.dataKind === 'demo' ? 'demo' : ''}}">{{item.dataStatus}}</text></view>
+  </view>
+</view>
