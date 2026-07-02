@@ -12,11 +12,7 @@
 
   <view class="card">
     <view class="card-title">当前功能边界</view>
-    <view class="boundary-item">当前不提供录取预测</view>
-    <view class="boundary-item">当前不接 AI</view>
-    <view class="boundary-item">当前不接后台或远程 API</view>
-    <view class="boundary-item">当前不上传用户数据</view>
-    <view class="boundary-item">收藏和目标记录仅保存在本机</view>
+    <view class="boundary-item" wx:for="{{boundaries}}" wx:key="*this">{{item}}</view>
   </view>
 
   <view class="card">

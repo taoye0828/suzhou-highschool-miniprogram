@@ -19,6 +19,8 @@
       <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{school.schoolType}}</text></view>
       <view class="info-row"><text class="info-label">住宿状态</text><text class="info-value">{{school.boardingType}}</text></view>
       <view class="info-row"><text class="info-label">数据状态</text><text class="info-value">{{school.dataStatus}}</text></view>
+      <view class="info-row"><text class="info-label">数据版本</text><text class="info-value">{{school.dataVersion}}</text></view>
+      <view wx:if="{{school.sourceVerifiedAt}}" class="info-row"><text class="info-label">来源核验日期</text><text class="info-value">{{school.sourceVerifiedAt}}</text></view>
       <view class="divider"></view>
       <view class="notice">{{school.intro}}</view>
       <view class="tag-line">
@@ -29,11 +31,7 @@
 
     <view class="card">
       <view class="section-heading">信息边界</view>
-      <view class="boundary-item">暂无已核验真实分数线</view>
-      <view class="boundary-item">不提供录取预测</view>
-      <view class="boundary-item">联系方式暂未开放</view>
-      <view class="boundary-item">照片暂未开放</view>
-      <view class="boundary-item">地图仅提供外部搜索</view>
+      <view class="boundary-item" wx:for="{{boundaries}}" wx:key="*this">{{item}}</view>
     </view>
 
     <view class="card">

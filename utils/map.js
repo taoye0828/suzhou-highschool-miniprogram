@@ -5,7 +5,8 @@ function mapSearchKeyword(schoolName) {
 function copyText(text, successMessage) {
   wx.setClipboardData({
     data: text,
-    success: () => wx.showToast({ title: successMessage, icon: 'success' })
+    success: () => wx.showToast({ title: successMessage, icon: 'success' }),
+    fail: () => wx.showToast({ title: '复制失败，请稍后重试。', icon: 'none' })
   })
 }
 
@@ -18,7 +19,8 @@ function showExternalMapGuide(schoolName) {
     cancelText: '知道了',
     success: (result) => {
       if (result.confirm) copyText(keyword, '搜索词已复制')
-    }
+    },
+    fail: () => wx.showToast({ title: '说明窗口打开失败，请重试。', icon: 'none' })
   })
 }
 

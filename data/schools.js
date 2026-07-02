@@ -1,5 +1,18 @@
+const { APP_CONFIG } = require('../config/app-config')
+
+const publicSampleMeta = {
+  dataVersion: APP_CONFIG.schoolData.version,
+  sourceVerifiedAt: APP_CONFIG.schoolData.publicSampleVerifiedAt
+}
+
+const demoMeta = {
+  dataVersion: APP_CONFIG.schoolData.version,
+  sourceVerifiedAt: null
+}
+
 const schools = [
   {
+    ...publicSampleMeta,
     id: 'public_001',
     name: '苏州市吴江区新教育学校',
     district: '吴江区',
@@ -12,6 +25,7 @@ const schools = [
     sourceNote: '来源：吴江区政府公开收费公示，基础字段已人工核对。'
   },
   {
+    ...publicSampleMeta,
     id: 'public_002',
     name: '苏州市吴江区世恒学校',
     district: '吴江区',
@@ -24,6 +38,7 @@ const schools = [
     sourceNote: '来源：吴江区政府公开收费公示，基础字段已人工核对。'
   },
   {
+    ...publicSampleMeta,
     id: 'public_003',
     name: '人大附中苏州学校',
     district: '苏州市区',
@@ -36,6 +51,7 @@ const schools = [
     sourceNote: '来源：苏州市政府公开教育通知，基础字段已人工核对。'
   },
   {
+    ...demoMeta,
     id: 'demo_001',
     name: '示例高中 A',
     district: '示例区域一',
@@ -48,6 +64,7 @@ const schools = [
     sourceNote: '本地虚构演示数据，不对应现实学校。'
   },
   {
+    ...demoMeta,
     id: 'demo_002',
     name: '示例高中 B',
     district: '示例区域一',
@@ -60,6 +77,7 @@ const schools = [
     sourceNote: '本地虚构演示数据，不对应现实学校。'
   },
   {
+    ...demoMeta,
     id: 'demo_003',
     name: '示例高中 C',
     district: '示例区域二',

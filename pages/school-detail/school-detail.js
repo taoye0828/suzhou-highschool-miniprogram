@@ -1,9 +1,17 @@
 const { getSchoolById } = require('../../utils/school')
-const { isFavorite, setFavorite } = require('../../utils/storage')
+const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
+const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { mapSearchKeyword, copyText, showExternalMapGuide } = require('../../utils/map')
+const { APP_CONFIG } = require('../../config/app-config')
 
 Page({
-  data: { schoolId: '', school: null, isFavorite: false, mapKeyword: '' },
+  data: {
+    schoolId: '',
+    school: null,
+    isFavorite: false,
+    mapKeyword: '',
+    boundaries: APP_CONFIG.policy.schoolDetailBoundaries
+  },
 
   onLoad(options) {
     this.setData({ schoolId: options.id || '' })
@@ -14,9 +22,11 @@ Page({
 
   refresh() {
     const school = getSchoolById(this.data.schoolId)
+    const favoriteResult = getFavoriteIdsResult()
+    notifyStorageReadResult(this, favoriteResult)
     this.setData({
       school: school || null,
-      isFavorite: school ? isFavorite(school.id) : false,
+      isFavorite: school ? favoriteResult.ids.includes(school.id) : false,
       mapKeyword: school ? mapSearchKeyword(school.name) : ''
     })
   },
@@ -24,7 +34,11 @@ Page({
   toggleFavorite() {
     if (!this.data.school) return
     const nextValue = !this.data.isFavorite
-    setFavorite(this.data.school.id, nextValue)
+    const result = setFavorite(this.data.school.id, nextValue)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
     this.setData({ isFavorite: nextValue })
     wx.showToast({ title: nextValue ? '已收藏' : '已取消收藏', icon: 'success' })
   },

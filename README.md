@@ -1,6 +1,6 @@
 # 苏州高中目标查询助手（微信小程序 MP1）
 
-原生微信小程序本地版，使用 WXML、WXSS、JavaScript 和 JSON。当前不连接后台、云开发或远程 API，不需要登录；收藏、目标记录和输入草稿只保存在微信小程序本地缓存。
+原生微信小程序本地版，使用 WXML、WXSS、JavaScript 和 JSON。当前不连接后台、云开发或远程 API，不需要登录；收藏、目标记录和输入草稿只保存在微信小程序本地缓存。当前版本为 `1.0.1-mp1`。
 
 ## 导入微信开发者工具
 
@@ -26,8 +26,13 @@
 ```sh
 node scripts/verify_mp1.js
 node scripts/smoke_local_logic.js
+node scripts/smoke_page_logic.js
 find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
 ```
+
+`verify_mp1.js` 只提供补充静态检查，不代表微信开发者工具编译通过。提交前仍必须在微信开发者工具中完成实际编译、页面操作和真机预览。
+
+本地存储层会过滤损坏或旧格式记录，捕获读取、写入和删除异常，并将目标记录限制为最多 100 条。草稿输入采用 400ms 防抖保存。
 
 ## 数据边界
 

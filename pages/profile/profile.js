@@ -1,12 +1,17 @@
-const { getFavoriteIds, getTargetRecords, clearLocalDemoData } = require('../../utils/storage')
+const { getFavoriteIdsResult, getTargetRecordsResult, clearLocalDemoData } = require('../../utils/storage')
+const { notifyStorageReadResult } = require('../../utils/storage-feedback')
+const { APP_CONFIG } = require('../../config/app-config')
 
 Page({
-  data: { version: '1.0.0-mp1', favoriteCount: 0, targetCount: 0 },
+  data: { version: APP_CONFIG.version, favoriteCount: 0, targetCount: 0 },
 
   onShow() { this.refreshSummary() },
 
   refreshSummary() {
-    this.setData({ favoriteCount: getFavoriteIds().length, targetCount: getTargetRecords().length })
+    const favoriteResult = getFavoriteIdsResult()
+    const targetResult = getTargetRecordsResult()
+    notifyStorageReadResult(this, favoriteResult.ok ? targetResult : favoriteResult)
+    this.setData({ favoriteCount: favoriteResult.ids.length, targetCount: targetResult.records.length })
   },
 
   openDataInfo() { wx.navigateTo({ url: '/pages/data-info/data-info' }) },
@@ -20,12 +25,17 @@ Page({
       content: '将清除本机收藏、目标记录和输入草稿。内置学校库不会被删除，此操作无法撤销。',
       confirmText: '确认清除',
       confirmColor: '#b42318',
-      success: (result) => {
-        if (!result.confirm) return
-        clearLocalDemoData()
+      success: (modalResult) => {
+        if (!modalResult.confirm) return
+        const storageResult = clearLocalDemoData()
+        if (!storageResult.ok) {
+          wx.showToast({ title: storageResult.message, icon: 'none' })
+          return
+        }
         this.refreshSummary()
         wx.showToast({ title: '本地数据已清除', icon: 'success' })
-      }
+      },
+      fail: () => wx.showToast({ title: '确认窗口打开失败，请重试。', icon: 'none' })
     })
   }
 })

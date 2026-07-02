@@ -1,12 +1,14 @@
+const { APP_CONFIG } = require('../../config/app-config')
 const {
-  getTargetRecords,
+  getTargetRecordsResult,
   saveTargetRecord,
   deleteTargetRecord,
   clearTargetRecords,
-  getTargetDraft,
+  getTargetDraftResult,
   saveTargetDraft,
   clearTargetDraft
 } = require('../../utils/storage')
+const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 
 function scoreNumber(value) {
   if (value === '' || value === null || value === undefined) return null
@@ -24,6 +26,28 @@ function gapSummary(currentScore, targetScore) {
   return { gapText: `当前分数已超过学习目标 ${Math.abs(gap)} 分`, reminder: '可根据近期学习情况设置下一阶段目标。' }
 }
 
+let targetIdSequence = 0
+
+function createTargetId() {
+  targetIdSequence = (targetIdSequence + 1) % 1000000
+  const suffix = Math.random().toString(36).slice(2, 10)
+  return `target_${Date.now()}_${targetIdSequence}_${suffix}`
+}
+
+function formatDisplayTime(isoTime) {
+  const date = new Date(isoTime)
+  const twoDigits = (value) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())} ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`
+}
+
+function presentRecord(record) {
+  return {
+    ...record,
+    ...gapSummary(record.currentScore, record.targetScore),
+    displayTime: formatDisplayTime(record.createdAt)
+  }
+}
+
 Page({
   data: {
     currentScore: '',
@@ -31,11 +55,21 @@ Page({
     note: '',
     gapText: '填写分数后显示学习差距',
     reminder: '建议先记录一次真实学习测评结果。',
-    records: []
+    records: [],
+    targetDisclaimer: APP_CONFIG.policy.targetDisclaimer,
+    scoreMin: APP_CONFIG.targetScore.min,
+    scoreMax: APP_CONFIG.targetScore.max,
+    scoreMaxLength: APP_CONFIG.targetScore.maxLength,
+    maxRecords: APP_CONFIG.targetScore.maxRecords
   },
 
   onLoad() {
-    const draft = getTargetDraft()
+    this.draftTimer = null
+    this.draftDirty = false
+    this.draftErrorShown = false
+    const draftResult = getTargetDraftResult()
+    notifyStorageReadResult(this, draftResult)
+    const draft = draftResult.draft
     this.setData({
       currentScore: draft.currentScore || '',
       targetScore: draft.targetScore || '',
@@ -44,6 +78,10 @@ Page({
   },
 
   onShow() { this.loadRecords() },
+
+  onHide() { this.flushDraft(false) },
+
+  onUnload() { this.flushDraft(false) },
 
   onCurrentInput(event) {
     this.setData({ currentScore: event.detail.value }, () => this.onDraftChanged())
@@ -54,20 +92,47 @@ Page({
   },
 
   onNoteInput(event) {
-    this.setData({ note: event.detail.value }, () => this.persistDraft())
+    this.setData({ note: event.detail.value }, () => this.onDraftChanged())
   },
 
   onDraftChanged() {
+    this.draftDirty = true
     this.refreshSummary()
-    this.persistDraft()
+    this.scheduleDraftSave()
+  },
+
+  scheduleDraftSave() {
+    clearTimeout(this.draftTimer)
+    this.draftTimer = setTimeout(() => {
+      this.draftTimer = null
+      const result = this.persistDraft()
+      if (!result.ok && !this.draftErrorShown) {
+        this.draftErrorShown = true
+        wx.showToast({ title: result.message, icon: 'none' })
+      }
+    }, APP_CONFIG.targetScore.draftDebounceMs)
   },
 
   persistDraft() {
-    saveTargetDraft({
+    if (!this.draftDirty) return { ok: true }
+    const result = saveTargetDraft({
       currentScore: this.data.currentScore,
       targetScore: this.data.targetScore,
       note: this.data.note
     })
+    if (result.ok) {
+      this.draftDirty = false
+      this.draftErrorShown = false
+    }
+    return result
+  },
+
+  flushDraft(showError) {
+    clearTimeout(this.draftTimer)
+    this.draftTimer = null
+    const result = this.persistDraft()
+    if (showError && !result.ok) wx.showToast({ title: result.message, icon: 'none' })
+    return result
   },
 
   refreshSummary() {
@@ -75,39 +140,55 @@ Page({
   },
 
   loadRecords() {
-    this.setData({ records: getTargetRecords() })
+    const result = getTargetRecordsResult()
+    notifyStorageReadResult(this, result)
+    this.setData({ records: result.records.map(presentRecord) })
   },
 
   saveRecord() {
     const current = scoreNumber(this.data.currentScore)
     const target = scoreNumber(this.data.targetScore)
-    if (current === null || target === null || current < 0 || target < 0 || current > 750 || target > 750) {
-      wx.showToast({ title: '请输入 0 至 750 的整数', icon: 'none' })
+    const { min, max } = APP_CONFIG.targetScore
+    if (current === null || target === null || current < min || target < min || current > max || target > max) {
+      wx.showToast({ title: `请输入 ${min} 至 ${max} 的整数`, icon: 'none' })
       return
     }
-    const now = new Date()
-    const summary = gapSummary(current, target)
-    saveTargetRecord({
-      id: `target_${now.getTime()}`,
+
+    const result = saveTargetRecord({
+      schemaVersion: 1,
+      id: createTargetId(),
       currentScore: current,
       targetScore: target,
       note: this.data.note.trim(),
-      gapText: summary.gapText,
-      reminder: summary.reminder,
-      createdAt: now.toISOString(),
-      displayTime: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      createdAt: new Date().toISOString()
     })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+
     wx.showToast({ title: '目标记录已保存', icon: 'success' })
     this.loadRecords()
   },
 
   clearInputs() {
-    clearTargetDraft()
+    clearTimeout(this.draftTimer)
+    const result = clearTargetDraft()
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.draftDirty = false
+    this.draftErrorShown = false
     this.setData({ currentScore: '', targetScore: '', note: '', ...gapSummary('', '') })
   },
 
   deleteRecord(event) {
-    deleteTargetRecord(event.currentTarget.dataset.id)
+    const result = deleteTargetRecord(event.currentTarget.dataset.id)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
     wx.showToast({ title: '记录已删除', icon: 'success' })
     this.loadRecords()
   },
@@ -119,12 +200,17 @@ Page({
       content: '此操作只删除本机目标记录，且无法撤销。',
       confirmText: '确认清空',
       confirmColor: '#b42318',
-      success: (result) => {
-        if (!result.confirm) return
-        clearTargetRecords()
+      success: (modalResult) => {
+        if (!modalResult.confirm) return
+        const result = clearTargetRecords()
+        if (!result.ok) {
+          wx.showToast({ title: result.message, icon: 'none' })
+          return
+        }
         this.loadRecords()
         wx.showToast({ title: '已清空', icon: 'success' })
-      }
+      },
+      fail: () => wx.showToast({ title: '确认窗口打开失败，请重试。', icon: 'none' })
     })
   }
 })

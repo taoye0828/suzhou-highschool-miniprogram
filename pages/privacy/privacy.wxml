@@ -10,20 +10,14 @@
   </view>
 
   <view class="card">
-    <view class="card-title">当前不收集</view>
-    <view class="privacy-item">不收集姓名</view>
-    <view class="privacy-item">不收集手机号</view>
-    <view class="privacy-item">不收集身份证信息</view>
-    <view class="privacy-item">不收集定位信息</view>
+    <view class="card-title">当前不主动收集</view>
+    <view class="privacy-item" wx:for="{{nonCollectionItems}}" wx:key="*this">{{item}}</view>
+    <view class="muted small">自由备注仅保存在本机，请勿主动填写姓名、手机号、身份证等个人敏感信息。</view>
   </view>
 
   <view class="card">
     <view class="card-title">当前不接入</view>
-    <view class="privacy-item">不接广告</view>
-    <view class="privacy-item">不接支付</view>
-    <view class="privacy-item">不接推送</view>
-    <view class="privacy-item">不接第三方统计 SDK</view>
-    <view class="privacy-item">不接账号或远程同步</view>
+    <view class="privacy-item" wx:for="{{nonIntegrationItems}}" wx:key="*this">{{item}}</view>
   </view>
 
   <view class="card">

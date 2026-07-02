@@ -1,5 +1,6 @@
 const { schools, withFavoriteState } = require('../../utils/school')
-const { getFavoriteIds, setFavorite } = require('../../utils/storage')
+const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
+const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 
 Page({
   data: { favorites: [] },
@@ -7,12 +8,18 @@ Page({
   onShow() { this.refresh() },
 
   refresh() {
-    const ids = getFavoriteIds()
+    const favoriteResult = getFavoriteIdsResult()
+    notifyStorageReadResult(this, favoriteResult)
+    const ids = favoriteResult.ids
     this.setData({ favorites: withFavoriteState(schools.filter((school) => ids.includes(school.id)), ids) })
   },
 
   removeFavorite(event) {
-    setFavorite(event.currentTarget.dataset.id, false)
+    const result = setFavorite(event.currentTarget.dataset.id, false)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
     wx.showToast({ title: '已取消收藏', icon: 'success' })
     this.refresh()
   },

@@ -1,16 +1,61 @@
+const { APP_CONFIG } = require('../config/app-config')
+
 const KEYS = {
   favorites: 'mp1.favorite_school_ids',
   targets: 'mp1.target_records',
   targetDraft: 'mp1.target_draft'
 }
 
-function readArray(key) {
-  const value = wx.getStorageSync(key)
-  return Array.isArray(value) ? value : []
+const STORAGE_ERROR_MESSAGE = '本地存储失败，请清理空间后重试。'
+
+function logStorageError(operation, error) {
+  const errorName = error && error.name ? error.name : 'Error'
+  if (typeof console !== 'undefined' && typeof console.error === 'function') {
+    console.error(`[storage] ${operation} failed`, errorName)
+  }
+}
+
+function readStorage(key, fallback) {
+  try {
+    const value = wx.getStorageSync(key)
+    return { ok: true, value: value === undefined || value === null || value === '' ? fallback : value }
+  } catch (error) {
+    logStorageError(`read ${key}`, error)
+    return { ok: false, value: fallback, message: STORAGE_ERROR_MESSAGE }
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    wx.setStorageSync(key, value)
+    return { ok: true, value }
+  } catch (error) {
+    logStorageError(`write ${key}`, error)
+    return { ok: false, message: STORAGE_ERROR_MESSAGE }
+  }
+}
+
+function removeStorage(key) {
+  try {
+    wx.removeStorageSync(key)
+    return { ok: true }
+  } catch (error) {
+    logStorageError(`remove ${key}`, error)
+    return { ok: false, message: STORAGE_ERROR_MESSAGE }
+  }
+}
+
+function getFavoriteIdsResult() {
+  const readResult = readStorage(KEYS.favorites, [])
+  const value = readResult.value
+  const ids = Array.isArray(value)
+    ? [...new Set(value.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim()))].sort()
+    : []
+  return readResult.ok ? { ok: true, ids } : { ok: false, ids, message: readResult.message }
 }
 
 function getFavoriteIds() {
-  return readArray(KEYS.favorites)
+  return getFavoriteIdsResult().ids
 }
 
 function isFavorite(schoolId) {
@@ -18,62 +63,132 @@ function isFavorite(schoolId) {
 }
 
 function setFavorite(schoolId, nextValue) {
-  const ids = new Set(getFavoriteIds())
-  if (nextValue) ids.add(schoolId)
-  else ids.delete(schoolId)
+  if (typeof schoolId !== 'string' || !schoolId.trim()) {
+    return { ok: false, message: '学校标识无效，请返回学校库重试。' }
+  }
+
+  const favoriteResult = getFavoriteIdsResult()
+  if (!favoriteResult.ok) return { ok: false, message: favoriteResult.message }
+  const ids = new Set(favoriteResult.ids)
+  if (nextValue) ids.add(schoolId.trim())
+  else ids.delete(schoolId.trim())
   const result = Array.from(ids).sort()
-  wx.setStorageSync(KEYS.favorites, result)
-  return result
+  return result.length ? writeStorage(KEYS.favorites, result) : removeStorage(KEYS.favorites)
+}
+
+function normalizeTargetRecord(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  if (typeof value.id !== 'string' || !value.id.trim()) return null
+  if (typeof value.createdAt !== 'string' || !Number.isFinite(Date.parse(value.createdAt))) return null
+
+  const currentScore = value.currentScore
+  const targetScore = value.targetScore
+  const { min, max } = APP_CONFIG.targetScore
+  if (!Number.isInteger(currentScore) || !Number.isInteger(targetScore)) return null
+  if (currentScore < min || currentScore > max || targetScore < min || targetScore > max) return null
+
+  return {
+    schemaVersion: 1,
+    id: value.id.trim(),
+    currentScore,
+    targetScore,
+    note: typeof value.note === 'string' ? value.note.slice(0, 200) : '',
+    createdAt: new Date(value.createdAt).toISOString()
+  }
+}
+
+function getTargetRecordsResult() {
+  const readResult = readStorage(KEYS.targets, [])
+  const value = readResult.value
+  const records = (Array.isArray(value) ? value : [])
+    .map(normalizeTargetRecord)
+    .filter(Boolean)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, APP_CONFIG.targetScore.maxRecords)
+  return readResult.ok ? { ok: true, records } : { ok: false, records, message: readResult.message }
 }
 
 function getTargetRecords() {
-  return readArray(KEYS.targets).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return getTargetRecordsResult().records
 }
 
 function saveTargetRecord(record) {
-  const records = getTargetRecords().filter((item) => item.id !== record.id)
-  records.unshift(record)
-  wx.setStorageSync(KEYS.targets, records)
-  return records
+  const normalized = normalizeTargetRecord(record)
+  if (!normalized) return { ok: false, message: '目标记录格式无效，请检查后重试。' }
+
+  const existingResult = getTargetRecordsResult()
+  if (!existingResult.ok) return { ok: false, message: existingResult.message }
+  const records = [
+    normalized,
+    ...existingResult.records.filter((item) => item.id !== normalized.id)
+  ].slice(0, APP_CONFIG.targetScore.maxRecords)
+
+  const result = writeStorage(KEYS.targets, records)
+  return result.ok ? { ok: true, records } : result
 }
 
 function deleteTargetRecord(id) {
-  const records = getTargetRecords().filter((item) => item.id !== id)
-  if (records.length) wx.setStorageSync(KEYS.targets, records)
-  else wx.removeStorageSync(KEYS.targets)
-  return records
+  if (typeof id !== 'string' || !id.trim()) return { ok: false, message: '目标记录标识无效。' }
+  const existingResult = getTargetRecordsResult()
+  if (!existingResult.ok) return { ok: false, message: existingResult.message }
+  const records = existingResult.records.filter((item) => item.id !== id)
+  const result = records.length ? writeStorage(KEYS.targets, records) : removeStorage(KEYS.targets)
+  return result.ok ? { ok: true, records } : result
 }
 
 function clearTargetRecords() {
-  wx.removeStorageSync(KEYS.targets)
+  return removeStorage(KEYS.targets)
+}
+
+function getTargetDraftResult() {
+  const readResult = readStorage(KEYS.targetDraft, {})
+  const value = readResult.value
+  const draft = !value || typeof value !== 'object' || Array.isArray(value) || !Object.keys(value).length ? {} : {
+    currentScore: typeof value.currentScore === 'string' ? value.currentScore.slice(0, APP_CONFIG.targetScore.maxLength) : '',
+    targetScore: typeof value.targetScore === 'string' ? value.targetScore.slice(0, APP_CONFIG.targetScore.maxLength) : '',
+    note: typeof value.note === 'string' ? value.note.slice(0, 200) : ''
+  }
+  return readResult.ok ? { ok: true, draft } : { ok: false, draft, message: readResult.message }
 }
 
 function getTargetDraft() {
-  const value = wx.getStorageSync(KEYS.targetDraft)
-  return value && typeof value === 'object' ? value : {}
+  return getTargetDraftResult().draft
 }
 
 function saveTargetDraft(draft) {
-  wx.setStorageSync(KEYS.targetDraft, draft)
+  const safeDraft = draft && typeof draft === 'object' && !Array.isArray(draft) ? draft : {}
+  const currentScore = safeDraft.currentScore === null || safeDraft.currentScore === undefined ? '' : safeDraft.currentScore
+  const targetScore = safeDraft.targetScore === null || safeDraft.targetScore === undefined ? '' : safeDraft.targetScore
+  return writeStorage(KEYS.targetDraft, {
+    currentScore: String(currentScore).slice(0, APP_CONFIG.targetScore.maxLength),
+    targetScore: String(targetScore).slice(0, APP_CONFIG.targetScore.maxLength),
+    note: String(safeDraft.note || '').slice(0, 200)
+  })
 }
 
 function clearTargetDraft() {
-  wx.removeStorageSync(KEYS.targetDraft)
+  return removeStorage(KEYS.targetDraft)
 }
 
 function clearLocalDemoData() {
-  Object.values(KEYS).forEach((key) => wx.removeStorageSync(key))
+  const failedKeys = Object.values(KEYS).filter((key) => !removeStorage(key).ok)
+  return failedKeys.length
+    ? { ok: false, message: '部分本地数据清除失败，请重试。' }
+    : { ok: true }
 }
 
 module.exports = {
   KEYS,
+  getFavoriteIdsResult,
   getFavoriteIds,
   isFavorite,
   setFavorite,
+  getTargetRecordsResult,
   getTargetRecords,
   saveTargetRecord,
   deleteTargetRecord,
   clearTargetRecords,
+  getTargetDraftResult,
   getTargetDraft,
   saveTargetDraft,
   clearTargetDraft,

@@ -1,17 +1,18 @@
 <view class="page">
   <view class="card target-note">
     <view class="card-title">本地学习目标</view>
-    <view class="muted small">用于记录阶段目标和学习差距，不代表录取判断，不输出学校推荐。</view>
+    <view class="muted small">{{targetDisclaimer}}</view>
   </view>
 
   <view class="card">
     <view class="section-heading">新增目标记录</view>
     <text class="field-label">当前分数</text>
-    <input class="input" type="number" maxlength="3" value="{{currentScore}}" placeholder="请输入当前学习测评分数" bindinput="onCurrentInput" />
+    <input class="input" type="number" maxlength="{{scoreMaxLength}}" value="{{currentScore}}" placeholder="请输入 {{scoreMin}} 至 {{scoreMax}} 的整数" bindinput="onCurrentInput" />
     <text class="field-label">目标分数</text>
-    <input class="input" type="number" maxlength="3" value="{{targetScore}}" placeholder="请输入本阶段学习目标" bindinput="onTargetInput" />
+    <input class="input" type="number" maxlength="{{scoreMaxLength}}" value="{{targetScore}}" placeholder="请输入 {{scoreMin}} 至 {{scoreMax}} 的整数" bindinput="onTargetInput" />
     <text class="field-label">备注</text>
-    <textarea class="input textarea" maxlength="200" value="{{note}}" placeholder="可记录复盘重点、科目或下阶段计划" bindinput="onNoteInput"></textarea>
+    <textarea class="input textarea" maxlength="200" value="{{note}}" placeholder="请勿填写姓名、手机号、身份证等个人敏感信息" bindinput="onNoteInput"></textarea>
+    <view class="muted small">备注仅保存在本机，请勿录入个人敏感信息。</view>
 
     <view class="summary-box">
       <view class="summary-title">{{gapText}}</view>
@@ -25,7 +26,7 @@
   </view>
 
   <view class="row between section-row">
-    <view class="section-title records-title">目标记录（{{records.length}}）</view>
+    <view class="section-title records-title">目标记录（{{records.length}} / {{maxRecords}}）</view>
     <button wx:if="{{records.length > 0}}" class="button danger small-button" bindtap="clearAllRecords">清空全部</button>
   </view>
 
