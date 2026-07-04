@@ -1,9 +1,4 @@
 <view class="page">
-  <view class="card library-note">
-    <view class="card-title">本地学校库</view>
-    <view class="muted small">含少量公开来源基础样本与明显虚构的演示数据；不展示真实分数线。</view>
-  </view>
-
   <input class="input" value="{{keyword}}" placeholder="搜索学校名称、区域或类型" bindinput="onKeywordInput" />
 
   <view class="filter-grid">
@@ -48,6 +43,5 @@
       <text class="badge">{{item.district}}</text>
     </view>
     <view class="muted small">{{item.schoolType}} · {{item.boardingType}}</view>
-    <view class="intro">{{item.intro}}</view>
   </view>
 </view>

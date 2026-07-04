@@ -1,13 +1,13 @@
 <view class="page">
   <view class="hero profile-hero">
     <view class="hero-title">苏州高中目标查询助手</view>
-    <view class="hero-subtitle">版本 {{version}} · 当前无需账号 · 当前使用本地存储</view>
+    <view class="hero-subtitle">版本 {{version}}</view>
   </view>
 
   <view class="summary-grid">
     <view class="card summary-card">
       <view class="summary-number">{{favoriteCount}}</view>
-      <view class="muted small">本地收藏</view>
+      <view class="muted small">收藏</view>
     </view>
     <view class="card summary-card">
       <view class="summary-number">{{targetCount}}</view>
@@ -15,15 +15,13 @@
     </view>
   </view>
 
-  <view class="section-title">功能与说明</view>
-  <view class="card menu-card" bindtap="openDataInfo"><view class="grow"><view class="card-title">数据说明</view><view class="muted small">查看数据范围和展示边界</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openPrivacy"><view class="grow"><view class="card-title">隐私说明</view><view class="muted small">查看本地存储和隐私边界</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openFavorites"><view class="grow"><view class="card-title">收藏</view><view class="muted small">查看已收藏学校</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openTargets"><view class="grow"><view class="card-title">目标记录</view><view class="muted small">查看本地学习目标</view></view><view class="list-arrow">›</view></view>
+  <view class="section-title">设置</view>
+  <view class="card menu-card" bindtap="openDataInfo"><view class="grow"><view class="card-title">数据说明</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu-card" bindtap="openPrivacy"><view class="grow"><view class="card-title">隐私说明</view></view><view class="list-arrow">›</view></view>
 
   <view class="card clear-card">
-    <view class="card-title danger-text">清除本地演示数据</view>
-    <view class="muted small clear-note">清除收藏、目标记录和输入草稿，不删除内置学校库。</view>
-    <button class="button danger" bindtap="clearLocalData">清除本地演示数据</button>
+    <view class="card-title danger-text">清除本地数据</view>
+    <view class="muted small clear-note">清除收藏、目标记录和输入草稿。</view>
+    <button class="button danger" bindtap="clearLocalData">清除本地数据</button>
   </view>
 </view>

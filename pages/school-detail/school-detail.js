@@ -1,7 +1,7 @@
 const { getSchoolById } = require('../../utils/school')
 const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
-const { mapSearchKeyword, copyText, showExternalMapGuide } = require('../../utils/map')
+const { mapSearchKeyword, copyText } = require('../../utils/map')
 const { APP_CONFIG } = require('../../config/app-config')
 
 Page({
@@ -10,7 +10,7 @@ Page({
     school: null,
     isFavorite: false,
     mapKeyword: '',
-    boundaries: APP_CONFIG.policy.schoolDetailBoundaries
+    detailNotice: APP_CONFIG.policy.schoolDetailNotice
   },
 
   onLoad(options) {
@@ -50,8 +50,4 @@ Page({
   copyMapKeyword() {
     copyText(this.data.mapKeyword, '搜索词已复制')
   },
-
-  showMapGuide() {
-    showExternalMapGuide(this.data.school.name)
-  }
 })

@@ -86,8 +86,8 @@ assert.deepStrictEqual(storage.getTargetDraft(), {})
 
 assert.ok(school.filterSchools({ keyword: '示例高中 A' }).some((item) => item.id === 'demo_001'))
 assert.ok(school.filterSchools({ district: '吴江区' }).every((item) => item.district === '吴江区'))
-assert.ok(school.filterSchools({ schoolType: '公办示例' }).every((item) => item.schoolType === '公办示例'))
-assert.ok(school.filterSchools({ boardingType: '走读示例' }).every((item) => item.boardingType === '走读示例'))
+assert.ok(school.filterSchools({ schoolType: '公办（示例）' }).every((item) => item.schoolType === '公办（示例）'))
+assert.ok(school.filterSchools({ boardingType: '走读（示例）' }).every((item) => item.boardingType === '走读（示例）'))
 
 assert.ok(expectedErrorLogs.length >= 7)
 console.error = originalConsoleError

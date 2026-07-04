@@ -1,4 +1,3 @@
-.safety-card { margin-top: 24rpx; border-left: 8rpx solid #f59e0b; }
 .entry { display: flex; align-items: center; }
 .entry:active { background: #f0f8f6; }
 .entry-subtitle { margin-top: 8rpx; }

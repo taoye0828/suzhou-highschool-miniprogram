@@ -1,13 +1,8 @@
 <view class="page">
-  <view class="card favorite-note">
-    <view class="card-title">本地收藏</view>
-    <view class="muted small">收藏仅保存在本机微信小程序本地缓存，不上传，也不需要登录。</view>
-  </view>
-
   <view wx:if="{{favorites.length === 0}}" class="card empty">
     <view class="empty-symbol">☆</view>
     <view class="card-title">暂无收藏学校</view>
-    <view class="muted small">可前往学校库，收藏公开来源基础样本或演示学校。</view>
+    <view class="muted small">可前往学校库收藏学校。</view>
   </view>
 
   <view

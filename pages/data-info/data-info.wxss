@@ -1,5 +1,3 @@
 .compact-hero { margin-bottom: 24rpx; }
 .info-card { border-left: 8rpx solid #0f766e; }
-.notice { margin-top: 14rpx; }
-.boundary-item { padding: 13rpx 0; color: #475569; }
-.boundary-item::before { content: "•"; margin-right: 14rpx; color: #0f766e; }
+.info-item { margin-top: 18rpx; }

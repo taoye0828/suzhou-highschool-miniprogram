@@ -18,31 +18,19 @@
       <view class="info-row"><text class="info-label">区域</text><text class="info-value">{{school.district}}</text></view>
       <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{school.schoolType}}</text></view>
       <view class="info-row"><text class="info-label">住宿状态</text><text class="info-value">{{school.boardingType}}</text></view>
-      <view class="info-row"><text class="info-label">数据状态</text><text class="info-value">{{school.dataStatus}}</text></view>
-      <view class="info-row"><text class="info-label">数据版本</text><text class="info-value">{{school.dataVersion}}</text></view>
-      <view wx:if="{{school.sourceVerifiedAt}}" class="info-row"><text class="info-label">来源核验日期</text><text class="info-value">{{school.sourceVerifiedAt}}</text></view>
       <view class="divider"></view>
       <view class="notice">{{school.intro}}</view>
-      <view class="tag-line">
-        <text class="badge" wx:for="{{school.tags}}" wx:key="*this">{{item}}</text>
-      </view>
       <view class="muted small">{{school.sourceNote}}</view>
+      <view class="muted small detail-notice">{{detailNotice}}</view>
     </view>
 
     <view class="card">
-      <view class="section-heading">信息边界</view>
-      <view class="boundary-item" wx:for="{{boundaries}}" wx:key="*this">{{item}}</view>
-    </view>
-
-    <view class="card">
-      <view class="section-heading">本地操作</view>
+      <view class="section-heading">操作</view>
       <view class="button-row">
         <button class="button" bindtap="toggleFavorite">{{isFavorite ? '取消收藏' : '收藏学校'}}</button>
         <button class="button secondary" bindtap="copySchoolName">复制学校名称</button>
         <button class="button secondary" bindtap="copyMapKeyword">复制地图搜索词</button>
-        <button class="button ghost" bindtap="showMapGuide">外部地图搜索说明</button>
       </view>
-      <view class="muted small map-keyword">地图搜索词：{{mapKeyword}}</view>
     </view>
   </block>
 </view>
