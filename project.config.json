@@ -1,5 +1,5 @@
 {
-  "description": "苏州高中目标查询助手 MP1 本地版",
+  "description": "苏州高中目标查询助手 MP2 上架准备版",
   "packOptions": {
     "ignore": [
       { "type": "folder", "value": "docs" },

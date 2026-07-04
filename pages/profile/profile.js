@@ -3,7 +3,13 @@ const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { APP_CONFIG } = require('../../config/app-config')
 
 Page({
-  data: { version: APP_CONFIG.version, favoriteCount: 0, targetCount: 0 },
+  data: {
+    appName: APP_CONFIG.name,
+    version: APP_CONFIG.version,
+    releaseStatus: APP_CONFIG.releaseStatus,
+    favoriteCount: 0,
+    targetCount: 0
+  },
 
   onShow() { this.refreshSummary() },
 
@@ -16,6 +22,14 @@ Page({
 
   openDataInfo() { wx.navigateTo({ url: '/pages/data-info/data-info' }) },
   openPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }) },
+  openSubmissionNotes() {
+    wx.showModal({
+      title: '提交前说明',
+      content: '上传前请替换真实 AppID，完成备案、服务类目、隐私保护指引，并在微信开发者工具中完成编译和真机预览。',
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  },
   clearLocalData() {
     wx.showModal({
       title: '清除本地数据',

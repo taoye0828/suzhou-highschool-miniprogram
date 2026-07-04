@@ -4,9 +4,8 @@
     <view class="hero-subtitle">了解你的数据如何保存</view>
   </view>
 
-  <view class="card privacy-card">
-    <view class="card-title">隐私要点</view>
-    <view class="notice privacy-item" wx:for="{{items}}" wx:key="*this">{{item}}</view>
-    <view class="muted small clear-tip">你可以在“我的”页面清除全部本地数据。</view>
+  <view class="card privacy-card" wx:for="{{sections}}" wx:key="title">
+    <view class="card-title">{{item.title}}</view>
+    <view class="notice privacy-item" wx:for="{{item.items}}" wx:for-item="line" wx:key="*this">{{line}}</view>
   </view>
 </view>

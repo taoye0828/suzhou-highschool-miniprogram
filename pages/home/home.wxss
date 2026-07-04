@@ -1,3 +1,35 @@
 .entry { display: flex; align-items: center; }
 .entry:active { background: #f0f8f6; }
 .entry-subtitle { margin-top: 8rpx; }
+.check-item,
+.limit-item {
+  display: flex;
+  gap: 14rpx;
+  margin-top: 18rpx;
+  color: #334155;
+  line-height: 1.65;
+}
+.check-dot,
+.limit-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34rpx;
+  height: 34rpx;
+  margin-top: 4rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+.check-dot { color: #ffffff; background: #0f766e; }
+.limit-card { border-left: 8rpx solid #f59e0b; }
+.limit-dot { color: #92400e; background: #fef3c7; }
+.step-card { counter-reset: step; }
+.step-item {
+  padding: 16rpx 0;
+  color: #334155;
+  border-bottom: 1rpx solid #eef2f1;
+  line-height: 1.65;
+}
+.step-item:last-child { border-bottom: none; }

@@ -4,8 +4,13 @@
     <view class="hero-subtitle">了解学校信息的来源和使用方式</view>
   </view>
 
-  <view class="card info-card">
-    <view class="card-title">使用说明</view>
-    <view class="notice info-item" wx:for="{{items}}" wx:key="*this">{{item}}</view>
+  <view class="card version-card">
+    <view class="card-title">当前数据版本</view>
+    <view class="notice">数据版本：{{dataVersion}}</view>
+  </view>
+
+  <view class="card info-card" wx:for="{{sections}}" wx:key="title">
+    <view class="card-title">{{item.title}}</view>
+    <view class="notice info-item" wx:for="{{item.items}}" wx:for-item="line" wx:key="*this">{{line}}</view>
   </view>
 </view>

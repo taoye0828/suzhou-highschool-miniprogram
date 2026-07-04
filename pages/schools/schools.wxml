@@ -1,5 +1,10 @@
 <view class="page">
-  <input class="input" value="{{keyword}}" placeholder="搜索学校名称、区域或类型" bindinput="onKeywordInput" />
+  <view class="hero compact-hero">
+    <view class="hero-title">学校库</view>
+    <view class="hero-subtitle">查看苏州高中阶段学校基础信息和公开来源</view>
+  </view>
+
+  <input class="input" value="{{keyword}}" placeholder="搜索学校名称、区域、类型、性质或标签" bindinput="onKeywordInput" />
 
   <view class="filter-grid">
     <picker range="{{districts}}" value="{{districtIndex}}" bindchange="onDistrictChange">
@@ -8,8 +13,14 @@
     <picker range="{{schoolTypes}}" value="{{schoolTypeIndex}}" bindchange="onSchoolTypeChange">
       <view class="filter-control">类型：{{schoolTypes[schoolTypeIndex]}}</view>
     </picker>
+    <picker range="{{ownerships}}" value="{{ownershipIndex}}" bindchange="onOwnershipChange">
+      <view class="filter-control">性质：{{ownerships[ownershipIndex]}}</view>
+    </picker>
     <picker range="{{boardingTypes}}" value="{{boardingTypeIndex}}" bindchange="onBoardingTypeChange">
       <view class="filter-control">住宿：{{boardingTypes[boardingTypeIndex]}}</view>
+    </picker>
+    <picker range="{{dataStatuses}}" value="{{dataStatusIndex}}" bindchange="onDataStatusChange">
+      <view class="filter-control">数据：{{dataStatuses[dataStatusIndex]}}</view>
     </picker>
   </view>
 
@@ -21,10 +32,11 @@
   <view wx:if="{{results.length === 0}}" class="card empty">
     <view class="card-title">没有找到匹配学校</view>
     <view class="muted small">请调整名称、区域、类型或住宿筛选条件。</view>
+    <button class="button empty-button" bindtap="resetFilters">重置筛选</button>
   </view>
 
   <view
-    class="card school-card"
+    class="card school-card {{item.isDemo ? 'demo-card' : ''}}"
     wx:for="{{results}}"
     wx:key="id"
     data-id="{{item.id}}"
@@ -41,7 +53,9 @@
     <view class="tag-line">
       <text class="badge {{item.dataKind === 'demo' ? 'demo' : ''}}">{{item.dataStatus}}</text>
       <text class="badge">{{item.district}}</text>
+      <text class="badge">{{item.sourceTypeLabel}}</text>
     </view>
-    <view class="muted small">{{item.schoolType}} · {{item.boardingType}}</view>
+    <view class="muted small">{{item.schoolType}} · {{item.ownership}} · {{item.boardingType}}</view>
+    <view wx:if="{{item.isDemo}}" class="demo-note">示例学校，不对应现实学校。</view>
   </view>
 </view>

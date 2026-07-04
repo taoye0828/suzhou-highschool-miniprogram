@@ -21,9 +21,9 @@ function gapSummary(currentScore, targetScore) {
   const target = scoreNumber(targetScore)
   if (current === null || target === null) return { gapText: '填写分数后显示学习差距', reminder: '建议先记录一次真实学习测评结果。' }
   const gap = target - current
-  if (gap > 0) return { gapText: `距离学习目标还有 ${gap} 分`, reminder: gap >= 50 ? '差距较大，建议拆分为每周小目标并定期复盘。' : '建议保持练习节奏，持续记录阶段变化。' }
-  if (gap === 0) return { gapText: '当前分数与学习目标一致', reminder: '建议继续巩固薄弱知识点。' }
-  return { gapText: `当前分数已超过学习目标 ${Math.abs(gap)} 分`, reminder: '可根据近期学习情况设置下一阶段目标。' }
+  if (gap > 0) return { gapText: `距离本阶段学习目标还有 ${gap} 分`, reminder: gap >= 50 ? '差距较大，建议拆分为每周小目标并定期复盘。' : '建议保持练习节奏，持续记录阶段变化。' }
+  if (gap === 0) return { gapText: '阶段测评分数与阶段目标一致', reminder: '建议继续巩固薄弱知识点。' }
+  return { gapText: `阶段测评分数已超过本阶段学习目标 ${Math.abs(gap)} 分`, reminder: '可根据近期学习情况设置下一阶段目标。' }
 }
 
 let targetIdSequence = 0
@@ -166,7 +166,7 @@ Page({
       return
     }
 
-    wx.showToast({ title: '目标记录已保存', icon: 'success' })
+    wx.showToast({ title: '学习目标已保存', icon: 'success' })
     this.loadRecords()
   },
 

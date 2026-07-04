@@ -7,10 +7,14 @@ Page({
     keyword: '',
     districts: uniqueValues('district'),
     schoolTypes: uniqueValues('schoolType'),
+    ownerships: uniqueValues('ownership'),
     boardingTypes: uniqueValues('boardingType'),
+    dataStatuses: uniqueValues('dataStatus'),
     districtIndex: 0,
     schoolTypeIndex: 0,
+    ownershipIndex: 0,
     boardingTypeIndex: 0,
+    dataStatusIndex: 0,
     results: []
   },
 
@@ -29,12 +33,27 @@ Page({
     this.setData({ schoolTypeIndex: Number(event.detail.value) }, () => this.refresh())
   },
 
+  onOwnershipChange(event) {
+    this.setData({ ownershipIndex: Number(event.detail.value) }, () => this.refresh())
+  },
+
   onBoardingTypeChange(event) {
     this.setData({ boardingTypeIndex: Number(event.detail.value) }, () => this.refresh())
   },
 
+  onDataStatusChange(event) {
+    this.setData({ dataStatusIndex: Number(event.detail.value) }, () => this.refresh())
+  },
+
   resetFilters() {
-    this.setData({ keyword: '', districtIndex: 0, schoolTypeIndex: 0, boardingTypeIndex: 0 }, () => this.refresh())
+    this.setData({
+      keyword: '',
+      districtIndex: 0,
+      schoolTypeIndex: 0,
+      ownershipIndex: 0,
+      boardingTypeIndex: 0,
+      dataStatusIndex: 0
+    }, () => this.refresh())
   },
 
   refresh() {
@@ -42,7 +61,9 @@ Page({
       keyword: this.data.keyword,
       district: this.data.districts[this.data.districtIndex],
       schoolType: this.data.schoolTypes[this.data.schoolTypeIndex],
-      boardingType: this.data.boardingTypes[this.data.boardingTypeIndex]
+      ownership: this.data.ownerships[this.data.ownershipIndex],
+      boardingType: this.data.boardingTypes[this.data.boardingTypeIndex],
+      dataStatus: this.data.dataStatuses[this.data.dataStatusIndex]
     }
     const favoriteResult = getFavoriteIdsResult()
     notifyStorageReadResult(this, favoriteResult)

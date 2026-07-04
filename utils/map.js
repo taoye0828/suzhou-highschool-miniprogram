@@ -3,8 +3,13 @@ function mapSearchKeyword(schoolName) {
 }
 
 function copyText(text, successMessage) {
+  const safeText = typeof text === 'string' ? text.trim() : ''
+  if (!safeText) {
+    wx.showToast({ title: '暂无可复制内容', icon: 'none' })
+    return
+  }
   wx.setClipboardData({
-    data: text,
+    data: safeText,
     success: () => wx.showToast({ title: successMessage, icon: 'success' }),
     fail: () => wx.showToast({ title: '复制失败，请稍后重试。', icon: 'none' })
   })

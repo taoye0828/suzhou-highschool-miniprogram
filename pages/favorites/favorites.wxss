@@ -2,3 +2,5 @@
 .favorite-meta { margin-top: 8rpx; }
 .empty-symbol { margin-bottom: 12rpx; color: #0f766e; font-size: 64rpx; }
 .tag-line { margin-top: 16rpx; }
+.empty-button { margin: 24rpx auto 0; width: 280rpx; }
+.demo-card { border-color: #f4d58d; background: #fffdf5; }

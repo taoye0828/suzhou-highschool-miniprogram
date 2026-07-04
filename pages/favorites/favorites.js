@@ -26,5 +26,9 @@ Page({
 
   openDetail(event) {
     wx.navigateTo({ url: `/pages/school-detail/school-detail?id=${event.currentTarget.dataset.id}` })
+  },
+
+  openSchools() {
+    wx.switchTab({ url: '/pages/schools/schools' })
   }
 })

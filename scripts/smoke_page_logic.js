@@ -53,7 +53,7 @@ async function run() {
   assert.strictEqual(firstRecords.length, 1)
   assert.strictEqual(firstRecords[0].schemaVersion, 1)
   assert.strictEqual(Object.hasOwn(firstRecords[0], 'gapText'), false)
-  assert.ok(toastTitles.includes('目标记录已保存'))
+  assert.ok(toastTitles.includes('学习目标已保存'))
 
   const originalConsoleError = console.error
   const expectedErrorLogs = []

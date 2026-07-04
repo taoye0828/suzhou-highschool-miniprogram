@@ -3,3 +3,7 @@
 .detail-card { margin-top: 0; }
 .section-heading { margin-bottom: 14rpx; font-size: 30rpx; font-weight: 700; }
 .detail-notice { margin-top: 18rpx; }
+.tag-line { margin-top: 18rpx; }
+.link-text { color: #0f766e; word-break: break-all; }
+.source-note { margin-top: 16rpx; }
+.map-card { border-left: 8rpx solid #0f766e; }
