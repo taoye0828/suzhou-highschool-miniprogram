@@ -1,24 +1,23 @@
-const { getSchoolById, sourceTypeLabel, isDemoSchool } = require('../../utils/school')
+const { getSchoolById, presentSchool } = require('../../utils/school')
 const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
-const { mapSearchKeyword, copyText } = require('../../utils/map')
+const { copyText } = require('../../utils/map')
+const {
+  EMPTY_SCORE_TEXT,
+  SCORE_SAFETY_NOTICE,
+  groupScoresByYear
+} = require('../../utils/admission-scores')
 const { APP_CONFIG } = require('../../config/app-config')
 
 Page({
   data: {
     schoolId: '',
     school: null,
+    scoreGroups: [],
     isFavorite: false,
-    mapKeyword: '',
-    detailNotice: APP_CONFIG.policy.schoolDetailNotice,
-    completenessItems: [
-      { label: '基础信息', value: '已展示' },
-      { label: '来源信息', value: '已标注' },
-      { label: '录取分数线', value: '当前版本暂不展示' },
-      { label: '地址坐标', value: '当前版本暂不展示' },
-      { label: '联系方式', value: '当前版本暂不展示' },
-      { label: '路线规划', value: '当前版本暂不提供' }
-    ]
+    emptyScoreText: EMPTY_SCORE_TEXT,
+    scoreSafetyNotice: SCORE_SAFETY_NOTICE,
+    detailNotice: APP_CONFIG.policy.schoolDetailNotice
   },
 
   onLoad(options) {
@@ -26,20 +25,18 @@ Page({
     this.refresh()
   },
 
-  onShow() { if (this.data.schoolId) this.refresh() },
+  onShow() {
+    if (this.data.schoolId) this.refresh()
+  },
 
   refresh() {
     const school = getSchoolById(this.data.schoolId)
     const favoriteResult = getFavoriteIdsResult()
     notifyStorageReadResult(this, favoriteResult)
     this.setData({
-      school: school ? {
-        ...school,
-        sourceTypeLabel: sourceTypeLabel(school.dataKind),
-        isDemo: isDemoSchool(school)
-      } : null,
+      school: school ? presentSchool(school, favoriteResult.ids) : null,
       isFavorite: school ? favoriteResult.ids.includes(school.id) : false,
-      mapKeyword: school ? school.mapSearchKeyword || mapSearchKeyword(school.name) : ''
+      scoreGroups: school ? groupScoresByYear(school.id) : []
     })
   },
 
@@ -56,18 +53,22 @@ Page({
   },
 
   copySchoolName() {
-    copyText(this.data.school.name, '学校名称已复制')
+    copyText(this.data.school && this.data.school.name, '学校名称已复制')
   },
 
-  copyMapKeyword() {
-    copyText(this.data.mapKeyword, '搜索词已复制')
+  copyAddress() {
+    copyText(this.data.school && this.data.school.address, '地址已复制')
   },
 
   copySourceLink() {
-    copyText(this.data.school.sourceUrl, '来源链接已复制')
+    copyText(this.data.school && this.data.school.sourceUrl, '来源链接已复制')
   },
 
   copyOfficialWebsite() {
-    copyText(this.data.school.officialWebsite, '官网链接已复制')
+    copyText(this.data.school && this.data.school.officialWebsite, '官网链接已复制')
+  },
+
+  openSchools() {
+    wx.switchTab({ url: '/pages/schools/schools' })
   }
 })

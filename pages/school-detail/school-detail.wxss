@@ -6,4 +6,12 @@
 .tag-line { margin-top: 18rpx; }
 .link-text { color: #0f766e; word-break: break-all; }
 .source-note { margin-top: 16rpx; }
-.map-card { border-left: 8rpx solid #0f766e; }
+.score-card { border-left: 8rpx solid #0f766e; }
+.safety-card { border-left: 8rpx solid #f59e0b; }
+.score-year { margin-top: 18rpx; }
+.score-year-title { margin-bottom: 12rpx; font-weight: 700; }
+.score-item { padding: 18rpx 0; border-top: 1rpx solid #eef2f1; }
+.score-main { margin-bottom: 8rpx; font-weight: 650; }
+.list-item { margin-top: 10rpx; }
+.copy-source { margin-top: 20rpx; }
+.empty-button { margin: 24rpx auto 0; width: 320rpx; }

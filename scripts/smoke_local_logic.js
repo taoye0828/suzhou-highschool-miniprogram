@@ -26,10 +26,16 @@ global.wx = {
 
 const storage = require('../utils/storage')
 const school = require('../utils/school')
+const scoreUtils = require('../utils/admission-scores')
+const { schools } = require('../data/schools')
+const { admissionScores } = require('../data/admission-scores')
 
 function target(id, createdAt = '2026-07-02T00:00:00.000Z') {
   return { id, currentScore: 500, targetScore: 550, note: '复盘数学', createdAt }
 }
+
+assert.ok(schools.length >= 50)
+assert.strictEqual(admissionScores.length, 0)
 
 assert.strictEqual(storage.getFavoriteIds().length, 0)
 assert.strictEqual(storage.setFavorite('suzhou_high_school', true).ok, true)
@@ -37,6 +43,14 @@ assert.strictEqual(storage.isFavorite('suzhou_high_school'), true)
 assert.strictEqual(storage.setFavorite('suzhou_high_school', false).ok, true)
 assert.strictEqual(storage.isFavorite('suzhou_high_school'), false)
 assert.strictEqual(storage.setFavorite('', true).ok, false)
+assert.strictEqual(storage.replaceFavoriteIds(['old_id', 'suzhou_high_school']).ok, true)
+assert.deepStrictEqual(storage.getFavoriteIds(), ['old_id', 'suzhou_high_school'])
+
+const splitIds = school.splitFavoriteIdsByValidity(storage.getFavoriteIds())
+assert.deepStrictEqual(splitIds.valid, ['suzhou_high_school'])
+assert.deepStrictEqual(splitIds.invalid, ['old_id'])
+assert.strictEqual(storage.replaceFavoriteIds(splitIds.valid).ok, true)
+assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
 
 assert.strictEqual(storage.saveTargetRecord(target('target_1')).ok, true)
 assert.strictEqual(storage.saveTargetRecord(target('target_2', '2026-07-02T01:00:00.000Z')).ok, true)
@@ -77,20 +91,48 @@ memory.set(storage.KEYS.targetDraft, [])
 assert.deepStrictEqual(storage.getTargetDraft(), {})
 
 removeFailure = true
-assert.strictEqual(storage.clearLocalDemoData().ok, false)
+assert.strictEqual(storage.clearLocalData().ok, false)
 removeFailure = false
-assert.strictEqual(storage.clearLocalDemoData().ok, true)
+assert.strictEqual(storage.clearLocalData().ok, true)
 assert.strictEqual(storage.getFavoriteIds().length, 0)
 assert.strictEqual(storage.getTargetRecords().length, 0)
 assert.deepStrictEqual(storage.getTargetDraft(), {})
 
-assert.ok(school.filterSchools({ keyword: '苏州中学' }).some((item) => item.id === 'suzhou_high_school'))
-assert.ok(school.filterSchools({ keyword: '学校官网' }).length > 0)
+assert.ok(school.filterSchools({ keyword: '南航苏附' }).some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
+assert.ok(school.filterSchools({ keyword: '星湖街' }).some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
 assert.ok(school.filterSchools({ district: '吴江区' }).every((item) => item.district === '吴江区'))
 assert.ok(school.filterSchools({ schoolType: '普通高中' }).every((item) => item.schoolType === '普通高中'))
-assert.ok(school.filterSchools({ ownership: '公办' }).every((item) => item.ownership === '公办'))
-assert.ok(school.filterSchools({ dataStatus: '示例学校' }).every((item) => item.dataKind === 'demo'))
+assert.ok(school.filterSchools({ ownership: '民办' }).every((item) => item.ownership === '民办'))
+assert.strictEqual(school.filterSchools({ scoreStatus: '已收录分数线' }).length, 0)
+assert.strictEqual(school.filterSchools({ scoreStatus: '未收录分数线' }).length, schools.length)
+
+const sampleScores = [
+  {
+    id: 'sample_2025_b',
+    schoolId: 'suzhou_high_school',
+    year: 2025,
+    region: '苏州市区',
+    batch: '第一批',
+    admissionType: '统招生',
+    scoreType: '录取最低分',
+    minScore: 650
+  },
+  {
+    id: 'sample_2024_a',
+    schoolId: 'suzhou_high_school',
+    year: 2024,
+    region: '苏州市区',
+    batch: '提前批',
+    admissionType: '统招生',
+    scoreType: '录取最低分',
+    minScore: 645
+  }
+]
+assert.strictEqual(scoreUtils.hasScoresForSchool('suzhou_high_school', sampleScores), true)
+assert.strictEqual(scoreUtils.countScoresBySchoolId('suzhou_high_school', sampleScores), 2)
+assert.deepStrictEqual(scoreUtils.getScoresBySchoolId('suzhou_high_school', sampleScores).map((item) => item.year), [2025, 2024])
+assert.deepStrictEqual(scoreUtils.groupScoresByYear('suzhou_high_school', sampleScores).map((group) => group.year), ['2025', '2024'])
 
 assert.ok(expectedErrorLogs.length >= 7)
 console.error = originalConsoleError
-console.log('MP1 LOCAL LOGIC SMOKE PASSED')
+console.log('MP4 LOCAL LOGIC SMOKE PASSED')

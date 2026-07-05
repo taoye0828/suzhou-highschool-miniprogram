@@ -1,8 +1,13 @@
 const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
 const { APP_CONFIG } = require('../config/app-config')
+const { EMPTY_SCORE_TEXT } = require('../utils/admission-scores')
 
 const memory = new Map()
 const toastTitles = []
+const modals = []
+const navigations = []
 let writeFailure = false
 
 global.wx = {
@@ -13,17 +18,32 @@ global.wx = {
   },
   removeStorageSync: (key) => memory.delete(key),
   showToast: ({ title }) => toastTitles.push(title),
-  showModal: () => {}
+  showModal: (options) => {
+    modals.push(options)
+    if (options && typeof options.success === 'function') options.success({ confirm: true })
+  },
+  navigateTo: ({ url }) => navigations.push(url),
+  switchTab: ({ url }) => navigations.push(url),
+  setClipboardData: ({ success }) => {
+    if (success) success()
+  }
 }
 
-let pageDefinition = null
-global.Page = (definition) => { pageDefinition = definition }
-require('../pages/targets/targets')
+function loadPage(relative) {
+  const modulePath = path.join(__dirname, '..', relative)
+  let definition = null
+  const previousPage = global.Page
+  global.Page = (value) => { definition = value }
+  delete require.cache[require.resolve(modulePath)]
+  require(modulePath)
+  global.Page = previousPage
+  return definition
+}
 
 function createPageInstance(definition) {
   return {
     ...definition,
-    data: JSON.parse(JSON.stringify(definition.data)),
+    data: JSON.parse(JSON.stringify(definition.data || {})),
     setData(values, callback) {
       Object.assign(this.data, values)
       if (callback) callback()
@@ -31,8 +51,9 @@ function createPageInstance(definition) {
   }
 }
 
-async function run() {
-  const page = createPageInstance(pageDefinition)
+async function testTargetsPage() {
+  const definition = loadPage('pages/targets/targets')
+  const page = createPageInstance(definition)
   page.onLoad()
   page.onShow()
 
@@ -51,9 +72,12 @@ async function run() {
   page.saveRecord()
   const firstRecords = memory.get('mp1.target_records')
   assert.strictEqual(firstRecords.length, 1)
-  assert.strictEqual(firstRecords[0].schemaVersion, 1)
-  assert.strictEqual(Object.hasOwn(firstRecords[0], 'gapText'), false)
+  assert.strictEqual(Object.hasOwn(firstRecords[0], 'schoolId'), false)
+  assert.strictEqual(Object.hasOwn(firstRecords[0], 'admissionScore'), false)
   assert.ok(toastTitles.includes('学习目标已保存'))
+
+  const targetSource = fs.readFileSync(path.join(__dirname, '..', 'pages/targets/targets.js'), 'utf8')
+  assert.strictEqual(targetSource.includes('admission-scores'), false)
 
   const originalConsoleError = console.error
   const expectedErrorLogs = []
@@ -65,9 +89,77 @@ async function run() {
   assert.strictEqual(memory.get('mp1.target_records').length, 1)
   assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
   assert.strictEqual(expectedErrorLogs.length, 1)
+}
 
-  page.onUnload()
-  console.log('MP1 PAGE LOGIC SMOKE PASSED')
+function testSchoolDetailPage() {
+  const definition = loadPage('pages/school-detail/school-detail')
+  const page = createPageInstance(definition)
+  page.onLoad({ id: 'suzhou_high_school' })
+  assert.strictEqual(page.data.school.id, 'suzhou_high_school')
+  assert.deepStrictEqual(page.data.scoreGroups, [])
+  assert.strictEqual(page.data.emptyScoreText, EMPTY_SCORE_TEXT)
+
+  page.toggleFavorite()
+  assert.ok(memory.get('mp1.favorite_school_ids').includes('suzhou_high_school'))
+  page.copySchoolName()
+  page.copySourceLink()
+  assert.ok(toastTitles.includes('学校名称已复制'))
+  assert.ok(toastTitles.includes('来源链接已复制'))
+
+  const missingPage = createPageInstance(definition)
+  missingPage.onLoad({ id: 'removed_school' })
+  assert.strictEqual(missingPage.data.school, null)
+  missingPage.openSchools()
+  assert.ok(navigations.includes('/pages/schools/schools'))
+}
+
+function testSchoolsPage() {
+  const definition = loadPage('pages/schools/schools')
+  const page = createPageInstance(definition)
+  page.onLoad()
+  assert.ok(page.data.results.length >= 50)
+  page.onKeywordInput({ detail: { value: '南航苏附' } })
+  assert.ok(page.data.results.some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
+  page.onScoreStatusChange({ detail: { value: String(page.data.scoreStatuses.indexOf('已收录分数线')) } })
+  assert.strictEqual(page.data.results.length, 0)
+  page.resetFilters()
+  assert.ok(page.data.results.length >= 50)
+}
+
+function testFavoritesPage() {
+  memory.set('mp1.favorite_school_ids', ['suzhou_high_school', 'removed_school'])
+  const definition = loadPage('pages/favorites/favorites')
+  const page = createPageInstance(definition)
+  page.onShow()
+  assert.strictEqual(page.data.favorites.length, 1)
+  assert.strictEqual(page.data.invalidCount, 1)
+  page.cleanInvalidFavorites()
+  assert.deepStrictEqual(memory.get('mp1.favorite_school_ids'), ['suzhou_high_school'])
+  assert.strictEqual(page.data.invalidCount, 0)
+}
+
+function testProfilePage() {
+  memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
+  memory.set('mp1.target_records', [{ id: 'target_1', currentScore: 500, targetScore: 550, note: '', createdAt: '2026-07-02T00:00:00.000Z' }])
+  memory.set('mp1.target_draft', { currentScore: '500' })
+  const definition = loadPage('pages/profile/profile')
+  const page = createPageInstance(definition)
+  page.onShow()
+  assert.strictEqual(page.data.favoriteCount, 1)
+  assert.strictEqual(page.data.targetCount, 1)
+  page.clearLocalData()
+  assert.strictEqual(memory.has('mp1.favorite_school_ids'), false)
+  assert.strictEqual(memory.has('mp1.target_records'), false)
+  assert.strictEqual(memory.has('mp1.target_draft'), false)
+}
+
+async function run() {
+  await testTargetsPage()
+  testSchoolDetailPage()
+  testSchoolsPage()
+  testFavoritesPage()
+  testProfilePage()
+  console.log('MP4 PAGE LOGIC SMOKE PASSED')
 }
 
 run().catch((error) => {

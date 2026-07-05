@@ -11,7 +11,7 @@
     </view>
     <view class="card summary-card">
       <view class="summary-number">{{targetCount}}</view>
-      <view class="muted small">目标记录</view>
+      <view class="muted small">学习目标</view>
     </view>
   </view>
 
@@ -20,9 +20,14 @@
   <view class="card menu-card" bindtap="openPrivacy"><view class="grow"><view class="card-title">隐私说明</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openSubmissionNotes"><view class="grow"><view class="card-title">提交前说明</view><view class="muted small">真实 AppID、备案、隐私保护指引和真机预览</view></view><view class="list-arrow">›</view></view>
 
+  <view class="card local-card">
+    <view class="card-title">本地保存</view>
+    <view class="muted small clear-note">收藏、学习目标记录和输入草稿只保存在当前设备。</view>
+  </view>
+
   <view class="card clear-card">
     <view class="card-title danger-text">清除本地数据</view>
-    <view class="muted small clear-note">清除收藏、目标记录和输入草稿。</view>
+    <view class="muted small clear-note">清除收藏、学习目标记录和输入草稿。</view>
     <button class="button danger" bindtap="clearLocalData">清除本地数据</button>
   </view>
 </view>

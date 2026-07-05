@@ -1,3 +1,13 @@
+.hero-pill {
+  margin-top: 18rpx;
+  padding: 14rpx 18rpx;
+  color: #e7fffb;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 14rpx;
+  font-size: 24rpx;
+  line-height: 1.55;
+}
+.hero-pill.secondary { color: #f3fbf9; }
 .entry { display: flex; align-items: center; }
 .entry:active { background: #f0f8f6; }
 .entry-subtitle { margin-top: 8rpx; }

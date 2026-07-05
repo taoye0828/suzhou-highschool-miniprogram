@@ -2,6 +2,8 @@
   <view class="hero">
     <view class="hero-title">{{appName}}</view>
     <view class="hero-subtitle">{{homeTagline}}</view>
+    <view class="hero-pill">{{homeBoundary}}</view>
+    <view class="hero-pill secondary">{{localBoundary}}</view>
   </view>
 
   <view class="card">

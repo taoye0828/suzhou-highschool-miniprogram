@@ -1,15 +1,12 @@
 .compact-hero { margin-bottom: 24rpx; }
+.search-input { min-height: 96rpx; }
 .filter-grid { display: grid; gap: 14rpx; margin-top: 18rpx; }
-.filter-control { padding: 20rpx 22rpx; background: #ffffff; border: 2rpx solid #dbe5e2; border-radius: 16rpx; }
+.filter-control { padding: 22rpx; background: #ffffff; border: 2rpx solid #dbe5e2; border-radius: 16rpx; line-height: 1.45; }
 .result-line { margin: 22rpx 0; }
+.card-head { align-items: flex-start; }
 .favorite-button { flex-shrink: 0; margin-left: 14rpx; }
 .tag-line { margin-top: 18rpx; }
 .school-card:active { background: #f0f8f6; }
-.demo-card { border-color: #f4d58d; background: #fffdf5; }
-.demo-note {
-  margin-top: 14rpx;
-  color: #92400e;
-  font-size: 24rpx;
-  line-height: 1.5;
-}
+.muted-badge { color: #64748b; background: #eef2f1; }
+.source-line { margin-top: 10rpx; }
 .empty-button { margin: 24rpx auto 0; width: 260rpx; }

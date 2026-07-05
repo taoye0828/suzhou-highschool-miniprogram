@@ -1,13 +1,19 @@
 <view class="page">
+  <view wx:if="{{invalidCount > 0}}" class="card warning-card">
+    <view class="card-title">部分收藏学校数据已更新或移除</view>
+    <view class="muted small">可清理 {{invalidCount}} 条无效收藏，不影响正常收藏。</view>
+    <button class="button secondary warning-button" bindtap="cleanInvalidFavorites">清理无效收藏</button>
+  </view>
+
   <view wx:if="{{favorites.length === 0}}" class="card empty">
     <view class="empty-symbol">☆</view>
     <view class="card-title">暂无收藏学校</view>
-    <view class="muted small">可前往学校库收藏学校。</view>
+    <view class="muted small">可前往学校库收藏学校，不需要登录。</view>
     <button class="button empty-button" bindtap="openSchools">去学校库看看</button>
   </view>
 
   <view
-    class="card favorite-card {{item.isDemo ? 'demo-card' : ''}}"
+    class="card favorite-card"
     wx:for="{{favorites}}"
     wx:key="id"
     data-id="{{item.id}}"
@@ -17,13 +23,13 @@
       <view class="grow">
         <view class="card-title">{{item.name}}</view>
         <view class="muted small favorite-meta">{{item.district}} · {{item.schoolType}}</view>
-        <view class="muted small favorite-meta">{{item.ownership}} · {{item.boardingType}}</view>
+        <view wx:if="{{item.ownership}}" class="muted small favorite-meta">{{item.ownership}}</view>
       </view>
       <button class="button danger small-button" data-id="{{item.id}}" catchtap="removeFavorite">取消收藏</button>
     </view>
     <view class="tag-line">
-      <text class="badge {{item.dataKind === 'demo' ? 'demo' : ''}}">{{item.dataStatus}}</text>
       <text class="badge">{{item.sourceTypeLabel}}</text>
+      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.hasAdmissionScores ? '已收录历史分数线' : '未收录历史分数线'}}</text>
     </view>
   </view>
 </view>

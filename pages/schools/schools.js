@@ -8,13 +8,11 @@ Page({
     districts: uniqueValues('district'),
     schoolTypes: uniqueValues('schoolType'),
     ownerships: uniqueValues('ownership'),
-    boardingTypes: uniqueValues('boardingType'),
-    dataStatuses: uniqueValues('dataStatus'),
+    scoreStatuses: ['全部', '已收录分数线', '未收录分数线'],
     districtIndex: 0,
     schoolTypeIndex: 0,
     ownershipIndex: 0,
-    boardingTypeIndex: 0,
-    dataStatusIndex: 0,
+    scoreStatusIndex: 0,
     results: []
   },
 
@@ -37,12 +35,8 @@ Page({
     this.setData({ ownershipIndex: Number(event.detail.value) }, () => this.refresh())
   },
 
-  onBoardingTypeChange(event) {
-    this.setData({ boardingTypeIndex: Number(event.detail.value) }, () => this.refresh())
-  },
-
-  onDataStatusChange(event) {
-    this.setData({ dataStatusIndex: Number(event.detail.value) }, () => this.refresh())
+  onScoreStatusChange(event) {
+    this.setData({ scoreStatusIndex: Number(event.detail.value) }, () => this.refresh())
   },
 
   resetFilters() {
@@ -51,8 +45,7 @@ Page({
       districtIndex: 0,
       schoolTypeIndex: 0,
       ownershipIndex: 0,
-      boardingTypeIndex: 0,
-      dataStatusIndex: 0
+      scoreStatusIndex: 0
     }, () => this.refresh())
   },
 
@@ -62,8 +55,7 @@ Page({
       district: this.data.districts[this.data.districtIndex],
       schoolType: this.data.schoolTypes[this.data.schoolTypeIndex],
       ownership: this.data.ownerships[this.data.ownershipIndex],
-      boardingType: this.data.boardingTypes[this.data.boardingTypeIndex],
-      dataStatus: this.data.dataStatuses[this.data.dataStatusIndex]
+      scoreStatus: this.data.scoreStatuses[this.data.scoreStatusIndex]
     }
     const favoriteResult = getFavoriteIdsResult()
     notifyStorageReadResult(this, favoriteResult)

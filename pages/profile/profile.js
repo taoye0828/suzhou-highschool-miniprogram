@@ -1,4 +1,4 @@
-const { getFavoriteIdsResult, getTargetRecordsResult, clearLocalDemoData } = require('../../utils/storage')
+const { getFavoriteIdsResult, getTargetRecordsResult, clearLocalData } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { APP_CONFIG } = require('../../config/app-config')
 
@@ -33,12 +33,12 @@ Page({
   clearLocalData() {
     wx.showModal({
       title: '清除本地数据',
-      content: '将清除收藏、目标记录和输入草稿，学校列表不受影响。此操作无法撤销。',
+      content: '将清除收藏、学习目标记录和输入草稿，学校列表不受影响。此操作无法撤销。',
       confirmText: '确认清除',
       confirmColor: '#b42318',
       success: (modalResult) => {
         if (!modalResult.confirm) return
-        const storageResult = clearLocalDemoData()
+        const storageResult = clearLocalData()
         if (!storageResult.ok) {
           wx.showToast({ title: storageResult.message, icon: 'none' })
           return

@@ -1,10 +1,10 @@
 const { APP_CONFIG } = require('../../config/app-config')
 
 const entries = [
-  { title: '学校库', subtitle: '搜索和筛选学校', route: '/pages/schools/schools', tab: true },
-  { title: '收藏', subtitle: '查看收藏的学校', route: '/pages/favorites/favorites', tab: true },
-  { title: '目标记录', subtitle: '记录阶段学习目标', route: '/pages/targets/targets', tab: true },
-  { title: '数据说明', subtitle: '查看数据来源和边界', route: '/pages/data-info/data-info', tab: false }
+  { title: '查学校', subtitle: '搜索和筛选学校基础信息', route: '/pages/schools/schools', tab: true },
+  { title: '看数据说明', subtitle: '了解来源、口径和边界', route: '/pages/data-info/data-info', tab: false },
+  { title: '学习目标记录', subtitle: '在本机记录阶段目标', route: '/pages/targets/targets', tab: true },
+  { title: '我的收藏', subtitle: '查看本机收藏学校', route: '/pages/favorites/favorites', tab: true }
 ]
 
 Page({
@@ -12,6 +12,8 @@ Page({
     appName: APP_CONFIG.name,
     entries,
     homeTagline: APP_CONFIG.policy.homeTagline,
+    homeBoundary: APP_CONFIG.policy.homeBoundary,
+    localBoundary: APP_CONFIG.policy.localBoundary,
     capabilities: APP_CONFIG.policy.currentCapabilities,
     limits: APP_CONFIG.policy.currentLimits,
     usageSteps: APP_CONFIG.policy.usageSteps

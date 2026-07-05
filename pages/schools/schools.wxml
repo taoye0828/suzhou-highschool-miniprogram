@@ -1,10 +1,10 @@
 <view class="page">
   <view class="hero compact-hero">
     <view class="hero-title">学校库</view>
-    <view class="hero-subtitle">查看苏州高中阶段学校基础信息和公开来源</view>
+    <view class="hero-subtitle">查看苏州高中阶段学校基础信息、来源和分数线收录情况</view>
   </view>
 
-  <input class="input" value="{{keyword}}" placeholder="搜索学校名称、区域、类型、性质或标签" bindinput="onKeywordInput" />
+  <input class="input search-input" value="{{keyword}}" placeholder="搜索学校、简称、区域、类型、地址、特色或项目" bindinput="onKeywordInput" />
 
   <view class="filter-grid">
     <picker range="{{districts}}" value="{{districtIndex}}" bindchange="onDistrictChange">
@@ -16,46 +16,44 @@
     <picker range="{{ownerships}}" value="{{ownershipIndex}}" bindchange="onOwnershipChange">
       <view class="filter-control">性质：{{ownerships[ownershipIndex]}}</view>
     </picker>
-    <picker range="{{boardingTypes}}" value="{{boardingTypeIndex}}" bindchange="onBoardingTypeChange">
-      <view class="filter-control">住宿：{{boardingTypes[boardingTypeIndex]}}</view>
-    </picker>
-    <picker range="{{dataStatuses}}" value="{{dataStatusIndex}}" bindchange="onDataStatusChange">
-      <view class="filter-control">数据：{{dataStatuses[dataStatusIndex]}}</view>
+    <picker range="{{scoreStatuses}}" value="{{scoreStatusIndex}}" bindchange="onScoreStatusChange">
+      <view class="filter-control">分数线：{{scoreStatuses[scoreStatusIndex]}}</view>
     </picker>
   </view>
 
   <view class="row between result-line">
     <view class="muted small">共 {{results.length}} 条结果</view>
-    <button class="button ghost small-button" bindtap="resetFilters">重置筛选</button>
+    <button class="button ghost small-button" bindtap="resetFilters">重置</button>
   </view>
 
   <view wx:if="{{results.length === 0}}" class="card empty">
     <view class="card-title">没有找到匹配学校</view>
-    <view class="muted small">请调整名称、区域、类型或住宿筛选条件。</view>
+    <view class="muted small">请调整名称、区域、类型或分数线筛选条件。</view>
     <button class="button empty-button" bindtap="resetFilters">重置筛选</button>
   </view>
 
   <view
-    class="card school-card {{item.isDemo ? 'demo-card' : ''}}"
+    class="card school-card"
     wx:for="{{results}}"
     wx:key="id"
     data-id="{{item.id}}"
     bindtap="openDetail"
   >
-    <view class="row between">
+    <view class="row between card-head">
       <view class="card-title grow">{{item.name}}</view>
       <button
         class="button secondary small-button favorite-button"
         data-id="{{item.id}}"
         catchtap="toggleFavorite"
-      >{{item.isFavorite ? '取消收藏' : '收藏'}}</button>
+      >{{item.isFavorite ? '取消' : '收藏'}}</button>
     </view>
     <view class="tag-line">
-      <text class="badge {{item.dataKind === 'demo' ? 'demo' : ''}}">{{item.dataStatus}}</text>
       <text class="badge">{{item.district}}</text>
-      <text class="badge">{{item.sourceTypeLabel}}</text>
+      <text class="badge">{{item.schoolType}}</text>
+      <text wx:if="{{item.ownership}}" class="badge">{{item.ownership}}</text>
+      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.hasAdmissionScores ? '已收录历史分数线' : '未收录历史分数线'}}</text>
     </view>
-    <view class="muted small">{{item.schoolType}} · {{item.ownership}} · {{item.boardingType}}</view>
-    <view wx:if="{{item.isDemo}}" class="demo-note">示例学校，不对应现实学校。</view>
+    <view wx:if="{{item.addressShort}}" class="muted small">{{item.addressShort}}</view>
+    <view class="muted small source-line">{{item.sourceTypeLabel}} · {{item.sourceCheckedAt}}</view>
   </view>
 </view>

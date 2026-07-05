@@ -76,6 +76,13 @@ function setFavorite(schoolId, nextValue) {
   return result.length ? writeStorage(KEYS.favorites, result) : removeStorage(KEYS.favorites)
 }
 
+function replaceFavoriteIds(ids) {
+  const cleanIds = Array.isArray(ids)
+    ? [...new Set(ids.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim()))].sort()
+    : []
+  return cleanIds.length ? writeStorage(KEYS.favorites, cleanIds) : removeStorage(KEYS.favorites)
+}
+
 function normalizeTargetRecord(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   if (typeof value.id !== 'string' || !value.id.trim()) return null
@@ -170,11 +177,15 @@ function clearTargetDraft() {
   return removeStorage(KEYS.targetDraft)
 }
 
-function clearLocalDemoData() {
+function clearLocalData() {
   const failedKeys = Object.values(KEYS).filter((key) => !removeStorage(key).ok)
   return failedKeys.length
     ? { ok: false, message: '部分本地数据清除失败，请重试。' }
     : { ok: true }
+}
+
+function clearLocalDemoData() {
+  return clearLocalData()
 }
 
 module.exports = {
@@ -183,6 +194,7 @@ module.exports = {
   getFavoriteIds,
   isFavorite,
   setFavorite,
+  replaceFavoriteIds,
   getTargetRecordsResult,
   getTargetRecords,
   saveTargetRecord,
@@ -192,5 +204,6 @@ module.exports = {
   getTargetDraft,
   saveTargetDraft,
   clearTargetDraft,
+  clearLocalData,
   clearLocalDemoData
 }

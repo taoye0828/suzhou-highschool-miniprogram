@@ -3,76 +3,27 @@ const { APP_CONFIG } = require('../config/app-config')
 const checkedAt = APP_CONFIG.schoolData.sourceCheckedAt
 
 const SOURCES = {
-  suzhou2026: {
+  suzhou2026Admissions: {
     title: '苏州市教育局：关于做好2026年苏州市区各类高级中等学校招生工作的通知',
     url: 'https://www.suzhou.gov.cn/szsrmzf/bmwj/202605/4a9271ac8d7049f8ac0e6f310e79bc57.shtml'
+  },
+  suzhou2026Autonomous: {
+    title: '苏州市教育局：关于做好2026年苏州市区普通高中学校自主招生工作的通知',
+    url: 'https://www.suzhou.gov.cn/szsrmzf/bmwj/202605/7b3dd33345cd40eea1894ef727c0bcda.shtml'
+  },
+  suzhou2026Indicator: {
+    title: '苏州市教育局：关于下达2026年苏州市姑苏区、工业园区、高新区普通高中指标生计划的通知',
+    url: 'https://www.suzhou.gov.cn/szsrmzf/bmwj/202606/47a0ac6e7af64325bb05b3be28a8b210.shtml'
   },
   changshuList2024: {
     title: '常熟市普通高中名录（数据截至2024年8月）',
     url: 'https://www.suzhou.gov.cn/szsrmzf/zxxjy/202409/eb5864363ba14c48855813d4fb8f0078.shtml'
-  },
-  suzhouHigh: {
-    title: '江苏省苏州中学校官网',
-    url: 'https://www.szzx1000.cn/'
-  },
-  suzhouNo10: {
-    title: '江苏省苏州第十中学校官网',
-    url: 'https://www.nths.cn/'
-  },
-  suzhouNo1: {
-    title: '江苏省苏州第一中学校官网',
-    url: 'https://www.sz1z.com/'
-  },
-  suzhouNo6: {
-    title: '苏州市第六中学校官网',
-    url: 'https://sz6z.suzhou.edu.cn/sy.htm'
-  },
-  suzhouExperiment: {
-    title: '江苏省苏州实验中学校官网',
-    url: 'https://szsyzx.jssnd.edu.cn/'
-  },
-  xinquNo1: {
-    title: '苏州高新区第一中学官网',
-    url: 'https://xqyz.jssnd.edu.cn/'
-  },
-  wuxian: {
-    title: '苏州市吴县中学官网',
-    url: 'https://wxzx.jssnd.edu.cn/'
-  },
-  mudu: {
-    title: '江苏省木渎高级中学官网',
-    url: 'https://www.muduhs.com/'
-  },
-  zhenzeGov: {
-    title: '苏州市人民政府：江苏省震泽中学建校100周年活动举行',
-    url: 'https://www.suzhou.gov.cn/szsrmzf/szyw/202310/400fe3908c824ba7b3a0c01a54ac4e7d.shtml'
-  },
-  taicangGov: {
-    title: '苏州市人民政府：江苏省太仓高级中学高质量发展大会举行',
-    url: 'https://www.suzhou.gov.cn/szsrmzf/zxxjy/202512/66a96e4c02ca4d398476c88b00ac6757.shtml'
-  },
-  liangfeng: {
-    title: '江苏省梁丰高级中学官网',
-    url: 'https://jslfgz.zjgedu.cn/'
-  },
-  chsi: {
-    title: '阳光高考中学信息库',
-    url: 'https://gaokao.chsi.com.cn/zx/sch/home.action?ssdm=32'
-  },
-  xiangchengEdu: {
-    title: '相城区教育信息网',
-    url: 'https://www.xcjyxx.com/'
-  },
-  kunshanGov: {
-    title: '昆山市普通高中招生政策公开信息',
-    url: 'https://www.ksrmtzx.com/news/detail/45296'
   }
 }
 
-function sourceFields(source, dataKind, dataStatus, note) {
+function sourceFields(source, note, sourceType = '政府公开页面') {
   return {
-    dataKind,
-    dataStatus,
+    sourceType,
     sourceTitle: source.title,
     sourceUrl: source.url,
     sourceCheckedAt: checkedAt,
@@ -82,433 +33,551 @@ function sourceFields(source, dataKind, dataStatus, note) {
 
 function school(value) {
   return {
-    educationStage: '高中阶段',
-    officialWebsite: '',
     tags: [],
-    mapSearchKeyword: `${value.name} 苏州`,
     dataVersion: APP_CONFIG.schoolData.version,
     ...value
   }
 }
 
+const cityIndicatorNote = '核对字段：学校或校区名称、普通高中指标生计划列项；本条只展示已在公开文件中明确的基础字段。'
+const cityAdmissionNote = '核对字段：学校名称、招生区域和普通高中招生批次；未统一核实的地址、联系方式不展示。'
+const autonomousNote = '核对字段：学校名称、校区或项目名称、普通高中自主招生相关公开信息；未统一核实的地址、联系方式不展示。'
+
 const schools = [
   school({
     id: 'suzhou_high_school',
     name: '江苏省苏州中学校',
+    aliases: ['苏州中学', '苏中'],
     district: '姑苏区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '市直属', '普通高中'],
-    officialWebsite: SOURCES.suzhouHigh.url,
-    ...sourceFields(SOURCES.suzhouHigh, 'official_site', '官网资料', '已核对学校官网首页；住宿、联系方式和地址坐标未进入当前版本。')
+    tags: ['市区招生', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
+  }),
+  school({
+    id: 'suzhou_high_school_sip',
+    name: '江苏省苏州中学园区校',
+    aliases: ['苏中园区校'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '园区校',
+    tags: ['市区招生', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'suzhou_no10_high_school',
     name: '江苏省苏州第十中学校',
+    aliases: ['苏州十中'],
     district: '姑苏区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '姑苏区', '普通高中'],
-    officialWebsite: SOURCES.suzhouNo10.url,
-    ...sourceFields(SOURCES.suzhouNo10, 'official_site', '官网资料', '已核对学校官网首页；校区、住宿等细项需后续人工复核。')
+    campus: '本部',
+    tags: ['姑苏区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'suzhou_no10_high_school_jinchang',
+    name: '江苏省苏州第十中学校金阊校区',
+    aliases: ['苏州十中金阊校区'],
+    district: '姑苏区',
+    schoolType: '普通高中',
+    campus: '金阊校区',
+    tags: ['姑苏区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'suzhou_no1_high_school',
     name: '江苏省苏州第一中学校',
+    aliases: ['苏州一中'],
     district: '姑苏区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '姑苏区', '普通高中'],
-    officialWebsite: SOURCES.suzhouNo1.url,
-    ...sourceFields(SOURCES.suzhouNo1, 'official_site', '官网资料', '已核对学校官网首页；不展示联系方式和坐标。')
+    tags: ['姑苏区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'suzhou_no3_high_school',
     name: '苏州市第三中学校',
+    aliases: ['苏州三中'],
     district: '姑苏区',
     schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校列入苏州市区高中阶段招生相关公开信息，本版本先保留基础名称和区域。',
-    tags: ['政府公开', '姑苏区', '待复核'],
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网入口和住宿状态需继续复核。')
+    tags: ['姑苏区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'suzhou_no6_high_school',
     name: '苏州市第六中学校',
+    aliases: ['苏州六中'],
     district: '姑苏区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '艺术特色', '普通高中'],
-    officialWebsite: SOURCES.suzhouNo6.url,
-    ...sourceFields(SOURCES.suzhouNo6, 'official_site', '官网资料', '已核对学校官网首页；艺术类招生信息不进入当前功能判断。')
+    tags: ['姑苏区', '专业特长类'],
+    programs: ['普通高中专业特长类相关招生以当年主管部门文件为准'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
+  }),
+  school({
+    id: 'suda_affiliated_high_school',
+    name: '苏州大学附属中学',
+    aliases: ['苏大附中'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '东振路校区',
+    tags: ['工业园区', '指标生计划'],
+    programs: ['费孝通班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'suda_affiliated_high_school_shengpu',
+    name: '苏州大学附属中学胜浦路校区',
+    aliases: ['苏大附中胜浦路校区'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '胜浦路校区',
+    tags: ['工业园区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'nuaa_suzhou_affiliated_high_school',
+    name: '南京航空航天大学苏州附属中学',
+    aliases: ['南航苏附'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '星湖街校区',
+    tags: ['工业园区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'nuaa_suzhou_affiliated_high_school_weiting',
+    name: '南京航空航天大学苏州附属中学唯亭校区',
+    aliases: ['南航苏附唯亭校区'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '唯亭校区',
+    tags: ['工业园区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'xjtu_suzhou_affiliated_high_school',
+    name: '西安交通大学苏州附属中学',
+    aliases: ['西交苏附'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '方洲路校区',
+    tags: ['工业园区', '指标生计划'],
+    programs: ['纳米科学人才实验班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'xjtu_suzhou_affiliated_high_school_puhui',
+    name: '西安交通大学苏州附属中学普惠路校区',
+    aliases: ['西交苏附普惠路校区'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '普惠路校区',
+    tags: ['工业园区', '指标生计划'],
+    programs: ['钱学森大成实验班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'xjtu_suzhou_affiliated_high_school_xietang',
+    name: '西安交通大学苏州附属中学斜塘校区',
+    aliases: ['西交苏附斜塘校区'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '斜塘校区',
+    tags: ['工业园区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'xinghai_experimental_high_school',
+    name: '苏州工业园区星海实验高级中学',
+    aliases: ['星海实验高级中学'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '苏茜路校区',
+    tags: ['工业园区', '指标生计划'],
+    programs: ['生命科学课程实验班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'xinghai_experimental_high_school_shenhu',
+    name: '苏州工业园区星海实验高级中学沈浒路校区',
+    aliases: ['星海实验沈浒路校区'],
+    district: '工业园区',
+    schoolType: '普通高中',
+    campus: '沈浒路校区',
+    tags: ['工业园区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'rdfz_suzhou_school',
     name: '人大附中苏州学校',
     district: '工业园区',
     schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高级中等学校招生公开文件，本版本只做基础信息整理。',
-    tags: ['政府公开', '工业园区', '待复核'],
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网、办学性质、住宿状态需继续复核。')
-  }),
-  school({
-    id: 'suda_affiliated_high_school',
-    name: '苏州大学附属中学',
-    district: '工业园区',
-    schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校基础信息来自公开中学信息库和苏州市区招生公开文件，本版本不展示未核实细项。',
-    tags: ['公开资料', '工业园区', '普通高中'],
-    ...sourceFields(SOURCES.chsi, 'official_public', '政府公开资料', '学校官网入口、住宿状态和联系方式需继续复核。')
-  }),
-  school({
-    id: 'xjtu_suzhou_affiliated_high_school',
-    name: '西安交通大学苏州附属中学',
-    district: '工业园区',
-    schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高级中等学校招生公开文件，本版本只做基础信息整理。',
-    tags: ['政府公开', '工业园区', '待复核'],
-    officialWebsite: 'http://xjdszfz.sipedu.org',
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网和具体校区信息需继续复核。')
-  }),
-  school({
-    id: 'nuaa_suzhou_affiliated_high_school',
-    name: '南京航空航天大学苏州附属中学',
-    district: '工业园区',
-    schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高级中等学校招生公开文件，本版本只做基础信息整理。',
-    tags: ['政府公开', '工业园区', '待复核'],
-    officialWebsite: 'http://nhszfz.sipedu.cn',
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网和具体校区信息需继续复核。')
-  }),
-  school({
-    id: 'xinghai_experimental_high_school',
-    name: '苏州工业园区星海实验高级中学',
-    district: '工业园区',
-    schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高级中等学校招生公开文件，本版本只做基础信息整理。',
-    tags: ['政府公开', '工业园区', '待复核'],
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网、校区和办学性质需继续复核。')
+    tags: ['工业园区', '提前录取'],
+    programs: ['未来科技英才战略实验班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
   }),
   school({
     id: 'suzhou_experimental_high_school',
     name: '江苏省苏州实验中学',
+    aliases: ['新区实验'],
     district: '高新区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '高新区', '普通高中'],
-    officialWebsite: SOURCES.suzhouExperiment.url,
-    ...sourceFields(SOURCES.suzhouExperiment, 'official_site', '官网资料', '已核对学校官网首页；校区和住宿状态需继续复核。')
+    campus: '本部',
+    tags: ['高新区', '指标生计划'],
+    programs: ['南京大学软件工程实验班', '中科创新实验班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'suzhou_experimental_high_school_science_city',
+    name: '江苏省苏州实验中学科技城校',
+    aliases: ['新区实验科技城校'],
+    district: '高新区',
+    schoolType: '普通高中',
+    campus: '科技城校区',
+    tags: ['高新区', '指标生计划'],
+    programs: ['智能工程实验班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'suzhou_experimental_high_school_taihu_science_city',
+    name: '江苏省苏州实验中学太湖科学城校区',
+    aliases: ['新区实验太湖科学城校区'],
+    district: '高新区',
+    schoolType: '普通高中',
+    campus: '太湖科学城校区',
+    tags: ['高新区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'suzhou_new_district_no1_high_school',
     name: '苏州高新区第一中学',
+    aliases: ['新区一中'],
     district: '高新区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '高新区', '普通高中'],
-    officialWebsite: SOURCES.xinquNo1.url,
-    ...sourceFields(SOURCES.xinquNo1, 'official_site', '官网资料', '已核对学校官网首页；校区和住宿状态需继续复核。')
+    campus: '本部',
+    tags: ['高新区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'suzhou_new_district_no1_high_school_science_city',
+    name: '苏州高新区第一中学科技城校区',
+    aliases: ['新区一中科技城校区'],
+    district: '高新区',
+    schoolType: '普通高中',
+    campus: '科技城校区',
+    tags: ['高新区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'wuxian_high_school',
     name: '苏州市吴县中学',
+    aliases: ['吴县中学'],
     district: '高新区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '高新区', '普通高中'],
-    officialWebsite: SOURCES.wuxian.url,
-    ...sourceFields(SOURCES.wuxian, 'official_site', '官网资料', '已核对学校官网首页；校区和住宿状态需继续复核。')
+    campus: '本部',
+    tags: ['高新区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'wuxian_high_school_jingshan',
+    name: '苏州市吴县中学景山校区',
+    aliases: ['吴县中学景山校区'],
+    district: '高新区',
+    schoolType: '普通高中',
+    campus: '景山校区',
+    tags: ['高新区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
+  }),
+  school({
+    id: 'wuxian_high_school_huguan',
+    name: '苏州市吴县中学浒关校区',
+    aliases: ['吴县中学浒关校区'],
+    district: '高新区',
+    schoolType: '普通高中',
+    campus: '浒关校区',
+    tags: ['高新区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Indicator, cityIndicatorNote)
   }),
   school({
     id: 'mudu_senior_high_school',
     name: '江苏省木渎高级中学',
+    aliases: ['木渎中学', '木渎高级中学'],
     district: '吴中区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '吴中区', '普通高中'],
-    officialWebsite: SOURCES.mudu.url,
-    ...sourceFields(SOURCES.mudu, 'official_site', '官网资料', '已核对学校官网入口；住宿、联系方式和地址坐标未进入当前版本。')
+    tags: ['吴中区', '提前录取'],
+    programs: ['培东实验项目'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
   }),
   school({
     id: 'suyuan_senior_high_school',
     name: '苏州市吴中区苏苑高级中学',
+    aliases: ['苏苑高级中学'],
     district: '吴中区',
     schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高级中等学校招生公开文件，本版本先保留基础名称和区域。',
-    tags: ['政府公开', '吴中区', '待复核'],
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网、办学性质和住宿状态需继续复核。')
+    tags: ['吴中区', '专业特长类'],
+    programs: ['清华美术班'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
     id: 'jiangsu_foreign_language_school',
     name: '江苏省外国语学校',
     district: '吴中区',
-    schoolType: '完全中学',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高级中等学校招生公开文件，本版本先保留基础名称和区域。',
-    tags: ['政府公开', '吴中区', '待复核'],
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网、办学性质和高中阶段细项需继续复核。')
+    schoolType: '普通高中',
+    tags: ['吴中区', '指标生计划'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
-    id: 'huangdai_high_school',
-    name: '江苏省黄埭中学',
-    district: '相城区',
+    id: 'luzhi_senior_high_school',
+    name: '苏州市吴中区甪直高级中学',
+    aliases: ['甪直高级中学'],
+    district: '吴中区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校列入苏州市区高中阶段招生公开文件，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '相城区', '普通高中'],
-    officialWebsite: 'http://hdzx.xcjyxx.com',
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '官网入口来自相城区教育信息网相关公开入口，住宿状态需继续复核。')
+    tags: ['吴中区', '专业特长类'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
-    id: 'lumu_high_school',
-    name: '苏州市相城区陆慕高级中学',
-    district: '相城区',
+    id: 'huazhong_normal_suzhou_experimental_high_school',
+    name: '华中师范大学苏州实验高级中学',
+    aliases: ['华师大苏州实验高级中学'],
+    district: '吴中区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校列入苏州市区高中阶段招生公开文件，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '相城区', '普通高中'],
-    officialWebsite: 'http://lmgjzx.xcjyxx.com',
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '官网入口来自相城区教育信息网相关公开入口，住宿状态需继续复核。')
+    tags: ['吴中区', '自主招生'],
+    programs: ['华一实验项目'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
   }),
   school({
-    id: 'xiangcheng_high_school',
-    name: '相城中学',
-    district: '相城区',
+    id: 'dongshan_senior_high_school',
+    name: '苏州市吴中区东山中学',
+    aliases: ['东山中学'],
+    district: '吴中区',
     schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自相城区教育信息网和苏州市区招生公开信息，本版本先保留基础名称和区域。',
-    tags: ['政府公开', '相城区', '待复核'],
-    ...sourceFields(SOURCES.xiangchengEdu, 'government_public', '政府公开资料', '高中部、办学性质和住宿状态需继续复核。')
+    tags: ['吴中区', '专业特长类'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
     id: 'zhenze_high_school',
     name: '江苏省震泽中学',
     district: '吴江区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自苏州市人民政府公开报道，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '吴江区', '普通高中'],
-    officialWebsite: 'https://zzzx.wjjyxxw.com',
-    ...sourceFields(SOURCES.zhenzeGov, 'government_public', '政府公开资料', '政府公开报道已核对学校名称；官网、住宿和校区细项需继续复核。')
+    tags: ['吴江区', '提前录取'],
+    programs: ['杨嘉墀创新实验班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'zhenze_high_school_shifanqu',
+    name: '江苏省震泽中学示范区校区',
+    district: '吴江区',
+    schoolType: '普通高中',
+    campus: '示范区校区',
+    tags: ['吴江区', '提前录取'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
     id: 'wujiang_high_school',
     name: '吴江中学',
     district: '吴江区',
     schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高中阶段招生公开文件，本版本先保留基础名称和区域。',
-    tags: ['政府公开', '吴江区', '待复核'],
-    officialWebsite: 'https://wjzx.wjjyxxw.com',
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网入口、办学性质和住宿状态需继续复核。')
+    tags: ['吴江区', '自主招生'],
+    programs: ['明伦书院班'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
   }),
   school({
     id: 'wujiang_senior_high_school',
     name: '吴江高级中学',
     district: '吴江区',
     schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自苏州市区高中阶段招生公开文件，本版本先保留基础名称和区域。',
-    tags: ['政府公开', '吴江区', '待复核'],
-    officialWebsite: 'https://wjgjzx.wjjyxxw.com',
-    ...sourceFields(SOURCES.suzhou2026, 'government_public', '政府公开资料', '学校官网入口、办学性质和住宿状态需继续复核。')
+    tags: ['吴江区', '市区招生'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
-    id: 'kunshan_high_school',
-    name: '江苏省昆山中学',
-    district: '昆山',
+    id: 'wujiang_xinsheng_experimental_school',
+    name: '苏州市吴江区新胜实验学校',
+    district: '吴江区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自昆山市普通高中招生政策公开信息，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '昆山', '普通高中'],
-    officialWebsite: 'https://kz.ksecloud.cn',
-    ...sourceFields(SOURCES.kunshanGov, 'government_public', '政府公开资料', '学校官网入口、住宿状态和联系方式需继续复核。')
+    tags: ['吴江区', '自主招生'],
+    programs: ['新胜项目'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
   }),
   school({
-    id: 'kunshan_zhenchuan_high_school',
-    name: '昆山震川高级中学',
-    district: '昆山',
+    id: 'wujiang_qingyun_experimental_school',
+    name: '苏州市吴江区青云实验中学',
+    aliases: ['青云实验中学'],
+    district: '吴江区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自昆山市普通高中招生政策公开信息，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '昆山', '普通高中'],
-    officialWebsite: 'https://e-zc.ksecloud.cn',
-    ...sourceFields(SOURCES.kunshanGov, 'government_public', '政府公开资料', '学校官网入口、住宿状态和联系方式需继续复核。')
+    tags: ['吴江区', '专业特长类'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
-    id: 'kunshan_no1_high_school',
-    name: '昆山市第一中学',
-    district: '昆山',
+    id: 'fenhu_senior_high_school',
+    name: '汾湖高级中学',
+    district: '吴江区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自昆山市普通高中招生政策公开信息，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '昆山', '普通高中'],
-    officialWebsite: 'https://ksyz.ksedu.cn/index.htm',
-    ...sourceFields(SOURCES.kunshanGov, 'government_public', '政府公开资料', '学校官网入口、住宿状态和联系方式需继续复核。')
+    tags: ['吴江区', '专业特长类'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
-    id: 'kunshan_development_zone_high_school',
-    name: '昆山经济技术开发区高级中学',
-    district: '昆山',
+    id: 'huangdai_high_school',
+    name: '江苏省黄埭中学',
+    district: '相城区',
     schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自昆山市普通高中招生政策公开信息，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '昆山', '普通高中'],
-    officialWebsite: 'https://kskg.ksecloud.cn',
-    ...sourceFields(SOURCES.kunshanGov, 'government_public', '政府公开资料', '学校官网入口、住宿状态和联系方式需继续复核。')
+    tags: ['相城区', '提前录取'],
+    programs: ['启新班', '院士班'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
+  }),
+  school({
+    id: 'lumu_high_school',
+    name: '苏州市相城区陆慕高级中学',
+    aliases: ['陆慕高级中学'],
+    district: '相城区',
+    schoolType: '普通高中',
+    tags: ['相城区', '提前录取'],
+    programs: ['志远班'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
+  }),
+  school({
+    id: 'xiangcheng_high_school',
+    name: '相城中学',
+    district: '相城区',
+    schoolType: '普通高中',
+    tags: ['相城区', '自主招生'],
+    programs: ['江苏省苏州中学相城实验项目'],
+    ...sourceFields(SOURCES.suzhou2026Autonomous, autonomousNote)
+  }),
+  school({
+    id: 'suzhou_university_experimental_school',
+    name: '苏州大学实验学校',
+    district: '相城区',
+    schoolType: '普通高中',
+    tags: ['相城区', '提前录取'],
+    programs: ['东吴班'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
+  }),
+  school({
+    id: 'wangting_high_school',
+    name: '苏州市相城区望亭中学',
+    aliases: ['望亭中学'],
+    district: '相城区',
+    schoolType: '普通高中',
+    tags: ['相城区', '专业特长类'],
+    ...sourceFields(SOURCES.suzhou2026Admissions, cityAdmissionNote)
   }),
   school({
     id: 'changshu_high_school',
     name: '江苏省常熟中学',
     district: '常熟',
-    schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自常熟市普通高中名录，本版本仅展示基础信息和来源。',
-    tags: ['政府名录', '常熟', '普通高中'],
-    officialWebsite: 'http://www.jsscszx.com',
-    ...sourceFields(SOURCES.changshuList2024, 'government_public', '政府公开资料', '常熟市普通高中名录已核对学校名称和举办者类型；住宿状态需继续复核。')
+    schoolType: '高级中学',
+    ownership: '县级教育部门',
+    address: '常熟市汇文路2号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
     id: 'changshu_city_high_school',
     name: '常熟市中学',
     district: '常熟',
-    schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自常熟市普通高中名录，本版本仅展示基础信息和来源。',
-    tags: ['政府名录', '常熟', '普通高中'],
-    ...sourceFields(SOURCES.changshuList2024, 'government_public', '政府公开资料', '常熟市普通高中名录已核对学校名称和举办者类型；官网和住宿状态需继续复核。')
+    schoolType: '高级中学',
+    ownership: '县级教育部门',
+    address: '常熟市新世纪大道1060号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
     id: 'changshu_foreign_language_school',
     name: '常熟外国语学校',
     district: '常熟',
     schoolType: '高级中学',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自常熟市普通高中名录，本版本仅展示基础信息和来源。',
-    tags: ['政府名录', '常熟', '高级中学'],
-    ...sourceFields(SOURCES.changshuList2024, 'government_public', '政府公开资料', '常熟市普通高中名录已核对学校名称和举办者类型；官网和住宿状态需继续复核。')
+    ownership: '县级教育部门',
+    address: '常熟市虞山北路193号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
     id: 'changshu_shanghu_high_school',
     name: '常熟市尚湖高级中学',
     district: '常熟',
     schoolType: '高级中学',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自常熟市普通高中名录，本版本仅展示基础信息和来源。',
-    tags: ['政府名录', '常熟', '高级中学'],
-    ...sourceFields(SOURCES.changshuList2024, 'government_public', '政府公开资料', '常熟市普通高中名录已核对学校名称和举办者类型；官网和住宿状态需继续复核。')
+    ownership: '县级教育部门',
+    address: '常熟市虞山街道环湖南路139号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
-    id: 'liangfeng_senior_high_school',
-    name: '江苏省梁丰高级中学',
-    district: '张家港',
-    schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自学校官网公开页面，本版本仅展示基础信息和来源。',
-    tags: ['学校官网', '张家港', '普通高中'],
-    officialWebsite: SOURCES.liangfeng.url,
-    ...sourceFields(SOURCES.liangfeng, 'official_site', '官网资料', '已核对学校官网首页；住宿、联系方式和地址坐标未进入当前版本。')
+    id: 'changshu_haiyu_high_school',
+    name: '常熟市海虞高级中学',
+    district: '常熟',
+    schoolType: '高级中学',
+    ownership: '县级教育部门',
+    address: '常熟市海虞镇海阳路75号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
-    id: 'taicang_high_school',
-    name: '江苏省太仓高级中学',
-    district: '太仓',
-    schoolType: '普通高中',
-    ownership: '公办',
-    boardingType: '待核实',
-    intro: '学校基础信息来自苏州市人民政府公开报道，本版本仅展示基础信息和来源。',
-    tags: ['政府公开', '太仓', '普通高中'],
-    officialWebsite: 'http://stg.tcedu.com.cn',
-    ...sourceFields(SOURCES.taicangGov, 'government_public', '政府公开资料', '政府公开报道已核对学校名称；官网、住宿和校区细项需继续复核。')
+    id: 'changshu_hupu_high_school',
+    name: '常熟市浒浦高级中学',
+    district: '常熟',
+    schoolType: '高级中学',
+    ownership: '县级教育部门',
+    address: '常熟经济技术开发区龙腾南路11号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
-    id: 'taicang_mingde_high_school',
-    name: '太仓市明德高级中学',
-    district: '太仓',
-    schoolType: '普通高中',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '学校名称来自太仓市高级中等学校招生相关公开信息，本版本先保留基础名称和区域。',
-    tags: ['政府公开', '太仓', '待复核'],
-    officialWebsite: 'https://mdgz.tcjyxx.cn',
-    ...sourceFields(SOURCES.taicangGov, 'government_public', '政府公开资料', '学校官网、办学性质和住宿状态需继续复核。')
+    id: 'changshu_wangganchang_high_school',
+    name: '常熟市王淦昌高级中学',
+    district: '常熟',
+    schoolType: '高级中学',
+    ownership: '县级教育部门',
+    address: '常熟市支塘镇支董路1号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
-    id: 'demo_green_high_school',
-    name: '示例高中 A',
-    district: '示例区域',
-    schoolType: '示例学校',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '用于体验搜索、筛选、收藏和详情页功能，不对应现实学校。',
-    tags: ['示例学校', '功能体验'],
-    dataKind: 'demo',
-    dataStatus: '示例学校',
-    sourceTitle: '本地示例数据',
-    sourceUrl: '',
-    sourceCheckedAt: checkedAt,
-    sourceNote: '示例内容，不对应现实学校。'
+    id: 'changshu_meili_high_school',
+    name: '常熟市梅李高级中学',
+    district: '常熟',
+    schoolType: '高级中学',
+    ownership: '县级教育部门',
+    address: '常熟市梅李镇学府路1号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   }),
   school({
-    id: 'demo_lake_high_school',
-    name: '示例高中 B',
-    district: '示例区域',
-    schoolType: '示例学校',
-    ownership: '待核实',
-    boardingType: '待核实',
-    intro: '用于体验不同筛选状态，不对应现实学校。',
-    tags: ['示例学校', '功能体验'],
-    dataKind: 'demo',
-    dataStatus: '示例学校',
-    sourceTitle: '本地示例数据',
-    sourceUrl: '',
-    sourceCheckedAt: checkedAt,
-    sourceNote: '示例内容，不对应现实学校。'
+    id: 'changshu_lunhua_high_school',
+    name: '常熟市伦华高级中学',
+    district: '常熟',
+    schoolType: '高级中学',
+    ownership: '民办',
+    address: '常熟市琴川街道青龙路28号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
+  }),
+  school({
+    id: 'changshu_shihua_high_school',
+    name: '常熟世华高级中学',
+    district: '常熟',
+    schoolType: '高级中学',
+    ownership: '民办',
+    address: '常熟市东南街道羿家路8号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
+  }),
+  school({
+    id: 'changshu_kangqiao_school',
+    name: '常熟康桥学校',
+    district: '常熟',
+    schoolType: '十二年一贯制学校',
+    ownership: '民办',
+    address: '常熟市碧溪街道松姿路6号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
+  }),
+  school({
+    id: 'changshu_suchang_foreign_language_school',
+    name: '常熟市苏常外国语学校',
+    district: '常熟',
+    schoolType: '十二年一贯制学校',
+    ownership: '民办',
+    address: '常熟市海虞镇王市路369号',
+    tags: ['常熟', '政府名录'],
+    ...sourceFields(SOURCES.changshuList2024, '核对字段：学校类型、举办者类型、学校名称、地址。')
   })
 ]
 

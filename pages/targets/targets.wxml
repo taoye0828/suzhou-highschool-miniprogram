@@ -1,7 +1,13 @@
 <view class="page">
+  <view class="hero compact-hero">
+    <view class="hero-title">学习目标记录</view>
+    <view class="hero-subtitle">记录当前测评分数、阶段目标和复盘备注</view>
+  </view>
+
   <view class="card">
-    <view class="section-heading">设置学习目标</view>
+    <view class="section-heading">设置阶段目标</view>
     <view class="notice target-notice">{{targetDisclaimer}}</view>
+    <view class="notice target-notice">{{targetStorageHint}}</view>
     <text class="field-label">阶段测评分数</text>
     <input class="input" type="number" maxlength="{{scoreMaxLength}}" value="{{currentScore}}" placeholder="请输入 {{scoreMin}} 至 {{scoreMax}} 的整数" bindinput="onCurrentInput" />
     <text class="field-label">阶段目标分数</text>
@@ -21,12 +27,12 @@
   </view>
 
   <view class="row between section-row">
-    <view class="section-title records-title">目标记录（{{records.length}}）</view>
+    <view class="section-title records-title">学习目标记录（{{records.length}}）</view>
     <button wx:if="{{records.length > 0}}" class="button danger small-button" bindtap="clearAllRecords">清空全部</button>
   </view>
 
   <view wx:if="{{records.length === 0}}" class="card empty">
-    <view class="card-title">暂无目标记录</view>
+    <view class="card-title">暂无学习目标记录</view>
     <view class="muted small">填写阶段测评分数与阶段目标分数后即可保存在本机。</view>
   </view>
 
