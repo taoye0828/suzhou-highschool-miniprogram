@@ -10,7 +10,7 @@
       <view class="hero-subtitle">{{school.district}} · {{school.schoolType}}</view>
       <view class="detail-badges">
         <text class="badge">{{school.sourceTypeLabel}}</text>
-        <text class="badge">{{school.hasAdmissionScores ? '已收录历史分数线' : '未收录历史分数线'}}</text>
+        <text class="badge">{{school.admissionScoreBadge}}</text>
       </view>
     </view>
 
@@ -52,6 +52,8 @@
           <view class="muted small">{{score.admissionType}} · {{score.scoreType}}：{{score.minScore}}</view>
           <view wx:if="{{score.sameScoreRule}}" class="muted small">{{score.sameScoreRule}}</view>
           <view class="muted small">{{score.sourceTitle}}</view>
+          <view class="muted small">核对日期：{{score.sourceCheckedAt}}</view>
+          <button class="button secondary small-button copy-source" data-url="{{score.sourceUrl}}" catchtap="copyScoreSource">复制分数线来源链接</button>
         </view>
       </view>
     </view>

@@ -1,6 +1,9 @@
 const { schools } = require('../data/schools')
 const { hasScoresForSchool, countScoresBySchoolId } = require('./admission-scores')
 
+const SCORE_STATUS_WITH_SCORES = '已收录已核实历史分数线'
+const SCORE_STATUS_WITHOUT_SCORES = '暂未收录已核实历史分数线'
+
 function uniqueValues(field) {
   return ['全部', ...new Set(schools.map((school) => school[field]).filter(Boolean))]
 }
@@ -45,8 +48,8 @@ function filterSchools({
       (schoolType === '全部' || school.schoolType === schoolType) &&
       (ownership === '全部' || school.ownership === ownership) &&
       (scoreStatus === '全部' ||
-        (scoreStatus === '已收录分数线' && hasScores) ||
-        (scoreStatus === '未收录分数线' && !hasScores))
+        (scoreStatus === SCORE_STATUS_WITH_SCORES && hasScores) ||
+        (scoreStatus === SCORE_STATUS_WITHOUT_SCORES && !hasScores))
   })
 }
 
@@ -62,6 +65,7 @@ function presentSchool(school, favoriteIds = []) {
     addressShort: compactAddress(school.address),
     hasAdmissionScores: scoreCount > 0,
     admissionScoreCount: scoreCount,
+    admissionScoreBadge: scoreCount > 0 ? SCORE_STATUS_WITH_SCORES : SCORE_STATUS_WITHOUT_SCORES,
     isFavorite: favoriteIds.includes(school.id)
   }
 }
@@ -87,5 +91,7 @@ module.exports = {
   getSchoolById,
   presentSchool,
   withFavoriteState,
-  splitFavoriteIdsByValidity
+  splitFavoriteIdsByValidity,
+  SCORE_STATUS_WITH_SCORES,
+  SCORE_STATUS_WITHOUT_SCORES
 }

@@ -29,7 +29,7 @@
     </view>
     <view class="tag-line">
       <text class="badge">{{item.sourceTypeLabel}}</text>
-      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.hasAdmissionScores ? '已收录历史分数线' : '未收录历史分数线'}}</text>
+      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.admissionScoreBadge}}</text>
     </view>
   </view>
 </view>

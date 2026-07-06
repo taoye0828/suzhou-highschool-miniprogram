@@ -4,6 +4,7 @@
     <view class="hero-subtitle">{{homeTagline}}</view>
     <view class="hero-pill">{{homeBoundary}}</view>
     <view class="hero-pill secondary">{{localBoundary}}</view>
+    <view class="hero-pill secondary">已收录官方历史分数线 {{admissionScoreCount}} 条</view>
   </view>
 
   <view class="card">

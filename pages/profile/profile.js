@@ -25,7 +25,7 @@ Page({
   openSubmissionNotes() {
     wx.showModal({
       title: '提交前说明',
-      content: '上传前请替换真实 AppID，完成备案、服务类目、隐私保护指引，并在微信开发者工具中完成编译和真机预览。',
+      content: '上传前请替换真实 AppID，完成备案、服务类目、隐私保护指引，并在微信开发者工具中完成编译和真机预览。当前版本仅展示官方来源可核验的学校信息和历史录取分数线，不做录取预测，不提供志愿填报结论。',
       showCancel: false,
       confirmText: '知道了'
     })

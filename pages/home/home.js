@@ -1,4 +1,5 @@
 const { APP_CONFIG } = require('../../config/app-config')
+const { admissionScores } = require('../../data/admission-scores')
 
 const entries = [
   { title: '查学校', subtitle: '搜索和筛选学校基础信息', route: '/pages/schools/schools', tab: true },
@@ -14,6 +15,7 @@ Page({
     homeTagline: APP_CONFIG.policy.homeTagline,
     homeBoundary: APP_CONFIG.policy.homeBoundary,
     localBoundary: APP_CONFIG.policy.localBoundary,
+    admissionScoreCount: admissionScores.length,
     capabilities: APP_CONFIG.policy.currentCapabilities,
     limits: APP_CONFIG.policy.currentLimits,
     usageSteps: APP_CONFIG.policy.usageSteps

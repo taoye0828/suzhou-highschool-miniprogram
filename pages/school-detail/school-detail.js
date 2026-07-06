@@ -68,6 +68,10 @@ Page({
     copyText(this.data.school && this.data.school.officialWebsite, '官网链接已复制')
   },
 
+  copyScoreSource(event) {
+    copyText(event.currentTarget.dataset.url, '分数线来源链接已复制')
+  },
+
   openSchools() {
     wx.switchTab({ url: '/pages/schools/schools' })
   }

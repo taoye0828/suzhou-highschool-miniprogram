@@ -51,7 +51,7 @@
       <text class="badge">{{item.district}}</text>
       <text class="badge">{{item.schoolType}}</text>
       <text wx:if="{{item.ownership}}" class="badge">{{item.ownership}}</text>
-      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.hasAdmissionScores ? '已收录历史分数线' : '未收录历史分数线'}}</text>
+      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.admissionScoreBadge}}</text>
     </view>
     <view wx:if="{{item.addressShort}}" class="muted small">{{item.addressShort}}</view>
     <view class="muted small source-line">{{item.sourceTypeLabel}} · {{item.sourceCheckedAt}}</view>

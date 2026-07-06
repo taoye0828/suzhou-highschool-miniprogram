@@ -35,7 +35,18 @@ function target(id, createdAt = '2026-07-02T00:00:00.000Z') {
 }
 
 assert.ok(schools.length >= 50)
-assert.strictEqual(admissionScores.length, 0)
+assert.ok(Array.isArray(admissionScores))
+for (const score of admissionScores) {
+  assert.strictEqual(score.year, 2025)
+  assert.ok(schools.some((item) => item.id === score.schoolId))
+  assert.strictEqual(score.region, '苏州市六区')
+  assert.strictEqual(score.scoreType, '录取最低分')
+  assert.ok(Number.isInteger(score.minScore))
+  assert.ok(score.minScore >= 300 && score.minScore <= 750)
+  assert.notStrictEqual(score.minScore, 600)
+  assert.notStrictEqual(score.minScore, 603)
+  assert.strictEqual(score.sourceCheckedAt, '2026-07-06')
+}
 
 assert.strictEqual(storage.getFavoriteIds().length, 0)
 assert.strictEqual(storage.setFavorite('suzhou_high_school', true).ok, true)
@@ -55,6 +66,12 @@ assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
 assert.strictEqual(storage.saveTargetRecord(target('target_1')).ok, true)
 assert.strictEqual(storage.saveTargetRecord(target('target_2', '2026-07-02T01:00:00.000Z')).ok, true)
 assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['target_2', 'target_1'])
+for (const item of storage.getTargetRecords()) {
+  assert.strictEqual(Object.hasOwn(item, 'schoolId'), false)
+  assert.strictEqual(Object.hasOwn(item, 'targetSchool'), false)
+  assert.strictEqual(Object.hasOwn(item, 'admissionResult'), false)
+  assert.strictEqual(Object.hasOwn(item, 'admissionScore'), false)
+}
 assert.strictEqual(storage.deleteTargetRecord('target_1').ok, true)
 assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['target_2'])
 
@@ -103,8 +120,9 @@ assert.ok(school.filterSchools({ keyword: '星湖街' }).some((item) => item.id 
 assert.ok(school.filterSchools({ district: '吴江区' }).every((item) => item.district === '吴江区'))
 assert.ok(school.filterSchools({ schoolType: '普通高中' }).every((item) => item.schoolType === '普通高中'))
 assert.ok(school.filterSchools({ ownership: '民办' }).every((item) => item.ownership === '民办'))
-assert.strictEqual(school.filterSchools({ scoreStatus: '已收录分数线' }).length, 0)
-assert.strictEqual(school.filterSchools({ scoreStatus: '未收录分数线' }).length, schools.length)
+const scoredSchools = new Set(admissionScores.map((item) => item.schoolId))
+assert.strictEqual(school.filterSchools({ scoreStatus: school.SCORE_STATUS_WITH_SCORES }).length, scoredSchools.size)
+assert.strictEqual(school.filterSchools({ scoreStatus: school.SCORE_STATUS_WITHOUT_SCORES }).length, schools.length - scoredSchools.size)
 
 const sampleScores = [
   {
@@ -112,7 +130,7 @@ const sampleScores = [
     schoolId: 'suzhou_high_school',
     year: 2025,
     region: '苏州市区',
-    batch: '第一批',
+    batch: '第一批次',
     admissionType: '统招生',
     scoreType: '录取最低分',
     minScore: 650
@@ -122,7 +140,7 @@ const sampleScores = [
     schoolId: 'suzhou_high_school',
     year: 2024,
     region: '苏州市区',
-    batch: '提前批',
+    batch: '提前录取批次',
     admissionType: '统招生',
     scoreType: '录取最低分',
     minScore: 645

@@ -1,5 +1,5 @@
 {
-  "description": "苏州高中目标查询助手 MP2 上架准备版",
+  "description": "苏州高中目标查询助手 MP5 官方分数线核验版",
   "packOptions": {
     "ignore": [
       { "type": "folder", "value": "docs" },

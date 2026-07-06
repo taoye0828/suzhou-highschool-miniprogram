@@ -1,4 +1,10 @@
-const { uniqueValues, filterSchools, withFavoriteState } = require('../../utils/school')
+const {
+  uniqueValues,
+  filterSchools,
+  withFavoriteState,
+  SCORE_STATUS_WITH_SCORES,
+  SCORE_STATUS_WITHOUT_SCORES
+} = require('../../utils/school')
 const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 
@@ -8,7 +14,7 @@ Page({
     districts: uniqueValues('district'),
     schoolTypes: uniqueValues('schoolType'),
     ownerships: uniqueValues('ownership'),
-    scoreStatuses: ['全部', '已收录分数线', '未收录分数线'],
+    scoreStatuses: ['全部', SCORE_STATUS_WITH_SCORES, SCORE_STATUS_WITHOUT_SCORES],
     districtIndex: 0,
     schoolTypeIndex: 0,
     ownershipIndex: 0,

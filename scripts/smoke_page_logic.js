@@ -96,7 +96,14 @@ function testSchoolDetailPage() {
   const page = createPageInstance(definition)
   page.onLoad({ id: 'suzhou_high_school' })
   assert.strictEqual(page.data.school.id, 'suzhou_high_school')
-  assert.deepStrictEqual(page.data.scoreGroups, [])
+  assert.ok(Array.isArray(page.data.scoreGroups))
+  if (page.data.scoreGroups.length > 0) {
+    assert.ok(page.data.scoreGroups[0].items.length > 0)
+    assert.ok(page.data.scoreGroups[0].items.every((score) => score.sourceCheckedAt === '2026-07-06'))
+    assert.ok(page.data.scoreGroups[0].items.some((score) => score.sameScoreRule))
+    page.copyScoreSource({ currentTarget: { dataset: { url: page.data.scoreGroups[0].items[0].sourceUrl } } })
+    assert.ok(toastTitles.includes('分数线来源链接已复制'))
+  }
   assert.strictEqual(page.data.emptyScoreText, EMPTY_SCORE_TEXT)
 
   page.toggleFavorite()
@@ -120,8 +127,13 @@ function testSchoolsPage() {
   assert.ok(page.data.results.length >= 50)
   page.onKeywordInput({ detail: { value: '南航苏附' } })
   assert.ok(page.data.results.some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
-  page.onScoreStatusChange({ detail: { value: String(page.data.scoreStatuses.indexOf('已收录分数线')) } })
-  assert.strictEqual(page.data.results.length, 0)
+  page.resetFilters()
+  page.onScoreStatusChange({ detail: { value: String(page.data.scoreStatuses.indexOf('已收录已核实历史分数线')) } })
+  const scoredIds = page.data.results.map((item) => item.id)
+  assert.strictEqual(new Set(scoredIds).size, scoredIds.length)
+  if (page.data.results.length > 0) {
+    assert.ok(page.data.results.every((item) => item.hasAdmissionScores))
+  }
   page.resetFilters()
   assert.ok(page.data.results.length >= 50)
 }
