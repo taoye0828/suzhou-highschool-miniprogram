@@ -4,6 +4,7 @@ const path = require('path')
 const root = path.resolve(__dirname, '..')
 const failures = []
 const notes = []
+const expectedAppId = 'wx17e903f81714736f'
 const requiredPages = [
   'pages/home/home',
   'pages/schools/schools',
@@ -276,8 +277,8 @@ const appConfig = verifyJson('app.json')
 const projectConfig = verifyJson('project.config.json')
 verifyJson('sitemap.json')
 
-if (projectConfig && projectConfig.appid !== 'touristappid') {
-  fail('project.config.json appid 应保持 touristappid')
+if (projectConfig && projectConfig.appid !== expectedAppId) {
+  fail(`project.config.json appid 应为 ${expectedAppId}`)
 }
 
 if (appConfig) {

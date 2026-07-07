@@ -4,6 +4,7 @@ const path = require('path')
 const root = path.resolve(__dirname, '..')
 const failures = []
 const notes = []
+const expectedAppId = 'wx17e903f81714736f'
 const requiredFiles = [
   'app.js',
   'app.json',
@@ -95,7 +96,7 @@ if (appJson) {
 }
 
 if (projectConfig) {
-  if (projectConfig.appid !== 'touristappid') fail('project.config.json appid 应保持 touristappid')
+  if (projectConfig.appid !== expectedAppId) fail(`project.config.json appid 应为 ${expectedAppId}`)
   if (!String(projectConfig.description || '').includes('MP6')) fail('project.config.json description 必须包含 MP6')
   const serialized = JSON.stringify(projectConfig)
   for (const phrase of ['AppSecret', 'token', 'password', 'service_role']) {
