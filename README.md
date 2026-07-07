@@ -89,6 +89,16 @@ git status --short
 - 若编译失败，请复制微信开发者工具 Console 红色报错全文。
 - 不能保证微信审核一定通过，审核结果以微信公众平台为准。
 
+## MP9 微信开发者工具接管状态
+
+- 微信开发者工具已安装：`/Applications/wechatwebdevtools.app`
+- CLI 路径：`/Applications/wechatwebdevtools.app/Contents/MacOS/cli`
+- 当前服务端口关闭，需要用户在微信开发者工具的安全设置中手动开启。
+- 当前 AppID 仍需用户填写，仓库保持 `touristappid` 占位。
+- 上传开发版本和提交审核仍需用户确认，不会由仓库自动完成。
+- MP9 文档：`docs/mp9_user_action_required.md`、`docs/mp9_devtools_cli_status.md`、`docs/mp9_final_user_checklist.md`
+- 遇到微信开发者工具报错时，请提供 Console 红色报错全文。
+
 ## 回滚方式
 
 ```bash
