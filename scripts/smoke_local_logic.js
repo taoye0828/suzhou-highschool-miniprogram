@@ -120,6 +120,13 @@ assert.ok(school.filterSchools({ keyword: '星湖街' }).some((item) => item.id 
 assert.ok(school.filterSchools({ district: '吴江区' }).every((item) => item.district === '吴江区'))
 assert.ok(school.filterSchools({ schoolType: '普通高中' }).every((item) => item.schoolType === '普通高中'))
 assert.ok(school.filterSchools({ ownership: '民办' }).every((item) => item.ownership === '民办'))
+assert.strictEqual(school.filterSchools({ boardingStatus: school.BOARDING_STATUS_NOT_DISPLAYED }).length, schools.length)
+assert.ok(school.filterSchools({
+  keyword: '苏州',
+  district: '工业园区',
+  schoolType: '普通高中',
+  boardingStatus: school.BOARDING_STATUS_NOT_DISPLAYED
+}).every((item) => item.district === '工业园区' && item.schoolType === '普通高中'))
 const scoredSchools = new Set(admissionScores.map((item) => item.schoolId))
 assert.strictEqual(school.filterSchools({ scoreStatus: school.SCORE_STATUS_WITH_SCORES }).length, scoredSchools.size)
 assert.strictEqual(school.filterSchools({ scoreStatus: school.SCORE_STATUS_WITHOUT_SCORES }).length, schools.length - scoredSchools.size)
@@ -153,4 +160,4 @@ assert.deepStrictEqual(scoreUtils.groupScoresByYear('suzhou_high_school', sample
 
 assert.ok(expectedErrorLogs.length >= 7)
 console.error = originalConsoleError
-console.log('MP4 LOCAL LOGIC SMOKE PASSED')
+console.log('MP6 LOCAL LOGIC SMOKE PASSED')

@@ -75,18 +75,42 @@ async function testTargetsPage() {
   assert.strictEqual(Object.hasOwn(firstRecords[0], 'schoolId'), false)
   assert.strictEqual(Object.hasOwn(firstRecords[0], 'admissionScore'), false)
   assert.ok(toastTitles.includes('学习目标已保存'))
+  assert.strictEqual(page.data.records.length, 1)
+
+  page.onCurrentInput({ detail: { value: 'abc' } })
+  page.saveRecord()
+  assert.ok(toastTitles.some((title) => title.includes('请输入')))
+
+  page.deleteRecord({ currentTarget: { dataset: { id: firstRecords[0].id } } })
+  assert.ok(toastTitles.includes('记录已删除'))
+  assert.strictEqual(memory.has('mp1.target_records'), false)
+
+  page.onCurrentInput({ detail: { value: '500' } })
+  page.onTargetInput({ detail: { value: '560' } })
+  page.saveRecord()
+  assert.strictEqual(memory.get('mp1.target_records').length, 1)
+  page.clearAllRecords()
+  assert.strictEqual(memory.has('mp1.target_records'), false)
+  assert.ok(toastTitles.includes('已清空'))
+  page.clearInputs()
+  assert.strictEqual(page.data.currentScore, '')
 
   const targetSource = fs.readFileSync(path.join(__dirname, '..', 'pages/targets/targets.js'), 'utf8')
   assert.strictEqual(targetSource.includes('admission-scores'), false)
+  for (const forbiddenField of ['schoolId', 'targetSchool', 'admissionResult', 'admissionScore']) {
+    assert.strictEqual(targetSource.includes(forbiddenField), false)
+  }
 
   const originalConsoleError = console.error
   const expectedErrorLogs = []
   console.error = (...values) => expectedErrorLogs.push(values.join(' '))
+  page.onCurrentInput({ detail: { value: '500' } })
+  page.onTargetInput({ detail: { value: '550' } })
   writeFailure = true
   page.saveRecord()
   writeFailure = false
   console.error = originalConsoleError
-  assert.strictEqual(memory.get('mp1.target_records').length, 1)
+  assert.strictEqual(memory.has('mp1.target_records'), false)
   assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
   assert.strictEqual(expectedErrorLogs.length, 1)
 }
@@ -96,6 +120,7 @@ function testSchoolDetailPage() {
   const page = createPageInstance(definition)
   page.onLoad({ id: 'suzhou_high_school' })
   assert.strictEqual(page.data.school.id, 'suzhou_high_school')
+  assert.strictEqual(page.data.school.boardingDisplay, '未展示住宿信息')
   assert.ok(Array.isArray(page.data.scoreGroups))
   if (page.data.scoreGroups.length > 0) {
     assert.ok(page.data.scoreGroups[0].items.length > 0)
@@ -109,8 +134,10 @@ function testSchoolDetailPage() {
   page.toggleFavorite()
   assert.ok(memory.get('mp1.favorite_school_ids').includes('suzhou_high_school'))
   page.copySchoolName()
+  page.copyMapKeyword()
   page.copySourceLink()
   assert.ok(toastTitles.includes('学校名称已复制'))
+  assert.ok(toastTitles.includes('地图搜索词已复制'))
   assert.ok(toastTitles.includes('来源链接已复制'))
 
   const missingPage = createPageInstance(definition)
@@ -135,6 +162,10 @@ function testSchoolsPage() {
     assert.ok(page.data.results.every((item) => item.hasAdmissionScores))
   }
   page.resetFilters()
+  page.onBoardingStatusChange({ detail: { value: String(page.data.boardingStatuses.indexOf('未展示住宿信息')) } })
+  assert.ok(page.data.results.length >= 50)
+  assert.ok(page.data.results.every((item) => item.boardingDisplay === '未展示住宿信息'))
+  page.resetFilters()
   assert.ok(page.data.results.length >= 50)
 }
 
@@ -148,6 +179,11 @@ function testFavoritesPage() {
   page.cleanInvalidFavorites()
   assert.deepStrictEqual(memory.get('mp1.favorite_school_ids'), ['suzhou_high_school'])
   assert.strictEqual(page.data.invalidCount, 0)
+
+  memory.set('mp1.favorite_school_ids', { broken: true })
+  page.refresh()
+  assert.strictEqual(page.data.favorites.length, 0)
+  assert.strictEqual(page.data.invalidCount, 0)
 }
 
 function testProfilePage() {
@@ -159,10 +195,23 @@ function testProfilePage() {
   page.onShow()
   assert.strictEqual(page.data.favoriteCount, 1)
   assert.strictEqual(page.data.targetCount, 1)
+  assert.ok(page.data.schoolCount >= 50)
+  assert.ok(page.data.scoreCount >= 0)
   page.clearLocalData()
   assert.strictEqual(memory.has('mp1.favorite_school_ids'), false)
   assert.strictEqual(memory.has('mp1.target_records'), false)
   assert.strictEqual(memory.has('mp1.target_draft'), false)
+}
+
+function testInfoPages() {
+  const dataInfoDefinition = loadPage('pages/data-info/data-info')
+  const dataInfoPage = createPageInstance(dataInfoDefinition)
+  assert.ok(dataInfoPage.data.sections.length > 0)
+  assert.ok(dataInfoPage.data.dataVersion)
+
+  const privacyDefinition = loadPage('pages/privacy/privacy')
+  const privacyPage = createPageInstance(privacyDefinition)
+  assert.ok(privacyPage.data.sections.length > 0)
 }
 
 async function run() {
@@ -171,7 +220,8 @@ async function run() {
   testSchoolsPage()
   testFavoritesPage()
   testProfilePage()
-  console.log('MP4 PAGE LOGIC SMOKE PASSED')
+  testInfoPages()
+  console.log('MP6 PAGE LOGIC SMOKE PASSED')
 }
 
 run().catch((error) => {

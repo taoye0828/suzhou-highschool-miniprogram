@@ -196,8 +196,8 @@ Page({
   clearAllRecords() {
     if (!this.data.records.length) return
     wx.showModal({
-      title: '清空全部目标记录',
-      content: '此操作只删除本机目标记录，且无法撤销。',
+      title: '清空全部学习目标记录',
+      content: '此操作只删除本机学习目标记录，且无法撤销。',
       confirmText: '确认清空',
       confirmColor: '#b42318',
       success: (modalResult) => {

@@ -1,5 +1,6 @@
 const {
   uniqueValues,
+  uniqueBoardingValues,
   filterSchools,
   withFavoriteState,
   SCORE_STATUS_WITH_SCORES,
@@ -14,10 +15,12 @@ Page({
     districts: uniqueValues('district'),
     schoolTypes: uniqueValues('schoolType'),
     ownerships: uniqueValues('ownership'),
+    boardingStatuses: uniqueBoardingValues(),
     scoreStatuses: ['全部', SCORE_STATUS_WITH_SCORES, SCORE_STATUS_WITHOUT_SCORES],
     districtIndex: 0,
     schoolTypeIndex: 0,
     ownershipIndex: 0,
+    boardingStatusIndex: 0,
     scoreStatusIndex: 0,
     results: []
   },
@@ -41,6 +44,10 @@ Page({
     this.setData({ ownershipIndex: Number(event.detail.value) }, () => this.refresh())
   },
 
+  onBoardingStatusChange(event) {
+    this.setData({ boardingStatusIndex: Number(event.detail.value) }, () => this.refresh())
+  },
+
   onScoreStatusChange(event) {
     this.setData({ scoreStatusIndex: Number(event.detail.value) }, () => this.refresh())
   },
@@ -51,6 +58,7 @@ Page({
       districtIndex: 0,
       schoolTypeIndex: 0,
       ownershipIndex: 0,
+      boardingStatusIndex: 0,
       scoreStatusIndex: 0
     }, () => this.refresh())
   },
@@ -61,6 +69,7 @@ Page({
       district: this.data.districts[this.data.districtIndex],
       schoolType: this.data.schoolTypes[this.data.schoolTypeIndex],
       ownership: this.data.ownerships[this.data.ownershipIndex],
+      boardingStatus: this.data.boardingStatuses[this.data.boardingStatusIndex],
       scoreStatus: this.data.scoreStatuses[this.data.scoreStatusIndex]
     }
     const favoriteResult = getFavoriteIdsResult()

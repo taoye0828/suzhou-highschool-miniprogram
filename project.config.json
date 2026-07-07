@@ -1,5 +1,5 @@
 {
-  "description": "苏州高中目标查询助手 MP5 官方分数线核验版",
+  "description": "苏州高中目标查询助手 MP6 填写 AppID 前最终收口版",
   "packOptions": {
     "ignore": [
       { "type": "folder", "value": "docs" },

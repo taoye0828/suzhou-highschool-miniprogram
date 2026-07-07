@@ -16,6 +16,9 @@
     <picker range="{{ownerships}}" value="{{ownershipIndex}}" bindchange="onOwnershipChange">
       <view class="filter-control">性质：{{ownerships[ownershipIndex]}}</view>
     </picker>
+    <picker range="{{boardingStatuses}}" value="{{boardingStatusIndex}}" bindchange="onBoardingStatusChange">
+      <view class="filter-control">住宿：{{boardingStatuses[boardingStatusIndex]}}</view>
+    </picker>
     <picker range="{{scoreStatuses}}" value="{{scoreStatusIndex}}" bindchange="onScoreStatusChange">
       <view class="filter-control">分数线：{{scoreStatuses[scoreStatusIndex]}}</view>
     </picker>
@@ -51,6 +54,7 @@
       <text class="badge">{{item.district}}</text>
       <text class="badge">{{item.schoolType}}</text>
       <text wx:if="{{item.ownership}}" class="badge">{{item.ownership}}</text>
+      <text class="badge muted-badge">{{item.boardingDisplay}}</text>
       <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.admissionScoreBadge}}</text>
     </view>
     <view wx:if="{{item.addressShort}}" class="muted small">{{item.addressShort}}</view>

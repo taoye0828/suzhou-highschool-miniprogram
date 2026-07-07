@@ -1,7 +1,7 @@
 const { getSchoolById, presentSchool } = require('../../utils/school')
 const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
-const { copyText } = require('../../utils/map')
+const { mapSearchKeyword, copyText } = require('../../utils/map')
 const {
   EMPTY_SCORE_TEXT,
   SCORE_SAFETY_NOTICE,
@@ -15,6 +15,7 @@ Page({
     school: null,
     scoreGroups: [],
     isFavorite: false,
+    mapKeyword: '',
     emptyScoreText: EMPTY_SCORE_TEXT,
     scoreSafetyNotice: SCORE_SAFETY_NOTICE,
     detailNotice: APP_CONFIG.policy.schoolDetailNotice
@@ -36,7 +37,8 @@ Page({
     this.setData({
       school: school ? presentSchool(school, favoriteResult.ids) : null,
       isFavorite: school ? favoriteResult.ids.includes(school.id) : false,
-      scoreGroups: school ? groupScoresByYear(school.id) : []
+      scoreGroups: school ? groupScoresByYear(school.id) : [],
+      mapKeyword: school ? mapSearchKeyword(school.name) : ''
     })
   },
 
@@ -58,6 +60,10 @@ Page({
 
   copyAddress() {
     copyText(this.data.school && this.data.school.address, '地址已复制')
+  },
+
+  copyMapKeyword() {
+    copyText(this.data.mapKeyword, '地图搜索词已复制')
   },
 
   copySourceLink() {

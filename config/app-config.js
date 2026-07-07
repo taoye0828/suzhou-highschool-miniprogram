@@ -3,8 +3,8 @@ const SOURCE_CHECKED_AT = '2026-07-06'
 
 const APP_CONFIG = {
   name: '苏州高中目标查询助手',
-  version: '1.3.0',
-  releaseStatus: 'MP5 官方分数线核验版',
+  version: '1.4.0',
+  releaseStatus: 'MP6 填写 AppID 前最终收口版',
   targetScore: {
     min: 0,
     max: TARGET_SCORE_MAX,
@@ -111,6 +111,8 @@ const APP_CONFIG = {
           '不读取微信头像或昵称。',
           '不读取手机号。',
           '不读取微信身份标识。',
+          '不读取身份证。',
+          '不收集学生姓名。',
           '备注框会提醒不要填写个人敏感信息。'
         ]
       }

@@ -13,6 +13,14 @@
       <view class="summary-number">{{targetCount}}</view>
       <view class="muted small">学习目标</view>
     </view>
+    <view class="card summary-card">
+      <view class="summary-number">{{schoolCount}}</view>
+      <view class="muted small">学校</view>
+    </view>
+    <view class="card summary-card">
+      <view class="summary-number">{{scoreCount}}</view>
+      <view class="muted small">历史分数线</view>
+    </view>
   </view>
 
   <view class="section-title">设置</view>

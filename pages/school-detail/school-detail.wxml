@@ -19,6 +19,7 @@
       <view class="info-row"><text class="info-label">区域</text><text class="info-value">{{school.district}}</text></view>
       <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{school.schoolType}}</text></view>
       <view wx:if="{{school.ownership}}" class="info-row"><text class="info-label">办学性质</text><text class="info-value">{{school.ownership}}</text></view>
+      <view class="info-row"><text class="info-label">住宿</text><text class="info-value">{{school.boardingDisplay}}</text></view>
       <view wx:if="{{school.campus}}" class="info-row"><text class="info-label">校区</text><text class="info-value">{{school.campus}}</text></view>
       <view wx:if="{{school.address}}" class="info-row"><text class="info-label">地址</text><text class="info-value">{{school.address}}</text></view>
       <view class="tag-line">
@@ -77,6 +78,7 @@
       <view class="button-row">
         <button class="button" bindtap="toggleFavorite">{{isFavorite ? '取消收藏' : '收藏学校'}}</button>
         <button class="button secondary" bindtap="copySchoolName">复制学校名称</button>
+        <button class="button secondary" bindtap="copyMapKeyword">复制地图搜索词</button>
         <button wx:if="{{school.address}}" class="button secondary" bindtap="copyAddress">复制地址</button>
         <button wx:if="{{school.officialWebsite}}" class="button secondary" bindtap="copyOfficialWebsite">复制官网链接</button>
       </view>
