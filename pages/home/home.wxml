@@ -2,25 +2,6 @@
   <view class="hero">
     <view class="hero-title">{{appName}}</view>
     <view class="hero-subtitle">{{homeTagline}}</view>
-    <view class="hero-pill">{{homeBoundary}}</view>
-    <view class="hero-pill secondary">{{localBoundary}}</view>
-    <view class="hero-pill secondary">已收录官方历史分数线 {{admissionScoreCount}} 条</view>
-  </view>
-
-  <view class="card">
-    <view class="card-title">当前版本能做什么</view>
-    <view class="check-item" wx:for="{{capabilities}}" wx:key="*this">
-      <text class="check-dot">✓</text>
-      <text>{{item}}</text>
-    </view>
-  </view>
-
-  <view class="card limit-card">
-    <view class="card-title">当前版本不做什么</view>
-    <view class="limit-item" wx:for="{{limits}}" wx:key="*this">
-      <text class="limit-dot">!</text>
-      <text>{{item}}</text>
-    </view>
   </view>
 
   <view class="section-title">快捷入口</view>

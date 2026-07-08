@@ -56,8 +56,6 @@ Page({
     gapText: '填写分数后显示学习差距',
     reminder: '建议先记录一次真实学习测评结果。',
     records: [],
-    targetDisclaimer: APP_CONFIG.policy.targetHint,
-    targetStorageHint: APP_CONFIG.policy.targetStorageHint,
     scoreMin: APP_CONFIG.targetScore.min,
     scoreMax: APP_CONFIG.targetScore.max,
     scoreMaxLength: APP_CONFIG.targetScore.maxLength

@@ -6,8 +6,6 @@
 
   <view class="card">
     <view class="section-heading">设置阶段目标</view>
-    <view class="notice target-notice">{{targetDisclaimer}}</view>
-    <view class="notice target-notice">{{targetStorageHint}}</view>
     <text class="field-label">阶段测评分数</text>
     <input class="input" type="number" maxlength="{{scoreMaxLength}}" value="{{currentScore}}" placeholder="请输入 {{scoreMin}} 至 {{scoreMax}} 的整数" bindinput="onCurrentInput" />
     <text class="field-label">阶段目标分数</text>
