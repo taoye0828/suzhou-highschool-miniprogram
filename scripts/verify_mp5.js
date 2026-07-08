@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
 
 const root = path.resolve(__dirname, '..')
 const failures = []
@@ -119,7 +120,7 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
   if (!allowedTitles.has(score.sourceTitle)) fail(`${score.id} sourceTitle 不在固定 3 个官方标题内`)
   if (score.sourceCheckedAt !== '2026-07-06') fail(`${score.id} sourceCheckedAt 必须为 2026-07-06`)
   if (!Number.isInteger(score.minScore)) fail(`${score.id} minScore 必须是数字`)
-  if (score.minScore < 300 || score.minScore > 750) fail(`${score.id} minScore 超出范围：${score.minScore}`)
+  if (score.minScore < 300 || score.minScore > EXAM_TOTAL_SCORE) fail(`${score.id} minScore 超出范围：${score.minScore}`)
   if (score.minScore === 600 || score.minScore === 603) fail(`${score.id} minScore 不得为控制线数字 ${score.minScore}`)
   if (score.scoreType !== '录取最低分') fail(`${score.id} scoreType 必须为录取最低分`)
   if (score.region !== '苏州市六区') fail(`${score.id} region 必须为苏州市六区`)
@@ -142,7 +143,6 @@ if (exists('docs/mp5_official_scores_sources.md')) verifySourceDocCounts(Array.i
 
 const projectConfig = JSON.parse(read('project.config.json'))
 if ((projectConfig.description || '').includes('MP2')) fail('project.config.json description 不得再含 MP2')
-const { APP_CONFIG } = require('../config/app-config')
 if (!['1.3.0', '1.4.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.3.0 或 1.4.0')
 if (/MP[1-9]|MP1[01]|AppID|提交前|真机预览|最终收口版/.test(String(APP_CONFIG.releaseStatus || ''))) {
   fail('config/app-config.js releaseStatus 不得再包含开发阶段或上架流程文案')

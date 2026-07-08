@@ -83,7 +83,7 @@ function replaceFavoriteIds(ids) {
   return cleanIds.length ? writeStorage(KEYS.favorites, cleanIds) : removeStorage(KEYS.favorites)
 }
 
-function normalizeTargetRecord(value) {
+function normalizeTargetRecord(value, options = {}) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   if (typeof value.id !== 'string' || !value.id.trim()) return null
   if (typeof value.createdAt !== 'string' || !Number.isFinite(Date.parse(value.createdAt))) return null
@@ -92,7 +92,8 @@ function normalizeTargetRecord(value) {
   const targetScore = value.targetScore
   const { min, max } = APP_CONFIG.targetScore
   if (!Number.isInteger(currentScore) || !Number.isInteger(targetScore)) return null
-  if (currentScore < min || currentScore > max || targetScore < min || targetScore > max) return null
+  if (currentScore < min || targetScore < min) return null
+  if (options.enforceScoreMax && (currentScore > max || targetScore > max)) return null
 
   return {
     schemaVersion: 1,
@@ -120,7 +121,7 @@ function getTargetRecords() {
 }
 
 function saveTargetRecord(record) {
-  const normalized = normalizeTargetRecord(record)
+  const normalized = normalizeTargetRecord(record, { enforceScoreMax: true })
   if (!normalized) return { ok: false, message: '目标记录格式无效，请检查后重试。' }
 
   const existingResult = getTargetRecordsResult()

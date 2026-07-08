@@ -20,6 +20,7 @@
 - 学校详情展示基础信息、历史分数线、来源说明和安全提示
 - 本地收藏、取消收藏、旧收藏 ID 清理
 - 阶段学习目标记录、删除、清空和本地草稿
+- 学习目标总分上限已统一按苏州中考满分 740 分处理
 - 数据说明、隐私说明、我的页本地数据管理
 
 ## 当前不支持
@@ -64,6 +65,7 @@ node scripts/verify_mp2.js
 node scripts/verify_mp4.js
 node scripts/verify_mp5.js
 node scripts/verify_mp6.js
+node scripts/verify_score_max_740.js
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
 find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check

@@ -1,5 +1,5 @@
 const assert = require('assert')
-const { APP_CONFIG } = require('../config/app-config')
+const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
 
 const originalConsoleError = console.error
 const expectedErrorLogs = []
@@ -42,7 +42,7 @@ for (const score of admissionScores) {
   assert.strictEqual(score.region, '苏州市六区')
   assert.strictEqual(score.scoreType, '录取最低分')
   assert.ok(Number.isInteger(score.minScore))
-  assert.ok(score.minScore >= 300 && score.minScore <= 750)
+  assert.ok(score.minScore >= 300 && score.minScore <= EXAM_TOTAL_SCORE)
   assert.notStrictEqual(score.minScore, 600)
   assert.notStrictEqual(score.minScore, 603)
   assert.strictEqual(score.sourceCheckedAt, '2026-07-06')
@@ -82,6 +82,13 @@ memory.set(storage.KEYS.targets, [
   target('valid')
 ])
 assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['valid'])
+
+const legacyTarget = target('legacy_above_max')
+legacyTarget.targetScore = EXAM_TOTAL_SCORE + 10
+memory.set(storage.KEYS.targets, [legacyTarget])
+assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['legacy_above_max'])
+assert.strictEqual(storage.saveTargetRecord(legacyTarget).ok, false)
+assert.strictEqual(storage.saveTargetRecord({ ...legacyTarget, targetScore: EXAM_TOTAL_SCORE }).ok, true)
 
 memory.set(storage.KEYS.targets, Array.from({ length: 120 }, (_, index) => target(`record_${index}`, new Date(2026, 6, 2, 0, index).toISOString())))
 assert.strictEqual(storage.getTargetRecords().length, APP_CONFIG.targetScore.maxRecords)

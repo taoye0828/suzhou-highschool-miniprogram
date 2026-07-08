@@ -20,6 +20,10 @@ function gapSummary(currentScore, targetScore) {
   const current = scoreNumber(currentScore)
   const target = scoreNumber(targetScore)
   if (current === null || target === null) return { gapText: '填写分数后显示学习差距', reminder: '建议先记录一次真实学习测评结果。' }
+  const { min, max } = APP_CONFIG.targetScore
+  if (current < min || current > max || target < min || target > max) {
+    return { gapText: `分数需在 ${min} 至 ${max} 之间`, reminder: '请先修正分数，再查看学习差距。' }
+  }
   const gap = target - current
   if (gap > 0) return { gapText: `距离本阶段学习目标还有 ${gap} 分`, reminder: gap >= 50 ? '差距较大，建议拆分为每周小目标并定期复盘。' : '建议保持练习节奏，持续记录阶段变化。' }
   if (gap === 0) return { gapText: '阶段测评分数与阶段目标一致', reminder: '建议继续巩固薄弱知识点。' }
@@ -147,8 +151,16 @@ Page({
     const current = scoreNumber(this.data.currentScore)
     const target = scoreNumber(this.data.targetScore)
     const { min, max } = APP_CONFIG.targetScore
-    if (current === null || target === null || current < min || target < min || current > max || target > max) {
+    if (current === null || target === null || current < min || target < min) {
       wx.showToast({ title: `请输入 ${min} 至 ${max} 的整数`, icon: 'none' })
+      return
+    }
+    if (current > max) {
+      wx.showToast({ title: `当前分数不能超过 ${max} 分`, icon: 'none' })
+      return
+    }
+    if (target > max) {
+      wx.showToast({ title: `目标分不能超过 ${max} 分`, icon: 'none' })
       return
     }
 

@@ -1,4 +1,4 @@
-const TARGET_SCORE_MAX = 750
+const EXAM_TOTAL_SCORE = 740
 const SOURCE_CHECKED_AT = '2026-07-06'
 
 const APP_CONFIG = {
@@ -7,8 +7,8 @@ const APP_CONFIG = {
   releaseStatus: '本地数据版',
   targetScore: {
     min: 0,
-    max: TARGET_SCORE_MAX,
-    maxLength: String(TARGET_SCORE_MAX).length,
+    max: EXAM_TOTAL_SCORE,
+    maxLength: String(EXAM_TOTAL_SCORE).length,
     maxRecords: 100,
     draftDebounceMs: 400
   },
@@ -121,4 +121,4 @@ const APP_CONFIG = {
   }
 }
 
-module.exports = { APP_CONFIG }
+module.exports = { APP_CONFIG, EXAM_TOTAL_SCORE }

@@ -77,6 +77,21 @@ async function testTargetsPage() {
   assert.ok(toastTitles.includes('学习目标已保存'))
   assert.strictEqual(page.data.records.length, 1)
 
+  page.onCurrentInput({ detail: { value: '700' } })
+  page.onTargetInput({ detail: { value: String(APP_CONFIG.targetScore.max) } })
+  page.saveRecord()
+  assert.ok(toastTitles.includes('学习目标已保存'))
+
+  for (const invalidTarget of [APP_CONFIG.targetScore.max + 1, APP_CONFIG.targetScore.max + 10]) {
+    const countBefore = memory.get('mp1.target_records').length
+    page.onTargetInput({ detail: { value: String(invalidTarget) } })
+    page.saveRecord()
+    assert.strictEqual(memory.get('mp1.target_records').length, countBefore)
+    assert.ok(toastTitles.includes(`目标分不能超过 ${APP_CONFIG.targetScore.max} 分`))
+  }
+  const boundaryRecord = memory.get('mp1.target_records').find((item) => item.targetScore === APP_CONFIG.targetScore.max)
+  page.deleteRecord({ currentTarget: { dataset: { id: boundaryRecord.id } } })
+
   page.onCurrentInput({ detail: { value: 'abc' } })
   page.saveRecord()
   assert.ok(toastTitles.some((title) => title.includes('请输入')))
