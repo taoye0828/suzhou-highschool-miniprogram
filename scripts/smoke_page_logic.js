@@ -221,7 +221,7 @@ async function run() {
   testFavoritesPage()
   testProfilePage()
   testInfoPages()
-  console.log('MP6 PAGE LOGIC SMOKE PASSED')
+  console.log('PAGE LOGIC SMOKE PASSED')
 }
 
 run().catch((error) => {

@@ -5,6 +5,29 @@ const root = path.resolve(__dirname, '..')
 const failures = []
 const notes = []
 const expectedAppId = 'wx17e903f81714736f'
+const forbiddenPublicPhrases = [
+  '提交前说明',
+  '真实 AppID',
+  '填写 AppID',
+  'touristappid',
+  'MP6',
+  'MP7',
+  'MP8',
+  'MP9',
+  'MP10',
+  'MP11',
+  '微信认证',
+  '真机预览',
+  '审核前',
+  '上传开发版本',
+  '体验版',
+  '最终收口版',
+  'Codex',
+  'commit',
+  'push',
+  '开发者工具',
+  '服务端口'
+]
 const requiredFiles = [
   'app.js',
   'app.json',
@@ -14,6 +37,8 @@ const requiredFiles = [
   'data/schools.js',
   'data/admission-scores.js',
   'README.md',
+  'docs/mp12_public_ui_cleanup.md',
+  'docs/mp12_package_cleanup_report.md',
   'docs/mp6_current_project_audit.md',
   'docs/mp6_manual_steps_for_user.md',
   'docs/mp6_wechat_devtools_test_checklist.md',
@@ -97,7 +122,9 @@ if (appJson) {
 
 if (projectConfig) {
   if (projectConfig.appid !== expectedAppId) fail(`project.config.json appid 应为 ${expectedAppId}`)
-  if (!String(projectConfig.description || '').includes('MP6')) fail('project.config.json description 必须包含 MP6')
+  for (const phrase of forbiddenPublicPhrases) {
+    if (String(projectConfig.description || '').includes(phrase)) fail(`project.config.json description 不得出现：${phrase}`)
+  }
   const serialized = JSON.stringify(projectConfig)
   for (const phrase of ['AppSecret', 'token', 'password', 'service_role']) {
     if (serialized.includes(phrase)) fail(`project.config.json 不得出现 ${phrase}`)
@@ -136,14 +163,16 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
 
 const { APP_CONFIG } = require('../config/app-config')
 if (APP_CONFIG.version !== '1.4.0') fail('config/app-config.js version 必须为 1.4.0')
-if (!String(APP_CONFIG.releaseStatus || '').includes('MP6')) fail('config/app-config.js releaseStatus 必须包含 MP6')
+for (const phrase of forbiddenPublicPhrases) {
+  if (String(APP_CONFIG.releaseStatus || '').includes(phrase)) fail(`config/app-config.js releaseStatus 不得出现：${phrase}`)
+}
 
 const readme = read('README.md')
 const schoolMatch = readme.match(/正式学校数据：(\d+) 条/)
 const scoreMatch = readme.match(/历史录取分数线：(\d+) 条/)
 if (!schoolMatch || Number(schoolMatch[1]) !== schools.length) fail('README 学校数量必须等于 schools.length')
 if (!scoreMatch || Number(scoreMatch[1]) !== admissionScores.length) fail('README 历史分数线数量必须等于 admissionScores.length')
-if (!readme.includes('微信开发者工具导入步骤')) fail('README 必须包含微信开发者工具导入步骤')
+if (!readme.includes('MP12 页面收口')) fail('README 必须包含 MP12 页面收口说明')
 
 const manualSteps = read('docs/mp6_manual_steps_for_user.md')
 for (const phrase of ['AppID', '编译', '真机预览', '上传', '体验版', '提交审核']) {
@@ -152,6 +181,9 @@ for (const phrase of ['AppID', '编译', '真机预览', '上传', '体验版', 
 
 const runtimeSources = runtimeTextSources()
 for (const { relative, source } of runtimeSources) {
+  for (const phrase of forbiddenPublicPhrases) {
+    if (source.includes(phrase)) fail(`${relative} 正式运行代码不得出现：${phrase}`)
+  }
   for (const phrase of ['TODO', 'mock', '示例学校', '待核实', 'AI 推荐']) {
     if (source.includes(phrase)) fail(`${relative} 正式运行代码不得出现：${phrase}`)
   }
@@ -197,13 +229,13 @@ const suspiciousFiles = walk(root).map((file) => path.relative(root, file)).filt
 if (suspiciousFiles.length) fail(`存在 .bak/tmp/old/new 残留文件：${suspiciousFiles.join(', ')}`)
 
 if (failures.length) {
-  console.error('MP6 STATIC VERIFY FAILED')
+  console.error('FORMAL STATIC VERIFY FAILED')
   failures.forEach((message) => console.error(`- ${message}`))
   process.exit(1)
 }
 
 notes.push(`正式学校数据：${schools.length} 条`)
 notes.push(`历史录取分数线：${admissionScores.length} 条`)
-notes.push('MP6 文档与运行边界：已检查')
-console.log('MP6 STATIC VERIFY PASSED')
+notes.push('正式页面文案与运行边界：已检查')
+console.log('FORMAL STATIC VERIFY PASSED')
 notes.forEach((message) => console.log(`- ${message}`))

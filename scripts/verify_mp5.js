@@ -144,7 +144,9 @@ const projectConfig = JSON.parse(read('project.config.json'))
 if ((projectConfig.description || '').includes('MP2')) fail('project.config.json description 不得再含 MP2')
 const { APP_CONFIG } = require('../config/app-config')
 if (!['1.3.0', '1.4.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.3.0 或 1.4.0')
-if (!/MP5|MP6/.test(String(APP_CONFIG.releaseStatus || ''))) fail('config/app-config.js releaseStatus 必须包含 MP5 或 MP6')
+if (/MP[1-9]|MP1[01]|AppID|提交前|真机预览|最终收口版/.test(String(APP_CONFIG.releaseStatus || ''))) {
+  fail('config/app-config.js releaseStatus 不得再包含开发阶段或上架流程文案')
+}
 
 verifySecrets()
 

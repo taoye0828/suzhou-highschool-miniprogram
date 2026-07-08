@@ -39,8 +39,8 @@ function groupScoresByYear(schoolId, source = admissionScores) {
   return getScoresBySchoolId(schoolId, source).reduce((groups, score) => {
     const year = String(score.year)
     const existing = groups.find((group) => group.year === year)
-    if (existing) existing.items.push(score)
-    else groups.push({ year, items: [score] })
+    if (existing) existing.items[existing.items.length] = score
+    else groups[groups.length] = { year, items: [score] }
     return groups
   }, [])
 }

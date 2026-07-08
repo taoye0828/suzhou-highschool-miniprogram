@@ -24,16 +24,10 @@ Page({
     this.setData({ favoriteCount: favoriteResult.ids.length, targetCount: targetResult.records.length })
   },
 
+  openFavorites() { wx.switchTab({ url: '/pages/favorites/favorites' }) },
+  openTargets() { wx.switchTab({ url: '/pages/targets/targets' }) },
   openDataInfo() { wx.navigateTo({ url: '/pages/data-info/data-info' }) },
   openPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }) },
-  openSubmissionNotes() {
-    wx.showModal({
-      title: '提交前说明',
-      content: '上传前请替换真实 AppID，完成备案、服务类目、隐私保护指引，并在微信开发者工具中完成编译和真机预览。当前版本仅展示官方来源可核验的学校信息和历史录取分数线；如果当前暂未收录历史分数线，以数据说明页为准。本小程序不做录取预测，不提供志愿填报结论。',
-      showCancel: false,
-      confirmText: '知道了'
-    })
-  },
   clearLocalData() {
     wx.showModal({
       title: '清除本地数据',

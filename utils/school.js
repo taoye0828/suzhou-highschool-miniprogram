@@ -90,8 +90,8 @@ function withFavoriteState(items, favoriteIds) {
 function splitFavoriteIdsByValidity(ids) {
   const validIds = new Set(schools.map((school) => school.id))
   return (Array.isArray(ids) ? ids : []).reduce((result, id) => {
-    if (validIds.has(id)) result.valid.push(id)
-    else result.invalid.push(id)
+    if (validIds.has(id)) result.valid[result.valid.length] = id
+    else result.invalid[result.invalid.length] = id
     return result
   }, { valid: [], invalid: [] })
 }

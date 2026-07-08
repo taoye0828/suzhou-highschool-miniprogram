@@ -1,11 +1,53 @@
 {
-  "description": "苏州高中目标查询助手 MP6 填写 AppID 前最终收口版",
+  "description": "苏州高中目标查询助手",
   "packOptions": {
     "ignore": [
-      { "type": "folder", "value": "docs" },
-      { "type": "folder", "value": "scripts" },
-      { "type": "file", "value": "README.md" }
-    ]
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "scripts",
+        "type": "folder"
+      },
+      {
+        "value": "README.md",
+        "type": "file"
+      },
+      {
+        "value": ".md",
+        "type": "suffix"
+      },
+      {
+        "value": ".git",
+        "type": "folder"
+      },
+      {
+        "value": ".DS_Store",
+        "type": "file"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": "package-lock.json",
+        "type": "file"
+      },
+      {
+        "value": "backups",
+        "type": "folder"
+      },
+      {
+        "value": "tmp",
+        "type": "folder"
+      },
+      {
+        "value": "coverage",
+        "type": "folder"
+      }
+    ],
+    "include": []
   },
   "setting": {
     "urlCheck": true,
@@ -15,12 +57,32 @@
     "minified": true,
     "coverView": true,
     "showShadowRootInWxmlPanel": true,
-    "compileHotReLoad": false
+    "compileHotReLoad": false,
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
   },
   "compileType": "miniprogram",
   "libVersion": "3.7.12",
   "appid": "wx17e903f81714736f",
   "projectname": "suzhou-highschool-miniprogram",
   "miniprogramRoot": "./",
-  "condition": {}
+  "condition": {},
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
 }

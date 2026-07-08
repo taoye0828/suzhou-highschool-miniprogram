@@ -160,4 +160,4 @@ assert.deepStrictEqual(scoreUtils.groupScoresByYear('suzhou_high_school', sample
 
 assert.ok(expectedErrorLogs.length >= 7)
 console.error = originalConsoleError
-console.log('MP6 LOCAL LOGIC SMOKE PASSED')
+console.log('LOCAL LOGIC SMOKE PASSED')

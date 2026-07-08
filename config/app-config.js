@@ -4,7 +4,7 @@ const SOURCE_CHECKED_AT = '2026-07-06'
 const APP_CONFIG = {
   name: '苏州高中目标查询助手',
   version: '1.4.0',
-  releaseStatus: 'MP6 填写 AppID 前最终收口版',
+  releaseStatus: '本地数据版',
   targetScore: {
     min: 0,
     max: TARGET_SCORE_MAX,
@@ -32,8 +32,9 @@ const APP_CONFIG = {
       '不做录取预测',
       '不提供志愿填报结论',
       '不按分数给出报考结论',
-      '不请求定位',
-      '不上传本机记录'
+      '不登录',
+      '不上传用户数据',
+      '不请求定位'
     ],
     usageSteps: [
       '先进入学校库筛选或搜索学校',

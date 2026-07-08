@@ -23,10 +23,13 @@
     </view>
   </view>
 
+  <view class="section-title">我的</view>
+  <view class="card menu-card" bindtap="openFavorites"><view class="grow"><view class="card-title">我的收藏</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu-card" bindtap="openTargets"><view class="grow"><view class="card-title">学习目标</view></view><view class="list-arrow">›</view></view>
+
   <view class="section-title">设置</view>
   <view class="card menu-card" bindtap="openDataInfo"><view class="grow"><view class="card-title">数据说明</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openPrivacy"><view class="grow"><view class="card-title">隐私说明</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openSubmissionNotes"><view class="grow"><view class="card-title">提交前说明</view><view class="muted small">真实 AppID、备案、隐私保护指引和真机预览</view></view><view class="list-arrow">›</view></view>
 
   <view class="card local-card">
     <view class="card-title">本地保存</view>
