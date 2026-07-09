@@ -4,12 +4,12 @@
 
 ## 当前状态
 
-- 版本号：1.4.0
+- 版本号：1.5.0
 - 正式学校数据：55 条
-- 历史录取分数线：103 条
-- 数据核对日期：2026-07-06
-- 当前已收录 2025 官方历史分数线：是
-- 当前暂未收录 2026 年学校级录取分数线
+- 历史录取分数线：146 条
+- 数据核对日期：2026-07-09
+- 当前已收录 2025、2026 年官方历史分数线：是
+- 2026 年仅录入官方图片核验且能匹配现有 schoolId 的记录
 - `project.config.json` 已写入 AppID：`wx17e903f81714736f`
 - 不写入 AppSecret，不提交账号、密码、token、cookie 或其他密钥
 
@@ -42,14 +42,14 @@
 
 ## 数据原则
 
-学校基础信息来自学校官网、教育局官网、政府公开网站等官方公开来源。正式页面只展示已核实字段，未核实字段不进入页面。当前版本收录苏州教育考试院官方来源可核验的 2025 年历史录取分数线。历史录取分数线仅供了解，不代表未来录取结果。
+学校基础信息来自学校官网、教育局官网、政府公开网站等官方公开来源。正式页面只展示已核实字段，未核实字段不进入页面。当前版本收录 2025、2026 年官方历史录取分数线；2026 年仅录入官方公开来源或官方图片核验且能匹配现有 schoolId 的记录。历史录取分数线仅供了解，不代表未来录取结果。
 
 ## MP12 页面收口
 
 - 用户可见页面已移除开发阶段文案。
 - 上传包已通过 `project.config.json` 的 `packOptions.ignore` 忽略 `docs`、`scripts`、`README.md`、Markdown 文档、Git 目录、系统临时文件和常见临时输出目录。
 - AppID 已写入 `project.config.json`。
-- 数据保持 55 所学校、103 条历史分数线。
+- 数据保持 55 所学校，历史分数线增至 146 条，其中 2025 年 103 条、2026 年 43 条。
 - 小程序仍保持不登录、不上传、不定位、不预测。
 - 重新编译后，应不再看到“提交前说明”和“MP6 填写 AppID 前最终收口版”。
 
@@ -66,6 +66,7 @@ node scripts/verify_mp4.js
 node scripts/verify_mp5.js
 node scripts/verify_mp6.js
 node scripts/verify_score_max_740.js
+node scripts/verify_mp13_2026_scores.js
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
 find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check

@@ -139,7 +139,8 @@ function testSchoolDetailPage() {
   assert.ok(Array.isArray(page.data.scoreGroups))
   if (page.data.scoreGroups.length > 0) {
     assert.ok(page.data.scoreGroups[0].items.length > 0)
-    assert.ok(page.data.scoreGroups[0].items.every((score) => score.sourceCheckedAt === '2026-07-06'))
+    assert.strictEqual(page.data.scoreGroups[0].year, '2026')
+    assert.ok(page.data.scoreGroups[0].items.every((score) => score.sourceCheckedAt === '2026-07-09'))
     assert.ok(page.data.scoreGroups[0].items.some((score) => score.sameScoreRule))
     page.copyScoreSource({ currentTarget: { dataset: { url: page.data.scoreGroups[0].items[0].sourceUrl } } })
     assert.ok(toastTitles.includes('分数线来源链接已复制'))

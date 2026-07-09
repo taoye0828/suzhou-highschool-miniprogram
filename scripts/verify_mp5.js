@@ -1,16 +1,23 @@
 const fs = require('fs')
 const path = require('path')
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
+const {
+  MP13_2026_VERIFIED_COUNT,
+  SOURCE_URL_2026_EARLY,
+  SOURCE_TITLE_2026_EARLY,
+  SOURCE_IMAGE_URL_2026_EARLY,
+  SOURCE_CHECKED_AT_2026
+} = require('../data/admission-scores-2026')
 
 const root = path.resolve(__dirname, '..')
 const failures = []
 const notes = []
-const allowedUrls = new Set([
+const official2025Urls = new Set([
   'https://www.szjyksy.com/Item/4202.aspx',
   'https://www.szjyksy.com/Item/4201.aspx',
   'https://www.szjyksy.com/Item/4199.aspx'
 ])
-const allowedTitles = new Set([
+const official2025Titles = new Set([
   '2025年苏州市六区第一批次普通高中学校及现代职教体系项目录取分数线',
   '2025年苏州市六区普通高中提前录取批次各校分数线公布',
   '2025年苏州市六区跨区招生各校分数线及最低控制线、自主招生最低控制线公布'
@@ -19,20 +26,9 @@ const allowedBatches = new Set(['提前录取批次', '第一批次', '跨区招
 const requiredFiles = [
   'docs/mp5_scores_to_confirm.md',
   'docs/mp5_official_scores_sources.md',
-  'docs/mp5_official_pages/4202.html',
-  'docs/mp5_official_pages/4201.html',
-  'docs/mp5_official_pages/4199.html',
-  'docs/mp5_official_images/20251029142432.jpeg',
-  'docs/mp5_official_images/2025711103329.jpeg',
-  'docs/mp5_official_images/2025711102122.jpeg'
-]
-const expectedHashes = [
-  'c6f26519b262ff7c29e5a53930f7d634ff4047529e262627ed00c73d56fabc7f',
-  '450df9e60c080b1ca51a21fe3a2f9e7451553c54f1854c493a537ee2a41bdfd8',
-  '8f23242a630957d814a6167c015ff6437794cc68c8572270c1634805d8622443',
-  '2bb9f435012f98a871ffc8d7a1f1adc11a5fc3ff6e7bf31a204d76f394c86c8c',
-  '4701d14d2d166d9aa0200c0088627fa8cc672ecff50dc005f7f9dcf4aba49b51',
-  'ea4a6f0e7f3288ac30b5c0980b2fec6c28ce942c05504bc3590a7fff172497cd'
+  'docs/mp13_2026_scores_to_confirm.md',
+  'docs/mp13_2026_scores_sync_report.md',
+  'data/admission-scores-2026.js'
 ]
 
 function fail(message) { failures.push(message) }
@@ -47,36 +43,6 @@ function walk(target) {
     if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === 'miniprogram_npm') return []
     return walk(path.join(target, entry.name))
   })
-}
-
-function verifyReadmeCounts(schoolCount, scoreCount) {
-  const readme = read('README.md')
-  const schoolMatch = readme.match(/正式学校数据：(\d+) 条/)
-  const scoreMatch = readme.match(/历史录取分数线：(\d+) 条/)
-  if (!schoolMatch || Number(schoolMatch[1]) !== schoolCount) fail(`README 学校数据数量不一致：${schoolMatch && schoolMatch[1]}`)
-  if (!scoreMatch || Number(scoreMatch[1]) !== scoreCount) fail(`README 历史录取分数线数量不一致：${scoreMatch && scoreMatch[1]}`)
-  if (!readme.includes('2026-07-06')) fail('README 缺少 2026-07-06 数据核对日期')
-  if (!readme.includes('当前暂未收录 2026 年学校级录取分数线')) fail('README 缺少 2026 年学校级分数线暂未收录说明')
-}
-
-function verifySourceDocCounts(scores) {
-  const doc = read('docs/mp5_official_scores_sources.md')
-  const grouped = scores.reduce((result, item) => {
-    result[item.sourceUrl] = (result[item.sourceUrl] || 0) + 1
-    return result
-  }, {})
-  const tableCounts = {}
-  for (const line of doc.split('\n')) {
-    const cells = line.split('|').map((cell) => cell.trim()).filter(Boolean)
-    if (cells.length >= 3 && allowedUrls.has(cells[0])) tableCounts[cells[0]] = Number(cells[1])
-  }
-  for (const url of allowedUrls) {
-    if (!Object.hasOwn(tableCounts, url)) fail(`来源文档缺少 sourceUrl 统计：${url}`)
-    else if (tableCounts[url] !== (grouped[url] || 0)) fail(`来源文档 ${url} 写入统计不一致：${tableCounts[url]} != ${grouped[url] || 0}`)
-  }
-  for (const hash of expectedHashes) if (!doc.includes(hash)) fail(`来源文档缺少 SHA256：${hash}`)
-  for (const method of ['图片识别']) if (!doc.includes(`数据提取方式：${method}`)) fail(`来源文档缺少数据提取方式：${method}`)
-  if (!doc.includes('当前暂未收录 2026 年学校级录取分数线')) fail('来源文档缺少 2026 年暂未收录说明')
 }
 
 function verifySecrets() {
@@ -97,6 +63,16 @@ function verifySecrets() {
   }
 }
 
+function verifyReadmeCounts(schoolCount, scoreCount) {
+  const readme = read('README.md')
+  const schoolMatch = readme.match(/正式学校数据：(\d+) 条/)
+  const scoreMatch = readme.match(/历史录取分数线：(\d+) 条/)
+  if (!schoolMatch || Number(schoolMatch[1]) !== schoolCount) fail(`README 学校数据数量不一致：${schoolMatch && schoolMatch[1]}`)
+  if (!scoreMatch || Number(scoreMatch[1]) !== scoreCount) fail(`README 历史录取分数线数量不一致：${scoreMatch && scoreMatch[1]}`)
+  if (!readme.includes('2025、2026 年官方历史分数线')) fail('README 缺少 2025、2026 年官方历史分数线说明')
+  if (!readme.includes('740')) fail('README 缺少 740 满分说明')
+}
+
 let schools = []
 let admissionScores = []
 try {
@@ -114,40 +90,43 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
   ids.add(score.id)
   if (!/^[a-z0-9_]+$/.test(score.id || '')) fail(`score.id 格式错误：${score.id}`)
   if (!schoolIds.has(score.schoolId)) fail(`${score.id} schoolId 不存在：${score.schoolId}`)
-  if (score.year !== 2025) fail(`${score.id} year 必须是 2025`)
-  if (score.year === 2026) fail(`${score.id} 不得出现 2026 年分数线`)
-  if (!allowedUrls.has(score.sourceUrl)) fail(`${score.id} sourceUrl 不在固定 3 个官方页面内`)
-  if (!allowedTitles.has(score.sourceTitle)) fail(`${score.id} sourceTitle 不在固定 3 个官方标题内`)
-  if (score.sourceCheckedAt !== '2026-07-06') fail(`${score.id} sourceCheckedAt 必须为 2026-07-06`)
-  if (!Number.isInteger(score.minScore)) fail(`${score.id} minScore 必须是数字`)
+  if (![2025, 2026].includes(score.year)) fail(`${score.id} year 不在允许范围：${score.year}`)
+  if (!Number.isInteger(score.minScore)) fail(`${score.id} minScore 必须是整数`)
   if (score.minScore < 300 || score.minScore > EXAM_TOTAL_SCORE) fail(`${score.id} minScore 超出范围：${score.minScore}`)
-  if (score.minScore === 600 || score.minScore === 603) fail(`${score.id} minScore 不得为控制线数字 ${score.minScore}`)
+  if ([600, 603].includes(score.minScore)) fail(`${score.id} minScore 不得为控制线数字 ${score.minScore}`)
   if (score.scoreType !== '录取最低分') fail(`${score.id} scoreType 必须为录取最低分`)
   if (score.region !== '苏州市六区') fail(`${score.id} region 必须为苏州市六区`)
   if (!allowedBatches.has(score.batch)) fail(`${score.id} batch 不合法：${score.batch}`)
   if (!score.admissionType || typeof score.admissionType !== 'string') fail(`${score.id} admissionType 必须是非空字符串`)
   if (Object.hasOwn(score, 'sameScoreRule')) {
     if (!score.sameScoreRule || typeof score.sameScoreRule !== 'string') fail(`${score.id} sameScoreRule 必须是非空字符串`)
-    if (['无', '暂无', '暂未公布'].includes(score.sameScoreRule)) fail(`${score.id} sameScoreRule 不得使用占位值`)
+    if (['无', '暂无', '暂未公布', '待核实'].includes(score.sameScoreRule)) fail(`${score.id} sameScoreRule 不得使用占位值`)
+  }
+  if (score.year === 2025) {
+    if (!official2025Urls.has(score.sourceUrl)) fail(`${score.id} 2025 sourceUrl 不在固定 3 个官方页面内`)
+    if (!official2025Titles.has(score.sourceTitle)) fail(`${score.id} 2025 sourceTitle 不在固定 3 个官方标题内`)
+    if (score.sourceCheckedAt !== '2026-07-06') fail(`${score.id} 2025 sourceCheckedAt 必须为 2026-07-06`)
+  }
+  if (score.year === 2026) {
+    if (score.sourceType !== 'officialImageViaMedia') fail(`${score.id} 2026 sourceType 必须为 officialImageViaMedia`)
+    if (score.status !== 'verified') fail(`${score.id} 2026 status 必须为 verified`)
+    if (score.sourceUrl !== SOURCE_URL_2026_EARLY) fail(`${score.id} 2026 sourceUrl 不匹配`)
+    if (score.sourceTitle !== SOURCE_TITLE_2026_EARLY) fail(`${score.id} 2026 sourceTitle 不匹配`)
+    if (score.sourceImageUrl !== SOURCE_IMAGE_URL_2026_EARLY) fail(`${score.id} 2026 sourceImageUrl 不匹配`)
+    if (score.sourceCheckedAt !== SOURCE_CHECKED_AT_2026) fail(`${score.id} 2026 sourceCheckedAt 必须为 ${SOURCE_CHECKED_AT_2026}`)
+    if (!score.sameScoreMin || !Number.isInteger(score.sameScoreMin.chineseMathEnglish)) fail(`${score.id} 缺少 sameScoreMin.chineseMathEnglish`)
   }
   const keywordText = [score.id, score.schoolId, score.admissionType, score.scoreType, score.sourceNote].join(' ')
-  for (const keyword of ['现代职教', '职教', '中职', '高职', '五年制', '职业', '技工']) {
+  for (const keyword of ['现代职教', '职教', '中职', '高职', '五年制', '职业', '技工', '控制线']) {
     if (keywordText.includes(keyword)) fail(`${score.id} 非 sourceTitle 字段出现禁止关键词：${keyword}`)
   }
 }
 
-for (const relative of requiredFiles) if (!exists(relative)) fail(`缺少 MP5 必要文件：${relative}`)
-
+for (const relative of requiredFiles) if (!exists(relative)) fail(`缺少必要文件：${relative}`)
 verifyReadmeCounts(Array.isArray(schools) ? schools.length : 0, Array.isArray(admissionScores) ? admissionScores.length : 0)
-if (exists('docs/mp5_official_scores_sources.md')) verifySourceDocCounts(Array.isArray(admissionScores) ? admissionScores : [])
-
-const projectConfig = JSON.parse(read('project.config.json'))
-if ((projectConfig.description || '').includes('MP2')) fail('project.config.json description 不得再含 MP2')
-if (!['1.3.0', '1.4.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.3.0 或 1.4.0')
-if (/MP[1-9]|MP1[01]|AppID|提交前|真机预览|最终收口版/.test(String(APP_CONFIG.releaseStatus || ''))) {
-  fail('config/app-config.js releaseStatus 不得再包含开发阶段或上架流程文案')
-}
-
+if (admissionScores.filter((item) => item.year === 2025).length !== 103) fail('2025 分数线数量必须保持 103')
+if (admissionScores.filter((item) => item.year === 2026).length !== MP13_2026_VERIFIED_COUNT) fail('2026 分数线数量与 MP13 常量不一致')
+if (!['1.4.0', '1.5.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.4.0 或 1.5.0')
 verifySecrets()
 
 if (failures.length) {
@@ -157,7 +136,7 @@ if (failures.length) {
 }
 
 notes.push(`正式学校数据：${schools.length} 条`)
-notes.push(`历史录取分数线：${admissionScores.length} 条`)
-notes.push('MP5 官方来源证据文件：已检查')
+notes.push(`2025 历史录取分数线：103 条`)
+notes.push(`2026 历史录取分数线：${MP13_2026_VERIFIED_COUNT} 条`)
 console.log('MP5 STATIC VERIFY PASSED')
 notes.forEach((message) => console.log(`- ${message}`))

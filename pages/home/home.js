@@ -1,4 +1,19 @@
+const { schools } = require('../../data/schools')
+const { admissionScores } = require('../../data/admission-scores')
 const { APP_CONFIG } = require('../../config/app-config')
+
+
+function uniqueScoreYears() {
+  return Array.from(new Set(admissionScores.map((item) => item.year))).sort((left, right) => left - right)
+}
+
+const scoreYears = uniqueScoreYears()
+const scoreStats = {
+  schoolCount: schools.length,
+  scoreCount: admissionScores.length,
+  yearsText: scoreYears.join('、'),
+  verifiedText: `已收录 ${scoreYears.join('、')} 年官方历史分数线`
+}
 
 const entries = [
   { title: '查学校', subtitle: '搜索和筛选学校基础信息', route: '/pages/schools/schools', tab: true },
@@ -12,7 +27,8 @@ Page({
     appName: APP_CONFIG.name,
     entries,
     homeTagline: APP_CONFIG.policy.homeTagline,
-    usageSteps: APP_CONFIG.policy.usageSteps
+    usageSteps: APP_CONFIG.policy.usageSteps,
+    scoreStats
   },
 
   openEntry(event) {

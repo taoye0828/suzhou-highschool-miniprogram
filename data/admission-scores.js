@@ -1,4 +1,6 @@
-const admissionScores = [
+const { admissionScores2026 } = require('./admission-scores-2026')
+
+const admissionScores2025 = [
   {
     id: "score_2025_suzhou_high_school_sip_first_001",
     schoolId: "suzhou_high_school_sip",
@@ -1545,4 +1547,6 @@ const admissionScores = [
   }
 ]
 
-module.exports = { admissionScores }
+const admissionScores = admissionScores2025.concat(admissionScores2026)
+
+module.exports = { admissionScores, admissionScores2025 }

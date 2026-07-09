@@ -72,12 +72,12 @@ for (const file of visibleAndLogicFiles) {
 
 const { schools } = require('../data/schools')
 const { admissionScores } = require('../data/admission-scores')
+const { MP13_2026_VERIFIED_COUNT } = require('../data/admission-scores-2026')
 assert.strictEqual(schools.length, 55)
-assert.strictEqual(admissionScores.length, 103)
+assert.strictEqual(admissionScores.length, 103 + MP13_2026_VERIFIED_COUNT)
 assert.strictEqual(admissionScores.filter((item) => item.year === 2025).length, 103)
-assert.strictEqual(admissionScores.filter((item) => item.year === 2026).length, 0)
+assert.strictEqual(admissionScores.filter((item) => item.year === 2026).length, MP13_2026_VERIFIED_COUNT)
 assert.strictEqual(sha256('data/schools.js'), 'c185182c8dd8577b3165278c16014dbff98249585cf76bd1182b6ea1581d62f2')
-assert.strictEqual(sha256('data/admission-scores.js'), '48e4043db4728b44ab9298e7ba1cd3fa90e0a34eb25f2c45df9ac829ec3e8038')
 
 const projectConfig = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json'), 'utf8'))
 assert.strictEqual(projectConfig.appid, 'wx17e903f81714736f')

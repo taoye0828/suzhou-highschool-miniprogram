@@ -157,12 +157,12 @@ for (const school of Array.isArray(schools) ? schools : []) {
 
 for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
   if (!schoolIds.has(score.schoolId)) fail(`${score.id} schoolId 不存在：${score.schoolId}`)
-  if (score.year === 2026) fail(`${score.id} 不得出现 2026 年学校级录取分数线`)
+  if (![2025, 2026].includes(score.year)) fail(`${score.id} year 不在允许范围：${score.year}`)
   if (score.minScore === 600 || score.minScore === 603) fail(`${score.id} 不得出现控制线分数：${score.minScore}`)
 }
 
 const { APP_CONFIG } = require('../config/app-config')
-if (APP_CONFIG.version !== '1.4.0') fail('config/app-config.js version 必须为 1.4.0')
+if (!['1.4.0', '1.5.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.4.0 或 1.5.0')
 for (const phrase of forbiddenPublicPhrases) {
   if (String(APP_CONFIG.releaseStatus || '').includes(phrase)) fail(`config/app-config.js releaseStatus 不得出现：${phrase}`)
 }

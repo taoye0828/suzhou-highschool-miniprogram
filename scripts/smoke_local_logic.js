@@ -37,7 +37,7 @@ function target(id, createdAt = '2026-07-02T00:00:00.000Z') {
 assert.ok(schools.length >= 50)
 assert.ok(Array.isArray(admissionScores))
 for (const score of admissionScores) {
-  assert.strictEqual(score.year, 2025)
+  assert.ok([2025, 2026].includes(score.year))
   assert.ok(schools.some((item) => item.id === score.schoolId))
   assert.strictEqual(score.region, '苏州市六区')
   assert.strictEqual(score.scoreType, '录取最低分')
@@ -45,8 +45,15 @@ for (const score of admissionScores) {
   assert.ok(score.minScore >= 300 && score.minScore <= EXAM_TOTAL_SCORE)
   assert.notStrictEqual(score.minScore, 600)
   assert.notStrictEqual(score.minScore, 603)
-  assert.strictEqual(score.sourceCheckedAt, '2026-07-06')
+  if (score.year === 2025) assert.strictEqual(score.sourceCheckedAt, '2026-07-06')
+  if (score.year === 2026) {
+    assert.strictEqual(score.sourceCheckedAt, '2026-07-09')
+    assert.strictEqual(score.status, 'verified')
+    assert.notStrictEqual(score.sourceType, 'thirdPartyCandidateOnly')
+  }
 }
+assert.strictEqual(admissionScores.filter((score) => score.year === 2025).length, 103)
+assert.strictEqual(admissionScores.filter((score) => score.year === 2026).length, 43)
 
 assert.strictEqual(storage.getFavoriteIds().length, 0)
 assert.strictEqual(storage.setFavorite('suzhou_high_school', true).ok, true)
