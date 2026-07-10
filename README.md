@@ -53,6 +53,15 @@
 - 小程序仍保持不登录、不上传、不定位、不预测。
 - 重新编译后，应不再看到“提交前说明”和“MP6 填写 AppID 前最终收口版”。
 
+## MP16 上传包清理
+
+- 开发文档、官方来源证据、验证脚本和审计资料继续保留在 GitHub，便于后续维护和数据溯源。
+- 小程序上传包通过 `project.config.json` 的 `packOptions.ignore` 排除 `docs`、`scripts`、`README.md`、Markdown 文档、官方图片缓存、官方页面 HTML 缓存、日志、临时目录、依赖目录和 IDE 配置目录。
+- 本轮不直接删除 `docs` 或 `scripts`，因为它们不属于运行时文件，但属于开发维护和官方来源证明资料。
+- 运行时入口和目录仍保持为 `app.js`、`app.json`、`app.wxss`、`sitemap.json`、`pages`、`data`、`utils`、`config`、`styles`。
+- 数据仍为 55 所学校、146 条历史录取分数线，其中 2025 年 103 条、2026 年 43 条。
+- 学习目标满分仍为 740，小程序仍保持不登录、不定位、不支付、不接广告、不接云开发、不接后台请求。
+
 ## 本地验证命令
 
 ```bash
@@ -67,6 +76,7 @@ node scripts/verify_mp5.js
 node scripts/verify_mp6.js
 node scripts/verify_score_max_740.js
 node scripts/verify_mp13_2026_scores.js
+node scripts/verify_upload_package_ignore.js
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
 find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check

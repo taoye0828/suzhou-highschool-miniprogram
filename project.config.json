@@ -7,6 +7,30 @@
         "type": "folder"
       },
       {
+        "value": "docs/mp5_official_images",
+        "type": "folder"
+      },
+      {
+        "value": "docs/mp5_official_pages",
+        "type": "folder"
+      },
+      {
+        "value": "^docs/.*\\.html$",
+        "type": "regexp"
+      },
+      {
+        "value": "^docs/.*\\.jpe?g$",
+        "type": "regexp"
+      },
+      {
+        "value": "^docs/.*\\.png$",
+        "type": "regexp"
+      },
+      {
+        "value": "^docs/.*\\.md$",
+        "type": "regexp"
+      },
+      {
         "value": "scripts",
         "type": "folder"
       },
@@ -35,6 +59,10 @@
         "type": "file"
       },
       {
+        "value": "package.json",
+        "type": "file"
+      },
+      {
         "value": "backups",
         "type": "folder"
       },
@@ -44,6 +72,18 @@
       },
       {
         "value": "coverage",
+        "type": "folder"
+      },
+      {
+        "value": ".log",
+        "type": "suffix"
+      },
+      {
+        "value": ".vscode",
+        "type": "folder"
+      },
+      {
+        "value": ".idea",
         "type": "folder"
       }
     ],
