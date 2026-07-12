@@ -9,6 +9,7 @@ Page({
     appName: APP_CONFIG.name,
     version: APP_CONFIG.version,
     releaseStatus: APP_CONFIG.releaseStatus,
+    sourceCheckedAt: APP_CONFIG.schoolData.sourceCheckedAt,
     schoolCount: schools.length,
     scoreCount: admissionScores.length,
     favoriteCount: 0,

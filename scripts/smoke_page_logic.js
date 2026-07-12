@@ -240,6 +240,7 @@ function testProfilePage() {
   assert.strictEqual(page.data.targetCount, 1)
   assert.ok(page.data.schoolCount >= 50)
   assert.ok(page.data.scoreCount >= 0)
+  assert.strictEqual(page.data.sourceCheckedAt, '2026-07-09')
   page.clearLocalData()
   assert.strictEqual(memory.has('mp1.favorite_school_ids'), false)
   assert.strictEqual(memory.has('mp1.target_records'), false)
