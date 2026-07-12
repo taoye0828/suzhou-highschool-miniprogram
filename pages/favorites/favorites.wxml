@@ -1,8 +1,8 @@
 <view class="page">
   <view wx:if="{{invalidCount > 0}}" class="card warning-card">
     <view class="card-title">部分收藏学校数据已更新或移除</view>
-    <view class="muted small">可清理 {{invalidCount}} 条无效收藏，不影响正常收藏。</view>
-    <button class="button secondary warning-button" bindtap="cleanInvalidFavorites">清理无效收藏</button>
+    <view class="muted small">{{invalidCount}} 条无效收藏自动清理失败，不影响正常收藏。</view>
+    <button class="button secondary warning-button" bindtap="cleanInvalidFavorites">重试清理</button>
   </view>
 
   <view wx:if="{{favorites.length === 0}}" class="card empty">

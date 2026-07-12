@@ -210,7 +210,15 @@ function testFavoritesPage() {
   const page = createPageInstance(definition)
   page.onShow()
   assert.strictEqual(page.data.favorites.length, 1)
+  assert.deepStrictEqual(memory.get('mp1.favorite_school_ids'), ['suzhou_high_school'])
+  assert.strictEqual(page.data.invalidCount, 0)
+
+  memory.set('mp1.favorite_school_ids', ['suzhou_high_school', 'removed_school'])
+  writeFailure = true
+  page.refresh()
+  writeFailure = false
   assert.strictEqual(page.data.invalidCount, 1)
+  assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
   page.cleanInvalidFavorites()
   assert.deepStrictEqual(memory.get('mp1.favorite_school_ids'), ['suzhou_high_school'])
   assert.strictEqual(page.data.invalidCount, 0)
