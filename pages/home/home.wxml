@@ -9,6 +9,9 @@
     <view class="card-title">{{scoreStats.verifiedText}}</view>
     <view class="notice">学校 {{scoreStats.schoolCount}} 所，历史分数线 {{scoreStats.scoreCount}} 条。</view>
     <view class="muted small">已收录年份：{{scoreStats.yearsText}}</view>
+    <view class="muted small">数据核对日期：{{sourceCheckedAt}}</view>
+    <view class="muted small">{{homeBoundary}}</view>
+    <view class="muted small">{{localBoundary}}</view>
   </view>
 
   <view class="section-title">快捷入口</view>

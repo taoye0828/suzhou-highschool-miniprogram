@@ -51,6 +51,25 @@ function createPageInstance(definition) {
   }
 }
 
+function testHomePage() {
+  const definition = loadPage('pages/home/home')
+  const page = createPageInstance(definition)
+  assert.strictEqual(page.data.scoreStats.schoolCount, 55)
+  assert.strictEqual(page.data.scoreStats.scoreCount, 146)
+  assert.strictEqual(page.data.scoreStats.yearsText, '2025、2026')
+  assert.strictEqual(page.data.sourceCheckedAt, APP_CONFIG.schoolData.sourceCheckedAt)
+  assert.ok(page.data.homeBoundary.includes('不判断未来录取结果'))
+  assert.ok(page.data.localBoundary.includes('只保存在本机'))
+
+  for (const entry of page.data.entries) {
+    page.openEntry({ currentTarget: { dataset: entry } })
+  }
+  assert.ok(navigations.includes('/pages/schools/schools'))
+  assert.ok(navigations.includes('/pages/data-info/data-info'))
+  assert.ok(navigations.includes('/pages/targets/targets'))
+  assert.ok(navigations.includes('/pages/favorites/favorites'))
+}
+
 async function testTargetsPage() {
   const definition = loadPage('pages/targets/targets')
   const page = createPageInstance(definition)
@@ -231,6 +250,7 @@ function testInfoPages() {
 }
 
 async function run() {
+  testHomePage()
   await testTargetsPage()
   testSchoolDetailPage()
   testSchoolsPage()

@@ -27,6 +27,9 @@ Page({
     appName: APP_CONFIG.name,
     entries,
     homeTagline: APP_CONFIG.policy.homeTagline,
+    homeBoundary: APP_CONFIG.policy.homeBoundary,
+    localBoundary: APP_CONFIG.policy.localBoundary,
+    sourceCheckedAt: APP_CONFIG.schoolData.sourceCheckedAt,
     usageSteps: APP_CONFIG.policy.usageSteps,
     scoreStats
   },
