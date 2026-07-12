@@ -1,0 +1,66 @@
+{
+  "project": "suzhou_highschool_miniprogram",
+  "startSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
+  "currentSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
+  "currentStage": "baseline_audit_complete",
+  "currentStepId": "RC4-MP-AUDIT-01",
+  "currentStepGoal": "记录初始完成矩阵并进入真实缺口修复",
+  "stepStartSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
+  "expectedFiles": [
+    "docs/final_rc4_completion_matrix.md",
+    "docs/final_rc4_progress.json"
+  ],
+  "actualFiles": [
+    "docs/final_rc4_completion_matrix.md",
+    "docs/final_rc4_progress.json"
+  ],
+  "targetedTests": [
+    "all existing scripts/*.js",
+    "all JavaScript syntax checks",
+    "git diff --check"
+  ],
+  "targetedTestResults": [
+    "all existing scripts passed on baseline",
+    "all JavaScript syntax checks passed",
+    "git diff --check passed"
+  ],
+  "stepCommitSha": "",
+  "stepPushSucceeded": false,
+  "lastStableSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
+  "completedTaskIds": [],
+  "verifiedTaskIds": [
+    "RC4-MP-CONFIG-01",
+    "RC4-MP-CONFIG-02",
+    "RC4-MP-CONFIG-03",
+    "RC4-MP-DATA-01",
+    "RC4-MP-DATA-02",
+    "RC4-MP-DATA-03"
+  ],
+  "pendingTaskIds": [
+    "RC4-MP-HOME-03",
+    "RC4-MP-SCHOOL-03",
+    "RC4-MP-DETAIL-04",
+    "RC4-MP-FAVORITE-03",
+    "RC4-MP-TARGET-06",
+    "RC4-MP-PROFILE-01",
+    "RC4-MP-PRIVACY-02",
+    "RC4-MP-DATA-04",
+    "RC4-MP-DOC-01",
+    "RC4-MP-DOC-02",
+    "RC4-MP-DOC-03"
+  ],
+  "failedTaskIds": [],
+  "createdCommits": [],
+  "pushedCommits": [],
+  "checkpointBranches": [
+    "backup/rc4-start-20260712-753a78d"
+  ],
+  "externalBlocks": [
+    "微信开发者工具人工编译、手机预览、体验版上传、备案、隐私指引、审核与发布"
+  ],
+  "lastSuccessfulCommand": "all existing scripts/*.js and all JavaScript node --check",
+  "lastFailedCommand": "",
+  "lastErrorSummary": "",
+  "nextAction": "修复首页、筛选/详情未核实字段、收藏与目标存储真实缺口",
+  "safeToContinue": false
+}
