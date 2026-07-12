@@ -44,7 +44,7 @@ assert.strictEqual(storage.saveTargetRecord({ ...baseRecord, id: 'old_wrong_max'
 
 const legacyRecord = { ...baseRecord, id: 'legacy_record', targetScore: EXAM_TOTAL_SCORE + 10 }
 memory.set(storage.KEYS.targets, [legacyRecord])
-assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['legacy_record'])
+assert.deepStrictEqual(storage.getTargetRecords(), [])
 
 const runtimeFiles = ['pages', 'components', 'config', 'utils', 'app.js', 'app.json', 'app.wxss']
   .flatMap(walk)

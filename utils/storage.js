@@ -109,7 +109,7 @@ function getTargetRecordsResult() {
   const readResult = readStorage(KEYS.targets, [])
   const value = readResult.value
   const records = (Array.isArray(value) ? value : [])
-    .map(normalizeTargetRecord)
+    .map((record) => normalizeTargetRecord(record, { enforceScoreMax: true }))
     .filter(Boolean)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .slice(0, APP_CONFIG.targetScore.maxRecords)

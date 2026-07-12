@@ -93,7 +93,7 @@ assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['vali
 const legacyTarget = target('legacy_above_max')
 legacyTarget.targetScore = EXAM_TOTAL_SCORE + 10
 memory.set(storage.KEYS.targets, [legacyTarget])
-assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['legacy_above_max'])
+assert.deepStrictEqual(storage.getTargetRecords(), [])
 assert.strictEqual(storage.saveTargetRecord(legacyTarget).ok, false)
 assert.strictEqual(storage.saveTargetRecord({ ...legacyTarget, targetScore: EXAM_TOTAL_SCORE }).ok, true)
 
