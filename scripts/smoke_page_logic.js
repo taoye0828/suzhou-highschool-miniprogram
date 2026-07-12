@@ -154,7 +154,7 @@ function testSchoolDetailPage() {
   const page = createPageInstance(definition)
   page.onLoad({ id: 'suzhou_high_school' })
   assert.strictEqual(page.data.school.id, 'suzhou_high_school')
-  assert.strictEqual(page.data.school.boardingDisplay, '未展示住宿信息')
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(page.data.school, 'boardingDisplay'), false)
   assert.ok(Array.isArray(page.data.scoreGroups))
   if (page.data.scoreGroups.length > 0) {
     assert.ok(page.data.scoreGroups[0].items.length > 0)
@@ -197,9 +197,9 @@ function testSchoolsPage() {
     assert.ok(page.data.results.every((item) => item.hasAdmissionScores))
   }
   page.resetFilters()
-  page.onBoardingStatusChange({ detail: { value: String(page.data.boardingStatuses.indexOf('未展示住宿信息')) } })
-  assert.ok(page.data.results.length >= 50)
-  assert.ok(page.data.results.every((item) => item.boardingDisplay === '未展示住宿信息'))
+  page.onTagChange({ detail: { value: String(page.data.tags.indexOf('工业园区')) } })
+  assert.ok(page.data.results.length > 0)
+  assert.ok(page.data.results.every((item) => item.tags.includes('工业园区')))
   page.resetFilters()
   assert.ok(page.data.results.length >= 50)
 }

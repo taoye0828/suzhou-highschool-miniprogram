@@ -19,7 +19,6 @@
       <view class="info-row"><text class="info-label">区域</text><text class="info-value">{{school.district}}</text></view>
       <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{school.schoolType}}</text></view>
       <view wx:if="{{school.ownership}}" class="info-row"><text class="info-label">办学性质</text><text class="info-value">{{school.ownership}}</text></view>
-      <view class="info-row"><text class="info-label">住宿</text><text class="info-value">{{school.boardingDisplay}}</text></view>
       <view wx:if="{{school.campus}}" class="info-row"><text class="info-label">校区</text><text class="info-value">{{school.campus}}</text></view>
       <view wx:if="{{school.address}}" class="info-row"><text class="info-label">地址</text><text class="info-value">{{school.address}}</text></view>
       <view class="tag-line">
