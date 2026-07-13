@@ -256,6 +256,9 @@ function testInfoPages() {
   const privacyDefinition = loadPage('pages/privacy/privacy')
   const privacyPage = createPageInstance(privacyDefinition)
   assert.ok(privacyPage.data.sections.length > 0)
+  const privacyText = JSON.stringify(privacyPage.data.sections)
+  assert.ok(privacyText.includes('不上传收藏、学习目标记录或输入草稿'))
+  assert.ok(privacyText.includes('不进行后台网络请求或用户行为追踪'))
 }
 
 async function run() {

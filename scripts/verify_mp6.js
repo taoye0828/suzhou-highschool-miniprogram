@@ -163,6 +163,10 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
 
 const { APP_CONFIG } = require('../config/app-config')
 if (!['1.4.0', '1.5.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.4.0 或 1.5.0')
+const privacyText = JSON.stringify(APP_CONFIG.policy.privacySections)
+for (const phrase of ['不上传收藏、学习目标记录或输入草稿', '不进行后台网络请求或用户行为追踪']) {
+  if (!privacyText.includes(phrase)) fail(`隐私说明缺少：${phrase}`)
+}
 for (const phrase of forbiddenPublicPhrases) {
   if (String(APP_CONFIG.releaseStatus || '').includes(phrase)) fail(`config/app-config.js releaseStatus 不得出现：${phrase}`)
 }
