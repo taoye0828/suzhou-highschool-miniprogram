@@ -1,0 +1,7 @@
+<web-view wx:if="{{url}}" src="{{url}}" binderror="onWebViewError"></web-view>
+<view wx:else class="page">
+  <view class="card empty">
+    <view class="card-title">来源链接无效</view>
+    <view class="muted small">请返回学校详情复制来源链接后核对。</view>
+  </view>
+</view>

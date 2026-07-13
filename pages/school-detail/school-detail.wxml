@@ -53,7 +53,10 @@
           <view wx:if="{{score.sameScoreRule}}" class="muted small">{{score.sameScoreRule}}</view>
           <view class="muted small">{{score.sourceTitle}}</view>
           <view class="muted small">核对日期：{{score.sourceCheckedAt}}</view>
-          <button class="button secondary small-button copy-source" data-url="{{score.sourceUrl}}" catchtap="copyScoreSource">复制分数线来源链接</button>
+          <view class="button-row">
+            <button class="button secondary small-button copy-source" data-url="{{score.sourceUrl}}" catchtap="openScoreSource">打开分数线来源</button>
+            <button class="button secondary small-button copy-source" data-url="{{score.sourceUrl}}" catchtap="copyScoreSource">复制来源链接</button>
+          </view>
         </view>
       </view>
     </view>
@@ -64,7 +67,10 @@
       <view class="info-row"><text class="info-label">来源类型</text><text class="info-value">{{school.sourceTypeLabel}}</text></view>
       <view class="info-row"><text class="info-label">核对日期</text><text class="info-value">{{school.sourceCheckedAt}}</text></view>
       <view class="notice source-note">{{school.sourceNote}}</view>
-      <button class="button secondary copy-source" bindtap="copySourceLink">复制来源链接</button>
+      <view class="button-row">
+        <button class="button secondary copy-source" bindtap="openSourceLink">打开官方来源</button>
+        <button class="button secondary copy-source" bindtap="copySourceLink">复制来源链接</button>
+      </view>
     </view>
 
     <view class="card safety-card">
@@ -79,6 +85,7 @@
         <button class="button secondary" bindtap="copySchoolName">复制学校名称</button>
         <button class="button secondary" bindtap="copyMapKeyword">复制地图搜索词</button>
         <button wx:if="{{school.address}}" class="button secondary" bindtap="copyAddress">复制地址</button>
+        <button wx:if="{{school.officialWebsite}}" class="button secondary" bindtap="openOfficialWebsite">打开学校官网</button>
         <button wx:if="{{school.officialWebsite}}" class="button secondary" bindtap="copyOfficialWebsite">复制官网链接</button>
       </view>
     </view>

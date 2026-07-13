@@ -27,8 +27,13 @@ global.wx = {
 const storage = require('../utils/storage')
 const school = require('../utils/school')
 const scoreUtils = require('../utils/admission-scores')
+const externalLink = require('../utils/external-link')
 const { schools } = require('../data/schools')
 const { admissionScores } = require('../data/admission-scores')
+
+assert.ok(externalLink.externalLinkRoute('https://www.suzhou.gov.cn/example').startsWith('/pages/web-view/web-view?url='))
+assert.strictEqual(externalLink.externalLinkRoute('http://example.com'), '')
+assert.strictEqual(externalLink.externalLinkRoute('javascript:alert(1)'), '')
 
 function target(id, createdAt = '2026-07-02T00:00:00.000Z') {
   return { id, currentScore: 500, targetScore: 550, note: '复盘数学', createdAt }

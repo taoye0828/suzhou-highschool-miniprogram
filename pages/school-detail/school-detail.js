@@ -2,6 +2,7 @@ const { getSchoolById, presentSchool } = require('../../utils/school')
 const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { mapSearchKeyword, copyText } = require('../../utils/map')
+const { openExternalLink } = require('../../utils/external-link')
 const {
   EMPTY_SCORE_TEXT,
   SCORE_SAFETY_NOTICE,
@@ -70,12 +71,24 @@ Page({
     copyText(this.data.school && this.data.school.sourceUrl, '来源链接已复制')
   },
 
+  openSourceLink() {
+    openExternalLink(this.data.school && this.data.school.sourceUrl)
+  },
+
   copyOfficialWebsite() {
     copyText(this.data.school && this.data.school.officialWebsite, '官网链接已复制')
   },
 
+  openOfficialWebsite() {
+    openExternalLink(this.data.school && this.data.school.officialWebsite)
+  },
+
   copyScoreSource(event) {
     copyText(event.currentTarget.dataset.url, '分数线来源链接已复制')
+  },
+
+  openScoreSource(event) {
+    openExternalLink(event.currentTarget.dataset.url)
   },
 
   openSchools() {

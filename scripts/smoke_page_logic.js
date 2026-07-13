@@ -163,6 +163,8 @@ function testSchoolDetailPage() {
     assert.ok(page.data.scoreGroups[0].items.some((score) => score.sameScoreRule))
     page.copyScoreSource({ currentTarget: { dataset: { url: page.data.scoreGroups[0].items[0].sourceUrl } } })
     assert.ok(toastTitles.includes('分数线来源链接已复制'))
+    page.openScoreSource({ currentTarget: { dataset: { url: page.data.scoreGroups[0].items[0].sourceUrl } } })
+    assert.ok(navigations.some((url) => url.startsWith('/pages/web-view/web-view?url=')))
   }
   assert.strictEqual(page.data.emptyScoreText, EMPTY_SCORE_TEXT)
 
@@ -171,9 +173,11 @@ function testSchoolDetailPage() {
   page.copySchoolName()
   page.copyMapKeyword()
   page.copySourceLink()
+  page.openSourceLink()
   assert.ok(toastTitles.includes('学校名称已复制'))
   assert.ok(toastTitles.includes('地图搜索词已复制'))
   assert.ok(toastTitles.includes('来源链接已复制'))
+  assert.ok(navigations.some((url) => url.startsWith('/pages/web-view/web-view?url=')))
 
   const missingPage = createPageInstance(definition)
   missingPage.onLoad({ id: 'removed_school' })
@@ -261,6 +265,20 @@ function testInfoPages() {
   assert.ok(privacyText.includes('不进行后台网络请求或用户行为追踪'))
 }
 
+function testWebViewPage() {
+  const definition = loadPage('pages/web-view/web-view')
+  const page = createPageInstance(definition)
+  page.onLoad({ url: encodeURIComponent('https://www.suzhou.gov.cn/example') })
+  assert.strictEqual(page.data.url, 'https://www.suzhou.gov.cn/example')
+  page.onWebViewError()
+  assert.ok(modals.some((item) => item.title === '官方页面打开失败'))
+
+  const invalidPage = createPageInstance(definition)
+  invalidPage.onLoad({ url: 'javascript%3Aalert(1)' })
+  assert.strictEqual(invalidPage.data.url, '')
+  assert.ok(modals.some((item) => item.title === '来源链接无效'))
+}
+
 async function run() {
   testHomePage()
   await testTargetsPage()
@@ -269,6 +287,7 @@ async function run() {
   testFavoritesPage()
   testProfilePage()
   testInfoPages()
+  testWebViewPage()
   console.log('PAGE LOGIC SMOKE PASSED')
 }
 

@@ -9,6 +9,7 @@ const requiredPages = [
   'pages/home/home',
   'pages/schools/schools',
   'pages/school-detail/school-detail',
+  'pages/web-view/web-view',
   'pages/favorites/favorites',
   'pages/targets/targets',
   'pages/data-info/data-info',
