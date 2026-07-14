@@ -4,3 +4,14 @@ miniprogram_npm/
 node_modules/
 *.log
 .env*
+*.p12
+*.mobileprovision
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+.vscode/
+.idea/
+coverage/
+tmp/
+*.tmp

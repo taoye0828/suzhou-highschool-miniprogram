@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, '..')
 const projectConfigPath = path.join(root, 'project.config.json')
 const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, 'utf8'))
 const ignoreRules = projectConfig.packOptions && projectConfig.packOptions.ignore
+const gitignore = fs.readFileSync(path.join(root, '.gitignore'), 'utf8').split(/\r?\n/).filter(Boolean)
 
 assert.ok(Array.isArray(ignoreRules), 'packOptions.ignore must be an array')
 assert.strictEqual(projectConfig.appid, 'wx17e903f81714736f')
@@ -13,6 +14,25 @@ assert.strictEqual(projectConfig.compileType, 'miniprogram')
 assert.strictEqual(projectConfig.miniprogramRoot, './')
 assert.strictEqual(Object.hasOwn(projectConfig, 'cloudfunctionRoot'), false)
 assert.strictEqual(Object.hasOwn(projectConfig, 'cloudfunctionTemplateRoot'), false)
+for (const rule of [
+  '.env*',
+  '*.p12',
+  '*.mobileprovision',
+  'build/',
+  'DerivedData/',
+  'xcuserdata/',
+  '*.xcuserstate',
+  'project.private.config.json',
+  'node_modules/',
+  '*.log',
+  '.vscode/',
+  '.idea/',
+  'coverage/',
+  'tmp/',
+  '*.tmp'
+]) {
+  assert.ok(gitignore.includes(rule), `.gitignore rule missing: ${rule}`)
+}
 
 function normalize(relativePath) {
   return relativePath.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '')
