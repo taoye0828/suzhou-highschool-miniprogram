@@ -110,10 +110,12 @@ assert.ok(hasRule('suffix', '.log'), '*.log ignore rule missing')
   'sitemap.json',
   'pages/home/home.js',
   'pages/schools/schools.wxml',
+  'pages/web-view/web-view.js',
   'data/schools.js',
   'data/admission-scores.js',
   'data/admission-scores-2026.js',
   'utils/school.js',
+  'utils/external-link.js',
   'config/app-config.js',
   'styles/common.wxss'
 ].forEach(assertNotIgnored)

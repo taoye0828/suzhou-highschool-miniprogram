@@ -281,8 +281,14 @@ verifyJson('sitemap.json')
 if (projectConfig && projectConfig.appid !== expectedAppId) {
   fail(`project.config.json appid 应为 ${expectedAppId}`)
 }
+if (projectConfig) {
+  if (projectConfig.compileType !== 'miniprogram') fail('project.config.json compileType 必须为 miniprogram')
+  if (projectConfig.miniprogramRoot !== './') fail('project.config.json miniprogramRoot 必须为 ./')
+  if (Object.hasOwn(projectConfig, 'cloudfunctionRoot')) fail('project.config.json 不得配置 cloudfunctionRoot')
+}
 
 if (appConfig) {
+  if (appConfig.lazyCodeLoading !== 'requiredComponents') fail('app.json lazyCodeLoading 必须为 requiredComponents')
   for (const page of requiredPages) {
     if (!appConfig.pages.includes(page)) fail(`app.json 未注册 ${page}`)
     for (const extension of ['js', 'json', 'wxml', 'wxss']) {

@@ -9,6 +9,7 @@ const toastTitles = []
 const modals = []
 const navigations = []
 let writeFailure = false
+let removeFailure = false
 
 global.wx = {
   getStorageSync: (key) => memory.get(key),
@@ -16,7 +17,10 @@ global.wx = {
     if (writeFailure) throw new Error('simulated quota failure')
     memory.set(key, value)
   },
-  removeStorageSync: (key) => memory.delete(key),
+  removeStorageSync: (key) => {
+    if (removeFailure) throw new Error('simulated remove failure')
+    memory.delete(key)
+  },
   showToast: ({ title }) => toastTitles.push(title),
   showModal: (options) => {
     modals.push(options)
@@ -87,6 +91,14 @@ async function testTargetsPage() {
     targetScore: '550',
     note: '复盘数学'
   })
+  assert.ok(page.data.gapText.includes('还有 50 分'))
+
+  page.onCurrentInput({ detail: { value: '550' } })
+  page.onTargetInput({ detail: { value: '550' } })
+  assert.ok(page.data.gapText.includes('一致'))
+  page.onCurrentInput({ detail: { value: '600' } })
+  assert.ok(page.data.gapText.includes('已超过'))
+  page.onCurrentInput({ detail: { value: '500' } })
 
   page.saveRecord()
   const firstRecords = memory.get('mp1.target_records')
@@ -95,6 +107,17 @@ async function testTargetsPage() {
   assert.strictEqual(Object.hasOwn(firstRecords[0], 'admissionScore'), false)
   assert.ok(toastTitles.includes('学习目标已保存'))
   assert.strictEqual(page.data.records.length, 1)
+
+  page.onCurrentInput({ detail: { value: '0' } })
+  page.onTargetInput({ detail: { value: String(APP_CONFIG.targetScore.max) } })
+  page.onNoteInput({ detail: { value: '  边界记录  ' } })
+  page.saveRecord()
+  const zeroRecord = memory.get('mp1.target_records').find((item) => item.currentScore === 0)
+  assert.strictEqual(zeroRecord.targetScore, APP_CONFIG.targetScore.max)
+  assert.strictEqual(zeroRecord.note, '边界记录')
+  assert.strictEqual(zeroRecord.schemaVersion, 1)
+  assert.ok(Number.isFinite(Date.parse(zeroRecord.createdAt)))
+  assert.strictEqual(new Set(memory.get('mp1.target_records').map((item) => item.id)).size, memory.get('mp1.target_records').length)
 
   page.onCurrentInput({ detail: { value: '700' } })
   page.onTargetInput({ detail: { value: String(APP_CONFIG.targetScore.max) } })
@@ -108,8 +131,17 @@ async function testTargetsPage() {
     assert.strictEqual(memory.get('mp1.target_records').length, countBefore)
     assert.ok(toastTitles.includes(`目标分不能超过 ${APP_CONFIG.targetScore.max} 分`))
   }
-  const boundaryRecord = memory.get('mp1.target_records').find((item) => item.targetScore === APP_CONFIG.targetScore.max)
-  page.deleteRecord({ currentTarget: { dataset: { id: boundaryRecord.id } } })
+  for (const [currentValue, targetValue] of [['', '550'], ['-1', '550'], ['500.5', '550']]) {
+    const countBefore = memory.get('mp1.target_records').length
+    page.onCurrentInput({ detail: { value: currentValue } })
+    page.onTargetInput({ detail: { value: targetValue } })
+    page.saveRecord()
+    assert.strictEqual(memory.get('mp1.target_records').length, countBefore)
+  }
+  const boundaryRecords = memory.get('mp1.target_records').filter((item) => item.targetScore === APP_CONFIG.targetScore.max)
+  for (const boundaryRecord of boundaryRecords) {
+    page.deleteRecord({ currentTarget: { dataset: { id: boundaryRecord.id } } })
+  }
 
   page.onCurrentInput({ detail: { value: 'abc' } })
   page.saveRecord()
@@ -194,6 +226,9 @@ function testSchoolsPage() {
   page.onKeywordInput({ detail: { value: '南航苏附' } })
   assert.ok(page.data.results.some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
   page.resetFilters()
+  page.onKeywordInput({ detail: { value: '不存在的学校关键词' } })
+  assert.strictEqual(page.data.results.length, 0)
+  page.resetFilters()
   page.onScoreStatusChange({ detail: { value: String(page.data.scoreStatuses.indexOf('已收录已核实历史分数线')) } })
   const scoredIds = page.data.results.map((item) => item.id)
   assert.strictEqual(new Set(scoredIds).size, scoredIds.length)
@@ -206,6 +241,9 @@ function testSchoolsPage() {
   assert.ok(page.data.results.every((item) => item.tags.includes('工业园区')))
   page.resetFilters()
   assert.ok(page.data.results.length >= 50)
+  const favoriteCandidate = page.data.results.find((item) => !item.isFavorite)
+  page.toggleFavorite({ currentTarget: { dataset: { id: favoriteCandidate.id } } })
+  assert.strictEqual(page.data.results.find((item) => item.id === favoriteCandidate.id).isFavorite, true)
 }
 
 function testFavoritesPage() {
@@ -249,6 +287,15 @@ function testProfilePage() {
   assert.strictEqual(memory.has('mp1.favorite_school_ids'), false)
   assert.strictEqual(memory.has('mp1.target_records'), false)
   assert.strictEqual(memory.has('mp1.target_draft'), false)
+
+  memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
+  memory.set('mp1.target_records', [{ id: 'target_2', currentScore: 500, targetScore: 550, note: '', createdAt: '2026-07-02T00:00:00.000Z' }])
+  removeFailure = true
+  page.clearLocalData()
+  removeFailure = false
+  assert.strictEqual(memory.has('mp1.favorite_school_ids'), true)
+  assert.strictEqual(memory.has('mp1.target_records'), true)
+  assert.ok(toastTitles.includes('部分本地数据清除失败，请重试。'))
 }
 
 function testInfoPages() {

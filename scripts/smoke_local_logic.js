@@ -87,6 +87,21 @@ for (const item of storage.getTargetRecords()) {
 assert.strictEqual(storage.deleteTargetRecord('target_1').ok, true)
 assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['target_2'])
 
+for (const record of [
+  { ...target('zero_boundary'), currentScore: 0, targetScore: 0 },
+  { ...target('max_boundary'), currentScore: EXAM_TOTAL_SCORE, targetScore: EXAM_TOTAL_SCORE }
+]) {
+  assert.strictEqual(storage.saveTargetRecord(record).ok, true)
+}
+for (const record of [
+  { ...target('negative'), currentScore: -1 },
+  { ...target('above_max'), targetScore: EXAM_TOTAL_SCORE + 1 },
+  { ...target('decimal'), targetScore: 500.5 },
+  { ...target('empty'), targetScore: '' }
+]) {
+  assert.strictEqual(storage.saveTargetRecord(record).ok, false)
+}
+
 memory.set(storage.KEYS.targets, [
   {},
   { id: 'broken', currentScore: 500, targetScore: 550, createdAt: 123 },
@@ -135,6 +150,9 @@ assert.strictEqual(storage.getTargetRecords().length, 0)
 assert.deepStrictEqual(storage.getTargetDraft(), {})
 
 assert.ok(school.filterSchools({ keyword: '南航苏附' }).some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
+assert.strictEqual(school.filterSchools({ keyword: '' }).length, schools.length)
+assert.strictEqual(school.filterSchools({ keyword: '   ' }).length, schools.length)
+assert.ok(school.filterSchools({ keyword: '  南航苏附  ' }).some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
 assert.ok(school.filterSchools({ keyword: '星湖街' }).some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
 assert.ok(school.filterSchools({ district: '吴江区' }).every((item) => item.district === '吴江区'))
 assert.ok(school.filterSchools({ schoolType: '普通高中' }).every((item) => item.schoolType === '普通高中'))
@@ -163,6 +181,16 @@ const sampleScores = [
     minScore: 650
   },
   {
+    id: 'sample_2025_c',
+    schoolId: 'suzhou_high_school',
+    year: 2025,
+    region: '苏州市区',
+    batch: '第一批次',
+    admissionType: '项目招生',
+    scoreType: '录取最低分',
+    minScore: 648
+  },
+  {
     id: 'sample_2024_a',
     schoolId: 'suzhou_high_school',
     year: 2024,
@@ -174,9 +202,10 @@ const sampleScores = [
   }
 ]
 assert.strictEqual(scoreUtils.hasScoresForSchool('suzhou_high_school', sampleScores), true)
-assert.strictEqual(scoreUtils.countScoresBySchoolId('suzhou_high_school', sampleScores), 2)
-assert.deepStrictEqual(scoreUtils.getScoresBySchoolId('suzhou_high_school', sampleScores).map((item) => item.year), [2025, 2024])
+assert.strictEqual(scoreUtils.countScoresBySchoolId('suzhou_high_school', sampleScores), 3)
+assert.deepStrictEqual(scoreUtils.getScoresBySchoolId('suzhou_high_school', sampleScores).map((item) => item.year), [2025, 2025, 2024])
 assert.deepStrictEqual(scoreUtils.groupScoresByYear('suzhou_high_school', sampleScores).map((group) => group.year), ['2025', '2024'])
+assert.strictEqual(scoreUtils.groupScoresByYear('suzhou_high_school', sampleScores)[0].items.length, 2)
 
 assert.ok(expectedErrorLogs.length >= 7)
 console.error = originalConsoleError
