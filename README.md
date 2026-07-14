@@ -16,12 +16,20 @@
 ## 当前功能
 
 - 首页展示产品功能、数据概况和必要免责声明
-- 学校库搜索、区域筛选、类型筛选、住宿信息筛选、分数线状态筛选
-- 学校详情展示基础信息、历史分数线、来源说明和安全提示
-- 本地收藏、取消收藏、旧收藏 ID 清理
+- 学校库名称/别名搜索，以及区域、类型、办学性质、正式标签和分数线状态组合筛选
+- 学校详情展示基础信息、历史分数线、来源说明和安全提示；HTTPS 官方来源可在受控页面打开，并保留复制回退
+- 本地收藏、取消收藏、失效收藏 ID 自动清理及失败重试
 - 阶段学习目标记录、删除、清空和本地草稿
 - 学习目标总分上限已统一按苏州中考满分 740 分处理
 - 数据说明、隐私说明、我的页本地数据管理
+
+## FINAL-RC4 状态
+
+- 小程序本地代码范围已完成并通过自动验证。
+- 运行页面共 9 个，其中 8 个正式功能页面、1 个受控官方来源页；tabBar 为首页、学校库、收藏、学习目标、我的 5 项。
+- 双端正式数据文件一致性为 16/16：55 所学校、146 条分数线，2025 年 103 条、2026 年 43 条。
+- Flutter 仓库的正式 JSON 与小程序一致，但 Flutter 默认运行模式仍为 mock 且仍含 Supabase 依赖；这属于 Flutter 代码缺口，不影响小程序本地功能验证，也不能据此宣称 Flutter FINAL-RC4 完成。
+- 代码完成不等于微信开发者工具编译、手机预览、备案、体验版上传或平台审核完成。
 
 ## 当前不支持
 
@@ -69,6 +77,7 @@ node -e "JSON.parse(require('fs').readFileSync('project.config.json','utf8')); c
 node --check app.js
 node --check data/schools.js
 node --check data/admission-scores.js
+node --check data/admission-scores-2026.js
 node scripts/verify_mp1.js
 node scripts/verify_mp2.js
 node scripts/verify_mp4.js
@@ -79,6 +88,7 @@ node scripts/verify_mp13_2026_scores.js
 node scripts/verify_upload_package_ignore.js
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
+node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app
 find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
 git diff --check
 ```
@@ -90,6 +100,9 @@ git diff --check
 3. 首页应展示产品说明、功能、边界、数据概况和正式快捷入口。
 4. 我的页应展示收藏、学习目标、数据说明、隐私说明、本地保存说明和清除本地数据。
 5. 如仍看到旧文案，优先检查是否打开了旧项目路径、是否未重新编译、是否命中了微信开发者工具缓存。
+6. 官方来源页需要在微信公众平台配置对应 HTTPS 业务域名；未配置时应出现明确失败提示，仍可复制链接用系统浏览器打开。
+
+完整人工检查步骤见 [docs/manual_wechat_release_checks.md](docs/manual_wechat_release_checks.md)，双端数据结果见 [docs/cross_platform_consistency_report.md](docs/cross_platform_consistency_report.md)，最终覆盖结果见 [docs/final_rc4_coverage_report.md](docs/final_rc4_coverage_report.md)。
 
 ## 回滚方式
 
