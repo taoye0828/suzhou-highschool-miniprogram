@@ -1,66 +1,90 @@
 {
   "project": "suzhou_highschool_miniprogram",
   "startSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
-  "currentSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
-  "currentStage": "baseline_audit_complete",
-  "currentStepId": "RC4-MP-AUDIT-01",
-  "currentStepGoal": "记录初始完成矩阵并进入真实缺口修复",
-  "stepStartSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
+  "currentSha": "9346e19c5b246836c8ab81ab778fe5efa8db271a",
+  "currentStage": "final_documentation_verified",
+  "currentStepId": "RC4-MP-DOC-03",
+  "currentStepGoal": "完成最终矩阵、覆盖报告和人工发布交接",
+  "stepStartSha": "29a19bc916c901fb3fa0dc66b059b5547a425b54",
   "expectedFiles": [
+    "README.md",
     "docs/final_rc4_completion_matrix.md",
-    "docs/final_rc4_progress.json"
+    "docs/final_rc4_progress.json",
+    "docs/final_rc4_coverage_report.md",
+    "docs/manual_wechat_release_checks.md",
+    "docs/cross_platform_consistency_report.md"
   ],
   "actualFiles": [
+    "README.md",
     "docs/final_rc4_completion_matrix.md",
-    "docs/final_rc4_progress.json"
+    "docs/final_rc4_progress.json",
+    "docs/final_rc4_coverage_report.md",
+    "docs/manual_wechat_release_checks.md",
+    "docs/cross_platform_consistency_report.md"
   ],
   "targetedTests": [
-    "all existing scripts/*.js",
+    "all verify and smoke scripts",
+    "cross-platform consistency verifier",
     "all JavaScript syntax checks",
     "git diff --check"
   ],
   "targetedTestResults": [
-    "all existing scripts passed on baseline",
+    "all verify and smoke scripts passed",
+    "cross-platform checks passed 16/16 with two Flutter runtime warnings",
     "all JavaScript syntax checks passed",
     "git diff --check passed"
   ],
-  "stepCommitSha": "",
-  "stepPushSucceeded": false,
-  "lastStableSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
-  "completedTaskIds": [],
+  "stepCommitSha": "9346e19c5b246836c8ab81ab778fe5efa8db271a",
+  "stepPushSucceeded": true,
+  "lastStableSha": "9346e19c5b246836c8ab81ab778fe5efa8db271a",
+  "completedTaskIds": [
+    "RC4-MP-CONFIG-01", "RC4-MP-CONFIG-02", "RC4-MP-CONFIG-03", "RC4-MP-CONFIG-04",
+    "RC4-MP-DATA-01", "RC4-MP-DATA-02", "RC4-MP-DATA-03", "RC4-MP-DATA-04",
+    "RC4-MP-HOME-01", "RC4-MP-HOME-02", "RC4-MP-HOME-03",
+    "RC4-MP-SCHOOL-01", "RC4-MP-SCHOOL-02", "RC4-MP-SCHOOL-03", "RC4-MP-SCHOOL-04", "RC4-MP-SCHOOL-05",
+    "RC4-MP-DETAIL-01", "RC4-MP-DETAIL-02", "RC4-MP-DETAIL-03", "RC4-MP-DETAIL-04", "RC4-MP-DETAIL-05",
+    "RC4-MP-FAVORITE-01", "RC4-MP-FAVORITE-02", "RC4-MP-FAVORITE-03", "RC4-MP-FAVORITE-04",
+    "RC4-MP-TARGET-01", "RC4-MP-TARGET-02", "RC4-MP-TARGET-03", "RC4-MP-TARGET-04", "RC4-MP-TARGET-05", "RC4-MP-TARGET-06", "RC4-MP-TARGET-07",
+    "RC4-MP-PROFILE-01", "RC4-MP-PROFILE-02",
+    "RC4-MP-PRIVACY-01", "RC4-MP-PRIVACY-02", "RC4-MP-PRIVACY-03",
+    "RC4-MP-TEST-01", "RC4-MP-TEST-02", "RC4-MP-TEST-03",
+    "RC4-MP-DOC-01", "RC4-MP-DOC-02", "RC4-MP-DOC-03"
+  ],
   "verifiedTaskIds": [
-    "RC4-MP-CONFIG-01",
-    "RC4-MP-CONFIG-02",
-    "RC4-MP-CONFIG-03",
-    "RC4-MP-DATA-01",
-    "RC4-MP-DATA-02",
-    "RC4-MP-DATA-03"
+    "RC4-MP-CONFIG-01", "RC4-MP-CONFIG-02", "RC4-MP-CONFIG-03", "RC4-MP-CONFIG-04",
+    "RC4-MP-DATA-01", "RC4-MP-DATA-02", "RC4-MP-DATA-03", "RC4-MP-DATA-04",
+    "RC4-MP-HOME-01", "RC4-MP-HOME-02", "RC4-MP-HOME-03",
+    "RC4-MP-SCHOOL-01", "RC4-MP-SCHOOL-02", "RC4-MP-SCHOOL-03", "RC4-MP-SCHOOL-04", "RC4-MP-SCHOOL-05",
+    "RC4-MP-DETAIL-01", "RC4-MP-DETAIL-02", "RC4-MP-DETAIL-03", "RC4-MP-DETAIL-04", "RC4-MP-DETAIL-05",
+    "RC4-MP-FAVORITE-01", "RC4-MP-FAVORITE-02", "RC4-MP-FAVORITE-03", "RC4-MP-FAVORITE-04",
+    "RC4-MP-TARGET-01", "RC4-MP-TARGET-02", "RC4-MP-TARGET-03", "RC4-MP-TARGET-04", "RC4-MP-TARGET-05", "RC4-MP-TARGET-06", "RC4-MP-TARGET-07",
+    "RC4-MP-PROFILE-01", "RC4-MP-PROFILE-02",
+    "RC4-MP-PRIVACY-01", "RC4-MP-PRIVACY-02", "RC4-MP-PRIVACY-03",
+    "RC4-MP-TEST-01", "RC4-MP-TEST-02", "RC4-MP-TEST-03",
+    "RC4-MP-DOC-01", "RC4-MP-DOC-02", "RC4-MP-DOC-03"
   ],
-  "pendingTaskIds": [
-    "RC4-MP-HOME-03",
-    "RC4-MP-SCHOOL-03",
-    "RC4-MP-DETAIL-04",
-    "RC4-MP-FAVORITE-03",
-    "RC4-MP-TARGET-06",
-    "RC4-MP-PROFILE-01",
-    "RC4-MP-PRIVACY-02",
-    "RC4-MP-DATA-04",
-    "RC4-MP-DOC-01",
-    "RC4-MP-DOC-02",
-    "RC4-MP-DOC-03"
-  ],
+  "pendingTaskIds": [],
   "failedTaskIds": [],
-  "createdCommits": [],
-  "pushedCommits": [],
+  "createdCommits": [
+    "9534b40", "1469c8c", "4139a2d", "d0ccd83", "8e8c24f", "2ecefb3",
+    "97f2448", "670217a", "d5ec894", "29a19bc", "9346e19"
+  ],
+  "pushedCommits": [
+    "9534b40", "1469c8c", "4139a2d", "d0ccd83", "8e8c24f", "2ecefb3",
+    "97f2448", "670217a", "d5ec894", "29a19bc", "9346e19"
+  ],
   "checkpointBranches": [
-    "backup/rc4-start-20260712-753a78d"
+    "backup/rc4-start-20260712-753a78d",
+    "backup/rc4-data-complete-20260714-29a19bc",
+    "backup/rc4-miniprogram-complete-20260714-d5ec894",
+    "backup/rc4-tests-passed-20260714-9346e19"
   ],
   "externalBlocks": [
     "微信开发者工具人工编译、手机预览、体验版上传、备案、隐私指引、审核与发布"
   ],
-  "lastSuccessfulCommand": "all existing scripts/*.js and all JavaScript node --check",
-  "lastFailedCommand": "",
-  "lastErrorSummary": "",
-  "nextAction": "修复首页、筛选/详情未核实字段、收藏与目标存储真实缺口",
-  "safeToContinue": false
+  "lastSuccessfulCommand": "all verify/smoke scripts, cross-platform verifier, all JavaScript node --check, git diff --check",
+  "lastFailedCommand": "node scripts/verify_mp4.js (before controlled web-view whitelist fix)",
+  "lastErrorSummary": "fixed: the old fixed page whitelist did not include pages/web-view/web-view",
+  "nextAction": "commit matrix/progress, add explicit edge assertions, rerun final validation, create final backup branch",
+  "safeToContinue": true
 }
