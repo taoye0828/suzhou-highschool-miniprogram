@@ -1,11 +1,11 @@
 {
   "project": "suzhou_highschool_miniprogram",
   "startSha": "753a78d1ca0fe266b95b50200782c5217a7ea532",
-  "currentSha": "9346e19c5b246836c8ab81ab778fe5efa8db271a",
-  "currentStage": "final_documentation_verified",
-  "currentStepId": "RC4-MP-DOC-03",
-  "currentStepGoal": "完成最终矩阵、覆盖报告和人工发布交接",
-  "stepStartSha": "29a19bc916c901fb3fa0dc66b059b5547a425b54",
+  "currentSha": "144f184ed9543afe00c93ed145f1d2f2f529c0f6",
+  "currentStage": "final_validation_passed",
+  "currentStepId": "RC4-MP-TEST-03",
+  "currentStepGoal": "补齐显式边界断言并完成最终全量自动验证",
+  "stepStartSha": "6cbff23976a173e0784c62f63c4ab27a8b0ba965",
   "expectedFiles": [
     "README.md",
     "docs/final_rc4_completion_matrix.md",
@@ -34,9 +34,9 @@
     "all JavaScript syntax checks passed",
     "git diff --check passed"
   ],
-  "stepCommitSha": "9346e19c5b246836c8ab81ab778fe5efa8db271a",
+  "stepCommitSha": "144f184ed9543afe00c93ed145f1d2f2f529c0f6",
   "stepPushSucceeded": true,
-  "lastStableSha": "9346e19c5b246836c8ab81ab778fe5efa8db271a",
+  "lastStableSha": "144f184ed9543afe00c93ed145f1d2f2f529c0f6",
   "completedTaskIds": [
     "RC4-MP-CONFIG-01", "RC4-MP-CONFIG-02", "RC4-MP-CONFIG-03", "RC4-MP-CONFIG-04",
     "RC4-MP-DATA-01", "RC4-MP-DATA-02", "RC4-MP-DATA-03", "RC4-MP-DATA-04",
@@ -67,24 +67,25 @@
   "failedTaskIds": [],
   "createdCommits": [
     "9534b40", "1469c8c", "4139a2d", "d0ccd83", "8e8c24f", "2ecefb3",
-    "97f2448", "670217a", "d5ec894", "29a19bc", "9346e19"
+    "97f2448", "670217a", "d5ec894", "29a19bc", "9346e19", "6cbff23", "144f184"
   ],
   "pushedCommits": [
     "9534b40", "1469c8c", "4139a2d", "d0ccd83", "8e8c24f", "2ecefb3",
-    "97f2448", "670217a", "d5ec894", "29a19bc", "9346e19"
+    "97f2448", "670217a", "d5ec894", "29a19bc", "9346e19", "6cbff23", "144f184"
   ],
   "checkpointBranches": [
     "backup/rc4-start-20260712-753a78d",
     "backup/rc4-data-complete-20260714-29a19bc",
     "backup/rc4-miniprogram-complete-20260714-d5ec894",
-    "backup/rc4-tests-passed-20260714-9346e19"
+    "backup/rc4-tests-passed-20260714-9346e19",
+    "backup/rc4-final-20260714"
   ],
   "externalBlocks": [
     "微信开发者工具人工编译、手机预览、体验版上传、备案、隐私指引、审核与发布"
   ],
-  "lastSuccessfulCommand": "all verify/smoke scripts, cross-platform verifier, all JavaScript node --check, git diff --check",
+  "lastSuccessfulCommand": "config parse, all verify/smoke scripts, cross-platform verifier, all JavaScript node --check, runtime forbidden-API scan, git diff --check",
   "lastFailedCommand": "node scripts/verify_mp4.js (before controlled web-view whitelist fix)",
   "lastErrorSummary": "fixed: the old fixed page whitelist did not include pages/web-view/web-view",
-  "nextAction": "commit matrix/progress, add explicit edge assertions, rerun final validation, create final backup branch",
+  "nextAction": "create and push backup/rc4-final-20260714, then perform external WeChat DevTools and phone checks",
   "safeToContinue": true
 }
