@@ -27,4 +27,4 @@
 
 ## 跨项目边界
 
-双端正式数据文件与本地隐私边界 16/16 一致；Flutter 默认运行模式仍为 mock 且仍含 Supabase 依赖，因此 Flutter FINAL-RC4 未完成。详见 `docs/cross_platform_consistency_report.md`。
+双端正式数据文件与本地隐私边界 16/16 一致；Flutter 正式本地运行链路 6/6 通过，不再存在 mock 默认链路或 Supabase 运行依赖阻断。详见 `docs/cross_platform_consistency_report.md`。

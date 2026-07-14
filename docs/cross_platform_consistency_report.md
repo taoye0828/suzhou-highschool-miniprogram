@@ -2,7 +2,7 @@
 
 生成命令：`node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app --write-report`
 
-结论：数据与本地隐私边界检查 通过（16/16 项）；Flutter 发布范围另有 2 个运行时阻断。
+结论：数据与本地隐私边界检查 通过（16/16 项）；Flutter 正式本地运行链路检查 通过（6/6 项）；Flutter FINAL-RC4 已完成。
 
 | 指标 | 微信小程序 | Flutter App | 一致 |
 |---|---:|---:|---|
@@ -48,7 +48,15 @@
 - PASS: miniPrivacyLocalOnly
 - PASS: appPrivacyLocalOnly
 
+## Flutter 正式本地运行链路
+
+- PASS: singleLocalDataMode
+- PASS: defaultRepositoriesUseLocalSources
+- PASS: productionAssetsRegistered
+- PASS: productionSourcesReadFormalAssets
+- PASS: noRuntimeDataSourceSelector
+- PASS: noMockOrSupabaseRuntime
+
 ## Flutter 运行时阻断
 
-- Flutter 当前默认运行模式仍为 mock，虽然已提交正式 JSON 与小程序完全一致，但正式运行链路未完成。
-- Flutter 仍包含 supabase_flutter 依赖，与 FINAL-RC4 的纯本地正式版范围不一致。
+- 无

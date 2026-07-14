@@ -10,8 +10,8 @@ const { schools } = require('../data/schools')
 const { admissionScores } = require('../data/admission-scores')
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
 
-const appSchoolsPath = path.join(appRoot, 'assets/local/schools_v1_4_0.json')
-const appScoresPath = path.join(appRoot, 'assets/local/admission_scores_v1_4_0.json')
+const appSchoolsPath = path.join(appRoot, 'assets/data/schools.json')
+const appScoresPath = path.join(appRoot, 'assets/data/admission_scores.json')
 const appSchools = JSON.parse(fs.readFileSync(appSchoolsPath, 'utf8'))
 const appScores = JSON.parse(fs.readFileSync(appScoresPath, 'utf8'))
 
@@ -74,6 +74,19 @@ function readApp(relative) {
   return fs.readFileSync(path.join(appRoot, relative), 'utf8')
 }
 
+function readFilesRecursively(root, extension) {
+  const values = []
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const target = path.join(root, entry.name)
+    if (entry.isDirectory()) {
+      values.push(...readFilesRecursively(target, extension))
+    } else if (entry.isFile() && entry.name.endsWith(extension)) {
+      values.push(fs.readFileSync(target, 'utf8'))
+    }
+  }
+  return values
+}
+
 const miniSchoolProjection = project(schools, schoolFields)
 const appSchoolProjection = project(appSchools, schoolFields)
 const miniScoreProjection = project(admissionScores, scoreFields)
@@ -94,10 +107,14 @@ const appRuntime = [
   'lib/features/privacy/pages/privacy_page.dart',
   'ios/Runner/Info.plist'
 ].filter((relative) => fs.existsSync(path.join(appRoot, relative))).map(readApp).join('\n')
-const appSupabaseSources = [
-  'lib/data/sources/supabase_school_data_source.dart',
-  'lib/data/sources/supabase_admission_score_data_source.dart'
-].filter((relative) => fs.existsSync(path.join(appRoot, relative))).map(readApp).join('\n')
+const appLibSource = readFilesRecursively(path.join(appRoot, 'lib'), '.dart').join('\n')
+const appPubspec = readApp('pubspec.yaml')
+const appMain = readApp('lib/main.dart')
+const appDataSourceMode = readApp('lib/core/config/data_source_mode.dart')
+const appSchoolRepository = readApp('lib/data/repositories/school_repository.dart')
+const appScoreRepository = readApp('lib/data/repositories/admission_score_repository.dart')
+const appLocalSchoolSource = readApp('lib/data/sources/local_school_data_source.dart')
+const appLocalScoreSource = readApp('lib/data/sources/local_admission_score_data_source.dart')
 
 const checks = {
   schoolCount: schools.length === appSchools.length,
@@ -113,20 +130,36 @@ const checks = {
   targetMaxEqual740: EXAM_TOTAL_SCORE === 740 && /examTotalScore\s*=\s*740/.test(appRuntime),
   miniNoForbiddenApi: !/wx\.(?:login|getUserProfile|getPhoneNumber|getLocation|chooseLocation|cloud|uploadFile|requestPayment|request)\b/.test(miniRuntime),
   appNoLocationPermission: !/NSLocation|geolocator|LocationPermission/.test(appRuntime),
-  appNoUserDataUpload: !/\.(?:insert|update|upsert|delete)\s*\(/.test(appSupabaseSources),
+  appNoUserDataUpload: !/package:(?:http|dio|supabase|firebase)|Supabase\.|Firebase\.|uploadFile|http\.(?:post|put|delete)|Dio\s*\(/.test(appLibSource),
   miniPrivacyLocalOnly: APP_CONFIG.policy.privacySections.some((section) => section.items.some((item) => item.includes('不上传收藏、学习目标记录或输入草稿'))),
   appPrivacyLocalOnly: /只保存在本机|不会上传/.test(appRuntime)
 }
 
-const releaseWarnings = []
-if (/defaultDataSourceMode\s*=\s*DataSourceMode\.mock/.test(appRuntime)) {
-  releaseWarnings.push('Flutter 当前默认运行模式仍为 mock，虽然已提交正式 JSON 与小程序完全一致，但正式运行链路未完成。')
+const runtimeChecks = {
+  singleLocalDataMode: /enum\s+DataSourceMode\s*\{\s*localAssets\s*\}/.test(appDataSourceMode) && /defaultDataSourceMode\s*=\s*DataSourceMode\.localAssets/.test(appDataSourceMode),
+  defaultRepositoriesUseLocalSources: /return\s+LocalSchoolDataSource\s*\(/.test(appSchoolRepository) && /return\s+LocalAdmissionScoreDataSource\s*\(/.test(appScoreRepository),
+  productionAssetsRegistered: /-\s+assets\/data\/schools\.json/.test(appPubspec) && /-\s+assets\/data\/admission_scores\.json/.test(appPubspec) && /-\s+assets\/data\/app_policy\.json/.test(appPubspec) && !/-\s+assets\/(?:mock|local)\//.test(appPubspec),
+  productionSourcesReadFormalAssets: /assets\/data\/schools\.json/.test(appLocalSchoolSource) && /assets\/data\/admission_scores\.json/.test(appLocalScoreSource),
+  noRuntimeDataSourceSelector: !/String\.fromEnvironment\s*\(\s*['"](?:DATA_SOURCE|SUPABASE_)/.test(appLibSource),
+  noMockOrSupabaseRuntime: !/package:supabase_flutter|Supabase\.initialize|class\s+(?:Mock|Supabase)(?:School|AdmissionScore)DataSource|assets\/mock\//.test(`${appPubspec}\n${appMain}\n${appLibSource}`)
 }
-if (/supabase_flutter/.test(readApp('pubspec.yaml'))) {
-  releaseWarnings.push('Flutter 仍包含 supabase_flutter 依赖，与 FINAL-RC4 的纯本地正式版范围不一致。')
+
+const releaseWarnings = []
+if (!runtimeChecks.singleLocalDataMode || !runtimeChecks.defaultRepositoriesUseLocalSources) {
+  releaseWarnings.push('Flutter 默认 Repository 尚未锁定为唯一正式本地数据链路。')
+}
+if (!runtimeChecks.productionAssetsRegistered || !runtimeChecks.productionSourcesReadFormalAssets) {
+  releaseWarnings.push('Flutter 正式 JSON 的注册路径与生产 DataSource 读取路径不一致。')
+}
+if (!runtimeChecks.noRuntimeDataSourceSelector) {
+  releaseWarnings.push('Flutter 仍存在运行时数据源环境变量切换逻辑。')
+}
+if (!runtimeChecks.noMockOrSupabaseRuntime) {
+  releaseWarnings.push('Flutter 生产代码或依赖仍包含 mock/Supabase 运行链路。')
 }
 
 const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name)
+const failedRuntimeChecks = Object.entries(runtimeChecks).filter(([, passed]) => !passed).map(([name]) => name)
 const summary = {
   mini: {
     schools: schools.length,
@@ -154,6 +187,8 @@ const summary = {
   },
   checks,
   failedChecks,
+  runtimeChecks,
+  failedRuntimeChecks,
   schoolDiff,
   scoreDiff,
   releaseWarnings
@@ -165,9 +200,10 @@ function markdownList(items) {
 
 function buildReport() {
   const passedCount = Object.values(checks).filter(Boolean).length
+  const runtimePassedCount = Object.values(runtimeChecks).filter(Boolean).length
   return `# FINAL-RC4 双端一致性报告\n\n` +
     `生成命令：\`node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app --write-report\`\n\n` +
-    `结论：数据与本地隐私边界检查 ${failedChecks.length ? '未通过' : '通过'}（${passedCount}/${Object.keys(checks).length} 项）；Flutter 发布范围另有 ${releaseWarnings.length} 个运行时阻断。\n\n` +
+    `结论：数据与本地隐私边界检查 ${failedChecks.length ? '未通过' : '通过'}（${passedCount}/${Object.keys(checks).length} 项）；Flutter 正式本地运行链路检查 ${failedRuntimeChecks.length ? '未通过' : '通过'}（${runtimePassedCount}/${Object.keys(runtimeChecks).length} 项）；${releaseWarnings.length ? `仍有 ${releaseWarnings.length} 个运行时阻断` : 'Flutter FINAL-RC4 已完成'}。\n\n` +
     `| 指标 | 微信小程序 | Flutter App | 一致 |\n|---|---:|---:|---|\n` +
     `| 学校数量 | ${summary.mini.schools} | ${summary.app.schools} | ${checks.schoolCount ? '是' : '否'} |\n` +
     `| 分数线总数 | ${summary.mini.scores} | ${summary.app.scores} | ${checks.scoreCount ? '是' : '否'} |\n` +
@@ -182,6 +218,7 @@ function buildReport() {
     `## 学校差异\n\n缺失：\n${markdownList(schoolDiff.missing)}\n\n多余：\n${markdownList(schoolDiff.extra)}\n\n字段变化：\n${markdownList(schoolDiff.changed)}\n\n` +
     `## 分数线差异\n\n缺失：\n${markdownList(scoreDiff.missing)}\n\n多余：\n${markdownList(scoreDiff.extra)}\n\n字段变化：\n${markdownList(scoreDiff.changed)}\n\n` +
     `## 隐私和能力边界\n\n${Object.entries(checks).slice(10).map(([name, passed]) => `- ${passed ? 'PASS' : 'FAIL'}: ${name}`).join('\n')}\n\n` +
+    `## Flutter 正式本地运行链路\n\n${Object.entries(runtimeChecks).map(([name, passed]) => `- ${passed ? 'PASS' : 'FAIL'}: ${name}`).join('\n')}\n\n` +
     `## Flutter 运行时阻断\n\n${markdownList(releaseWarnings)}\n`
 }
 
@@ -190,4 +227,4 @@ if (writeReport) {
 }
 
 console.log(JSON.stringify(summary, null, 2))
-if (failedChecks.length) process.exit(1)
+if (failedChecks.length || failedRuntimeChecks.length) process.exit(1)
