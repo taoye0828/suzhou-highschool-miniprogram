@@ -131,7 +131,7 @@ const checks = {
   miniNoForbiddenApi: !/wx\.(?:login|getUserProfile|getPhoneNumber|getLocation|chooseLocation|cloud|uploadFile|requestPayment|request)\b/.test(miniRuntime),
   appNoLocationPermission: !/NSLocation|geolocator|LocationPermission/.test(appRuntime),
   appNoUserDataUpload: !/package:(?:http|dio|supabase|firebase)|Supabase\.|Firebase\.|uploadFile|http\.(?:post|put|delete)|Dio\s*\(/.test(appLibSource),
-  miniPrivacyLocalOnly: APP_CONFIG.policy.privacySections.some((section) => section.items.some((item) => item.includes('不上传收藏、学习目标记录或输入草稿'))),
+  miniPrivacyLocalOnly: APP_CONFIG.policy.privacySections.some((section) => section.items.some((item) => item.includes('不上传收藏、学习目标记录、成绩记录、目标年份或输入草稿'))),
   appPrivacyLocalOnly: /只保存在本机|不会上传/.test(appRuntime)
 }
 
@@ -201,9 +201,9 @@ function markdownList(items) {
 function buildReport() {
   const passedCount = Object.values(checks).filter(Boolean).length
   const runtimePassedCount = Object.values(runtimeChecks).filter(Boolean).length
-  return `# FINAL-RC4 双端一致性报告\n\n` +
+  return `# FINAL-RC6 双端一致性报告\n\n` +
     `生成命令：\`node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app --write-report\`\n\n` +
-    `结论：数据与本地隐私边界检查 ${failedChecks.length ? '未通过' : '通过'}（${passedCount}/${Object.keys(checks).length} 项）；Flutter 正式本地运行链路检查 ${failedRuntimeChecks.length ? '未通过' : '通过'}（${runtimePassedCount}/${Object.keys(runtimeChecks).length} 项）；${releaseWarnings.length ? `仍有 ${releaseWarnings.length} 个运行时阻断` : 'Flutter FINAL-RC4 已完成'}。\n\n` +
+    `结论：数据与本地隐私边界检查 ${failedChecks.length ? '未通过' : '通过'}（${passedCount}/${Object.keys(checks).length} 项）；Flutter 正式本地运行链路检查 ${failedRuntimeChecks.length ? '未通过' : '通过'}（${runtimePassedCount}/${Object.keys(runtimeChecks).length} 项）；${releaseWarnings.length ? `仍有 ${releaseWarnings.length} 个运行时阻断` : '双端正式数据与本地运行边界一致'}。\n\n` +
     `| 指标 | 微信小程序 | Flutter App | 一致 |\n|---|---:|---:|---|\n` +
     `| 学校数量 | ${summary.mini.schools} | ${summary.app.schools} | ${checks.schoolCount ? '是' : '否'} |\n` +
     `| 分数线总数 | ${summary.mini.scores} | ${summary.app.scores} | ${checks.scoreCount ? '是' : '否'} |\n` +

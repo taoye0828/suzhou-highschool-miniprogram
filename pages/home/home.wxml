@@ -4,6 +4,20 @@
     <view class="hero-subtitle">{{homeTagline}}</view>
   </view>
 
+  <view class="section-title">中考倒计时</view>
+  <view class="card countdown-card" wx:if="{{countdown}}">
+    <view class="row between countdown-head">
+      <view class="grow">
+        <view class="card-title">{{countdown.daysText}}</view>
+        <view class="muted small countdown-date">目标日期：{{countdown.targetDateText}}</view>
+      </view>
+      <picker range="{{examYears}}" value="{{examYearIndex}}" bindchange="onExamYearChange">
+        <view class="year-picker">{{examYears[examYearIndex]}} 年⌄</view>
+      </picker>
+    </view>
+    <view class="muted small">目标年份只保存在本机，可随时调整。</view>
+  </view>
+
   <view class="section-title">数据概况</view>
   <view class="card">
     <view class="card-title">{{scoreStats.verifiedText}}</view>
@@ -33,5 +47,10 @@
   <view class="section-title">使用步骤</view>
   <view class="card step-card">
     <view class="step-item" wx:for="{{usageSteps}}" wx:key="*this">{{item}}</view>
+  </view>
+
+  <view class="card planning-notice">
+    <view class="card-title">使用边界</view>
+    <view class="muted small planning-notice-text">{{homeBoundary}}</view>
   </view>
 </view>

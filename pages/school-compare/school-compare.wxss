@@ -1,0 +1,35 @@
+.compact-hero { margin-bottom: 24rpx; }
+.selector-card { margin-top: 24rpx; }
+.picker-input {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20rpx;
+  color: #0f766e;
+  font-weight: 600;
+}
+.limit-note {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 16rpx;
+  text-align: center;
+}
+.empty-selection { margin-top: 18rpx; }
+.selected-list { margin-top: 18rpx; }
+.selected-chip {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 12rpx;
+  padding: 18rpx 20rpx;
+  background: #edf8f5;
+  border-radius: 16rpx;
+}
+.remove-chip { color: #b42318; font-size: 24rpx; }
+.compact-empty { padding: 34rpx 24rpx; }
+.compare-title { margin-bottom: 10rpx; }
+.compare-card:active { background: #f0f8f6; }
+.disclaimer-card { margin-top: 34rpx; border-left: 8rpx solid #f59e0b; }
+.disclaimer-text { margin-top: 10rpx; }

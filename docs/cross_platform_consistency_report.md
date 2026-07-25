@@ -1,8 +1,8 @@
-# FINAL-RC4 双端一致性报告
+# FINAL-RC6 双端一致性报告
 
 生成命令：`node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app --write-report`
 
-结论：数据与本地隐私边界检查 通过（16/16 项）；Flutter 正式本地运行链路检查 通过（6/6 项）；Flutter FINAL-RC4 已完成。
+结论：数据与本地隐私边界检查 通过（16/16 项）；Flutter 正式本地运行链路检查 通过（6/6 项）；双端正式数据与本地运行边界一致。
 
 | 指标 | 微信小程序 | Flutter App | 一致 |
 |---|---:|---:|---|

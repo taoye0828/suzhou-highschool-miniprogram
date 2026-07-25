@@ -1,7 +1,7 @@
 <view class="page">
   <view class="hero compact-hero">
     <view class="hero-title">学习目标记录</view>
-    <view class="hero-subtitle">记录当前测评分数、阶段目标和复盘备注</view>
+    <view class="hero-subtitle">记录目标等级、当前测评分数、阶段目标和复盘备注</view>
   </view>
 
   <view class="card">
@@ -10,6 +10,10 @@
     <input class="input" type="number" maxlength="{{scoreMaxLength}}" value="{{currentScore}}" placeholder="请输入 {{scoreMin}} 至 {{scoreMax}} 的整数" bindinput="onCurrentInput" />
     <text class="field-label">阶段目标分数</text>
     <input class="input" type="number" maxlength="{{scoreMaxLength}}" value="{{targetScore}}" placeholder="请输入 {{scoreMin}} 至 {{scoreMax}} 的整数" bindinput="onTargetInput" />
+    <text class="field-label">目标等级</text>
+    <picker range="{{targetLevels}}" range-key="label" value="{{targetLevelIndex}}" bindchange="onTargetLevelChange">
+      <view class="input picker-input">{{targetLevels[targetLevelIndex].label}}⌄</view>
+    </picker>
     <text class="field-label">备注</text>
     <textarea class="input textarea" maxlength="200" value="{{note}}" placeholder="请勿填写姓名、手机号、身份证、准考证号等个人敏感信息。" bindinput="onNoteInput"></textarea>
 
@@ -36,12 +40,21 @@
 
   <view class="card record-card" wx:for="{{records}}" wx:key="id">
     <view class="row between">
-      <view class="card-title">测评 {{item.currentScore}} / 目标 {{item.targetScore}}</view>
+      <view class="grow">
+        <view class="record-level">{{item.targetLevelLabel}}</view>
+        <view class="card-title">测评 {{item.currentScore}} / 目标 {{item.targetScore}}</view>
+      </view>
       <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
     </view>
     <view class="gap-line">{{item.gapText}}</view>
     <view class="muted small">{{item.reminder}}</view>
     <view wx:if="{{item.note}}" class="record-note">备注：{{item.note}}</view>
     <view class="muted small record-time">{{item.displayTime}}</view>
+  </view>
+
+  <view class="card target-boundary">
+    <view class="card-title">使用边界</view>
+    <view class="muted small target-boundary-text">{{targetLevelLabel}}</view>
+    <view class="muted small">目标等级和备注仅保存在本机，不用于判断录取结果。请勿填写个人敏感信息。</view>
   </view>
 </view>

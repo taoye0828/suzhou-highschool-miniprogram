@@ -58,12 +58,14 @@ function createPageInstance(definition) {
 function testHomePage() {
   const definition = loadPage('pages/home/home')
   const page = createPageInstance(definition)
+  page.onLoad()
   assert.strictEqual(page.data.scoreStats.schoolCount, 55)
   assert.strictEqual(page.data.scoreStats.scoreCount, 146)
   assert.strictEqual(page.data.scoreStats.yearsText, '2025、2026')
   assert.strictEqual(page.data.sourceCheckedAt, APP_CONFIG.schoolData.sourceCheckedAt)
   assert.ok(page.data.homeBoundary.includes('不判断未来录取结果'))
   assert.ok(page.data.localBoundary.includes('只保存在本机'))
+  assert.strictEqual(page.data.countdown.targetYear, APP_CONFIG.countdown.defaultYear)
 
   for (const entry of page.data.entries) {
     page.openEntry({ currentTarget: { dataset: entry } })
@@ -72,6 +74,13 @@ function testHomePage() {
   assert.ok(navigations.includes('/pages/data-info/data-info'))
   assert.ok(navigations.includes('/pages/targets/targets'))
   assert.ok(navigations.includes('/pages/favorites/favorites'))
+  assert.ok(navigations.includes('/pages/target-analysis/target-analysis'))
+  assert.ok(navigations.includes('/pages/school-compare/school-compare'))
+  assert.ok(navigations.includes('/pages/score-trend/score-trend'))
+
+  const nextYearIndex = page.data.examYears.indexOf(APP_CONFIG.countdown.defaultYear + 1)
+  page.onExamYearChange({ detail: { value: String(nextYearIndex) } })
+  assert.strictEqual(memory.get('mp1.exam_year'), APP_CONFIG.countdown.defaultYear + 1)
 }
 
 async function testTargetsPage() {
@@ -82,6 +91,7 @@ async function testTargetsPage() {
 
   page.onCurrentInput({ detail: { value: '500' } })
   page.onTargetInput({ detail: { value: '550' } })
+  page.onTargetLevelChange({ detail: { value: '0' } })
   page.onNoteInput({ detail: { value: '复盘数学' } })
 
   assert.strictEqual(memory.has('mp1.target_draft'), false)
@@ -89,6 +99,7 @@ async function testTargetsPage() {
   assert.deepStrictEqual(memory.get('mp1.target_draft'), {
     currentScore: '500',
     targetScore: '550',
+    targetLevel: 'challenge',
     note: '复盘数学'
   })
   assert.ok(page.data.gapText.includes('还有 50 分'))
@@ -105,6 +116,7 @@ async function testTargetsPage() {
   assert.strictEqual(firstRecords.length, 1)
   assert.strictEqual(Object.hasOwn(firstRecords[0], 'schoolId'), false)
   assert.strictEqual(Object.hasOwn(firstRecords[0], 'admissionScore'), false)
+  assert.strictEqual(firstRecords[0].targetLevel, 'challenge')
   assert.ok(toastTitles.includes('学习目标已保存'))
   assert.strictEqual(page.data.records.length, 1)
 
@@ -115,7 +127,7 @@ async function testTargetsPage() {
   const zeroRecord = memory.get('mp1.target_records').find((item) => item.currentScore === 0)
   assert.strictEqual(zeroRecord.targetScore, APP_CONFIG.targetScore.max)
   assert.strictEqual(zeroRecord.note, '边界记录')
-  assert.strictEqual(zeroRecord.schemaVersion, 1)
+  assert.strictEqual(zeroRecord.schemaVersion, 2)
   assert.ok(Number.isFinite(Date.parse(zeroRecord.createdAt)))
   assert.strictEqual(new Set(memory.get('mp1.target_records').map((item) => item.id)).size, memory.get('mp1.target_records').length)
 
@@ -275,11 +287,21 @@ function testProfilePage() {
   memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
   memory.set('mp1.target_records', [{ id: 'target_1', currentScore: 500, targetScore: 550, note: '', createdAt: '2026-07-02T00:00:00.000Z' }])
   memory.set('mp1.target_draft', { currentScore: '500' })
+  memory.set('mp1.score_records', [{
+    id: 'score_profile',
+    date: '2026-09-15',
+    examName: '月考',
+    score: 650,
+    createdAt: '2026-09-15T08:00:00.000Z'
+  }])
+  memory.set('mp1.exam_year', 2028)
   const definition = loadPage('pages/profile/profile')
   const page = createPageInstance(definition)
   page.onShow()
   assert.strictEqual(page.data.favoriteCount, 1)
   assert.strictEqual(page.data.targetCount, 1)
+  assert.strictEqual(page.data.scoreRecordCount, 1)
+  assert.strictEqual(page.data.examYear, 2028)
   assert.ok(page.data.schoolCount >= 50)
   assert.ok(page.data.scoreCount >= 0)
   assert.strictEqual(page.data.sourceCheckedAt, '2026-07-09')
@@ -287,6 +309,8 @@ function testProfilePage() {
   assert.strictEqual(memory.has('mp1.favorite_school_ids'), false)
   assert.strictEqual(memory.has('mp1.target_records'), false)
   assert.strictEqual(memory.has('mp1.target_draft'), false)
+  assert.strictEqual(memory.has('mp1.score_records'), false)
+  assert.strictEqual(memory.has('mp1.exam_year'), false)
 
   memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
   memory.set('mp1.target_records', [{ id: 'target_2', currentScore: 500, targetScore: 550, note: '', createdAt: '2026-07-02T00:00:00.000Z' }])
@@ -296,6 +320,66 @@ function testProfilePage() {
   assert.strictEqual(memory.has('mp1.favorite_school_ids'), true)
   assert.strictEqual(memory.has('mp1.target_records'), true)
   assert.ok(toastTitles.includes('部分本地数据清除失败，请重试。'))
+}
+
+function testTargetAnalysisPage() {
+  const definition = loadPage('pages/target-analysis/target-analysis')
+  const page = createPageInstance(definition)
+  page.onScoreInput({ detail: { value: '650' } })
+  page.analyze()
+  assert.strictEqual(page.data.hasAnalyzed, true)
+  assert.ok(page.data.resultCount > 0)
+  assert.strictEqual(page.data.sections.length, 3)
+  assert.ok(page.data.sections.some((section) => section.results.length > 0))
+  const firstResult = page.data.sections.flatMap((section) => section.results)[0]
+  page.openDetail({ currentTarget: { dataset: { id: firstResult.schoolId } } })
+  assert.ok(navigations.includes(`/pages/school-detail/school-detail?id=${firstResult.schoolId}`))
+
+  page.onScoreInput({ detail: { value: '741' } })
+  page.analyze()
+  assert.strictEqual(page.data.hasAnalyzed, false)
+  assert.ok(page.data.inputError.includes('0 至 740'))
+}
+
+function testSchoolComparePage() {
+  memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
+  const definition = loadPage('pages/school-compare/school-compare')
+  const page = createPageInstance(definition)
+  page.onLoad()
+  page.onSchoolChange({ detail: { value: '0' } })
+  page.onSchoolChange({ detail: { value: '0' } })
+  assert.strictEqual(page.data.selectedSchools.length, 2)
+  assert.strictEqual(page.data.canCompare, true)
+  assert.ok(page.data.selectedSchools.every((school) => school.scoreSummary))
+  const firstId = page.data.selectedSchools[0].id
+  page.openDetail({ currentTarget: { dataset: { id: firstId } } })
+  assert.ok(navigations.includes(`/pages/school-detail/school-detail?id=${firstId}`))
+  page.removeSchool({ currentTarget: { dataset: { id: firstId } } })
+  assert.strictEqual(page.data.selectedSchools.length, 1)
+}
+
+function testScoreTrendPage() {
+  memory.delete('mp1.score_records')
+  const definition = loadPage('pages/score-trend/score-trend')
+  const page = createPageInstance(definition)
+  page.onLoad()
+  page.onDateChange({ detail: { value: '2026-09-15' } })
+  page.onExamNameInput({ detail: { value: '九月月考' } })
+  page.onScoreInput({ detail: { value: '650' } })
+  page.saveRecord()
+  assert.strictEqual(page.data.records.length, 1)
+  assert.strictEqual(page.data.chartRecords.length, 1)
+  assert.ok(toastTitles.includes('成绩记录已保存在本机'))
+
+  page.onExamNameInput({ detail: { value: '无效成绩' } })
+  page.onScoreInput({ detail: { value: '741' } })
+  page.saveRecord()
+  assert.strictEqual(page.data.records.length, 1)
+  assert.ok(page.data.inputError.includes('0 至 740'))
+
+  page.deleteRecord({ currentTarget: { dataset: { id: page.data.records[0].id } } })
+  assert.strictEqual(page.data.records.length, 0)
+  assert.strictEqual(memory.has('mp1.score_records'), false)
 }
 
 function testInfoPages() {
@@ -308,7 +392,7 @@ function testInfoPages() {
   const privacyPage = createPageInstance(privacyDefinition)
   assert.ok(privacyPage.data.sections.length > 0)
   const privacyText = JSON.stringify(privacyPage.data.sections)
-  assert.ok(privacyText.includes('不上传收藏、学习目标记录或输入草稿'))
+  assert.ok(privacyText.includes('不上传收藏、学习目标记录、成绩记录、目标年份或输入草稿'))
   assert.ok(privacyText.includes('不进行后台网络请求或用户行为追踪'))
 }
 
@@ -332,6 +416,9 @@ async function run() {
   testSchoolDetailPage()
   testSchoolsPage()
   testFavoritesPage()
+  testTargetAnalysisPage()
+  testSchoolComparePage()
+  testScoreTrendPage()
   testProfilePage()
   testInfoPages()
   testWebViewPage()

@@ -1,0 +1,72 @@
+<view class="page">
+  <view class="hero compact-hero">
+    <view class="hero-title">成绩趋势记录</view>
+    <view class="hero-subtitle">记录本机考试成绩，查看最近 12 条变化</view>
+  </view>
+
+  <view class="card input-card">
+    <text class="field-label">考试日期</text>
+    <picker mode="date" value="{{selectedDate}}" start="2020-01-01" end="2100-12-31" bindchange="onDateChange">
+      <view class="input picker-input">{{selectedDate}}⌄</view>
+    </picker>
+    <text class="field-label">考试名称</text>
+    <input
+      class="input"
+      maxlength="40"
+      value="{{examName}}"
+      placeholder="例如：2026-09 月考"
+      bindinput="onExamNameInput"
+    />
+    <text class="field-label">成绩</text>
+    <input
+      class="input"
+      type="number"
+      maxlength="3"
+      value="{{scoreInput}}"
+      placeholder="请输入 0 至 {{scoreMax}} 的整数"
+      bindinput="onScoreInput"
+    />
+    <view wx:if="{{inputError}}" class="input-error">{{inputError}}</view>
+    <button class="button save-button" bindtap="saveRecord">保存成绩记录</button>
+  </view>
+
+  <view class="row between section-row">
+    <view class="section-title records-title">成绩记录（{{records.length}} / {{maxRecords}}）</view>
+    <button wx:if="{{records.length > 0}}" class="button danger small-button" bindtap="clearAllRecords">清空全部</button>
+  </view>
+
+  <view wx:if="{{records.length === 0}}" class="card empty">
+    <view class="card-title">暂无成绩记录</view>
+    <view class="muted small">填写考试日期、名称和成绩后即可保存在本机。</view>
+  </view>
+
+  <view wx:if="{{chartRecords.length > 0}}" class="card chart-card">
+    <view class="card-title">最近 {{chartRecords.length}} 条成绩趋势</view>
+    <scroll-view class="chart-scroll" scroll-x="true" enhanced="true">
+      <view class="chart">
+        <view wx:for="{{chartRecords}}" wx:key="id" class="chart-column">
+          <view class="chart-score">{{item.score}}</view>
+          <view class="bar-track"><view class="bar" style="height: {{item.height}}%;"></view></view>
+          <view class="chart-label">{{item.shortName}}</view>
+          <view class="chart-date">{{item.shortDate}}</view>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="muted small chart-note">纵向高度按 740 分满分换算，仅用于观察本机记录变化。</view>
+  </view>
+
+  <view class="card record-card" wx:for="{{records}}" wx:key="id">
+    <view class="row between">
+      <view class="grow">
+        <view class="card-title">{{item.examName}} · {{item.score}} 分</view>
+        <view class="muted small record-date">{{item.date}}</view>
+      </view>
+      <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
+    </view>
+  </view>
+
+  <view class="card disclaimer-card">
+    <view class="card-title">使用边界</view>
+    <view class="muted small disclaimer-text">{{planningDisclaimer}}</view>
+  </view>
+</view>

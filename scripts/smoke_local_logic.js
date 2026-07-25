@@ -27,6 +27,8 @@ global.wx = {
 const storage = require('../utils/storage')
 const school = require('../utils/school')
 const scoreUtils = require('../utils/admission-scores')
+const scoreAnalysis = require('../utils/score-analysis')
+const countdown = require('../utils/countdown')
 const externalLink = require('../utils/external-link')
 const { schools } = require('../data/schools')
 const { admissionScores } = require('../data/admission-scores')
@@ -79,6 +81,7 @@ assert.strictEqual(storage.saveTargetRecord(target('target_1')).ok, true)
 assert.strictEqual(storage.saveTargetRecord(target('target_2', '2026-07-02T01:00:00.000Z')).ok, true)
 assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['target_2', 'target_1'])
 for (const item of storage.getTargetRecords()) {
+  assert.strictEqual(item.targetLevel, 'target')
   assert.strictEqual(Object.hasOwn(item, 'schoolId'), false)
   assert.strictEqual(Object.hasOwn(item, 'targetSchool'), false)
   assert.strictEqual(Object.hasOwn(item, 'admissionResult'), false)
@@ -136,10 +139,73 @@ assert.deepStrictEqual(storage.getFavoriteIds(), [])
 assert.strictEqual(storage.setFavorite('suzhou_high_school', true).ok, false)
 readFailure = false
 
-assert.strictEqual(storage.saveTargetDraft({ currentScore: '500', targetScore: '550', note: '复盘数学' }).ok, true)
+assert.strictEqual(storage.saveTargetDraft({
+  currentScore: '500',
+  targetScore: '550',
+  targetLevel: 'challenge',
+  note: '复盘数学'
+}).ok, true)
 assert.strictEqual(storage.getTargetDraft().targetScore, '550')
+assert.strictEqual(storage.getTargetDraft().targetLevel, 'challenge')
 memory.set(storage.KEYS.targetDraft, [])
 assert.deepStrictEqual(storage.getTargetDraft(), {})
+
+const firstScoreRecord = {
+  id: 'score_1',
+  date: '2026-09-15',
+  examName: '  九月月考  ',
+  score: 650,
+  createdAt: '2026-09-15T08:00:00.000Z'
+}
+const secondScoreRecord = {
+  id: 'score_2',
+  date: '2026-10-20',
+  examName: '期中考试',
+  score: 670,
+  createdAt: '2026-10-20T08:00:00.000Z'
+}
+assert.strictEqual(storage.saveScoreRecord(secondScoreRecord).ok, true)
+assert.strictEqual(storage.saveScoreRecord(firstScoreRecord).ok, true)
+assert.deepStrictEqual(storage.getScoreRecords().map((item) => item.id), ['score_1', 'score_2'])
+assert.strictEqual(storage.getScoreRecords()[0].examName, '九月月考')
+assert.strictEqual(storage.saveScoreRecord({ ...firstScoreRecord, id: 'over', score: EXAM_TOTAL_SCORE + 1 }).ok, false)
+assert.strictEqual(storage.saveScoreRecord({ ...firstScoreRecord, id: 'bad-date', date: '2026-02-30' }).ok, false)
+assert.strictEqual(storage.deleteScoreRecord('score_1').ok, true)
+assert.deepStrictEqual(storage.getScoreRecords().map((item) => item.id), ['score_2'])
+
+assert.strictEqual(storage.getExamYear(), APP_CONFIG.countdown.defaultYear)
+assert.strictEqual(storage.saveExamYear(2028).ok, true)
+assert.strictEqual(storage.getExamYear(), 2028)
+assert.strictEqual(storage.saveExamYear(2101).ok, false)
+
+const countdownResult = countdown.calculateExamCountdown(2027, new Date(2026, 6, 25))
+assert.strictEqual(countdownResult.targetDate, '2027-06-17')
+assert.strictEqual(countdownResult.daysRemaining, 327)
+assert.ok(countdown.examYearOptions(2027, new Date(2026, 6, 25)).includes(2029))
+
+assert.strictEqual(scoreAnalysis.classifyDifference(-31), null)
+assert.strictEqual(scoreAnalysis.classifyDifference(-30), 'challenge')
+assert.strictEqual(scoreAnalysis.classifyDifference(0), 'match')
+assert.strictEqual(scoreAnalysis.classifyDifference(15), 'match')
+assert.strictEqual(scoreAnalysis.classifyDifference(16), 'safe')
+const analysisResults = scoreAnalysis.analyzeScore({
+  userScore: 650,
+  targetYear: 2027,
+  schools: [
+    { id: 'challenge', name: '冲刺高中' },
+    { id: 'match', name: '匹配高中' },
+    { id: 'safe', name: '稳妥高中' }
+  ],
+  scores: [
+    { id: 'challenge_old', schoolId: 'challenge', year: 2025, minScore: 690 },
+    { id: 'challenge_latest_low', schoolId: 'challenge', year: 2026, minScore: 675 },
+    { id: 'challenge_latest_high', schoolId: 'challenge', year: 2026, minScore: 680 },
+    { id: 'match', schoolId: 'match', year: 2026, minScore: 650 },
+    { id: 'safe', schoolId: 'safe', year: 2026, minScore: 620 }
+  ]
+})
+assert.deepStrictEqual(analysisResults.map((item) => item.level), ['challenge', 'match', 'safe'])
+assert.strictEqual(analysisResults[0].schoolScore, 680)
 
 removeFailure = true
 assert.strictEqual(storage.clearLocalData().ok, false)
@@ -148,6 +214,8 @@ assert.strictEqual(storage.clearLocalData().ok, true)
 assert.strictEqual(storage.getFavoriteIds().length, 0)
 assert.strictEqual(storage.getTargetRecords().length, 0)
 assert.deepStrictEqual(storage.getTargetDraft(), {})
+assert.strictEqual(storage.getScoreRecords().length, 0)
+assert.strictEqual(storage.getExamYear(), APP_CONFIG.countdown.defaultYear)
 
 assert.ok(school.filterSchools({ keyword: '南航苏附' }).some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
 assert.strictEqual(school.filterSchools({ keyword: '' }).length, schools.length)

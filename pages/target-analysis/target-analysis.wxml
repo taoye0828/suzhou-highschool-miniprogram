@@ -1,0 +1,61 @@
+<view class="page">
+  <view class="hero compact-hero">
+    <view class="hero-title">成绩分析</view>
+    <view class="hero-subtitle">使用已收录历史分数线和固定分差区间整理目标参考</view>
+  </view>
+
+  <view class="card input-card">
+    <text class="field-label">当前成绩</text>
+    <input
+      class="input"
+      type="number"
+      maxlength="3"
+      value="{{scoreInput}}"
+      placeholder="请输入 0 至 {{scoreMax}} 的整数"
+      bindinput="onScoreInput"
+    />
+    <text class="field-label">目标考试年份</text>
+    <picker range="{{targetYears}}" value="{{targetYearIndex}}" bindchange="onTargetYearChange">
+      <view class="input picker-input">{{targetYears[targetYearIndex]}} 年⌄</view>
+    </picker>
+    <view wx:if="{{inputError}}" class="input-error">{{inputError}}</view>
+    <button class="button analyze-button" bindtap="analyze">开始分析</button>
+  </view>
+
+  <block wx:if="{{hasAnalyzed}}">
+    <view class="card method-card">
+      <view class="card-title">分析口径</view>
+      <view class="muted small method-text">{{analysisNotice}}</view>
+      <view class="muted small">本次共整理 {{resultCount}} 所学校。</view>
+    </view>
+
+    <view wx:for="{{sections}}" wx:key="value" wx:for-item="section" class="analysis-section">
+      <view class="section-title section-heading">{{section.label}}（{{section.results.length}}）</view>
+      <view class="muted small section-description">{{section.description}}</view>
+      <view wx:if="{{section.results.length === 0}}" class="card empty compact-empty">
+        当前没有符合该区间且已收录历史分数线的学校。
+      </view>
+      <view
+        wx:for="{{section.results}}"
+        wx:key="schoolId"
+        wx:for-item="result"
+        class="card result-card"
+        data-id="{{result.schoolId}}"
+        bindtap="openDetail"
+      >
+        <view class="row between">
+          <view class="card-title grow">{{result.schoolName}}</view>
+          <view class="list-arrow">›</view>
+        </view>
+        <view class="info-row"><text class="info-label">历史参考分</text><text class="info-value">{{result.schoolScore}} 分（{{result.year}} 年）</text></view>
+        <view class="info-row"><text class="info-label">当前成绩</text><text class="info-value">{{result.userScore}} 分</text></view>
+        <view class="info-row"><text class="info-label">分差</text><text class="info-value">{{result.differenceText}}</text></view>
+      </view>
+    </view>
+  </block>
+
+  <view class="card disclaimer-card">
+    <view class="card-title">使用边界</view>
+    <view class="muted small disclaimer-text">{{planningDisclaimer}}</view>
+  </view>
+</view>

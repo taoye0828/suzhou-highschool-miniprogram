@@ -45,9 +45,11 @@ function formatDisplayTime(isoTime) {
 }
 
 function presentRecord(record) {
+  const level = APP_CONFIG.targetScore.levels.find((item) => item.value === record.targetLevel)
   return {
     ...record,
     ...gapSummary(record.currentScore, record.targetScore),
+    targetLevelLabel: level ? level.label : '目标学校',
     displayTime: formatDisplayTime(record.createdAt)
   }
 }
@@ -57,12 +59,15 @@ Page({
     currentScore: '',
     targetScore: '',
     note: '',
+    targetLevels: APP_CONFIG.targetScore.levels,
+    targetLevelIndex: APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target'),
     gapText: '填写分数后显示学习差距',
     reminder: '建议先记录一次真实学习测评结果。',
     records: [],
     scoreMin: APP_CONFIG.targetScore.min,
     scoreMax: APP_CONFIG.targetScore.max,
-    scoreMaxLength: APP_CONFIG.targetScore.maxLength
+    scoreMaxLength: APP_CONFIG.targetScore.maxLength,
+    targetLevelLabel: APP_CONFIG.policy.targetHint
   },
 
   onLoad() {
@@ -75,6 +80,7 @@ Page({
     this.setData({
       currentScore: draft.currentScore || '',
       targetScore: draft.targetScore || '',
+      targetLevelIndex: Math.max(0, APP_CONFIG.targetScore.levels.findIndex((item) => item.value === (draft.targetLevel || 'target'))),
       note: draft.note || ''
     }, () => this.refreshSummary())
   },
@@ -95,6 +101,10 @@ Page({
 
   onNoteInput(event) {
     this.setData({ note: event.detail.value }, () => this.onDraftChanged())
+  },
+
+  onTargetLevelChange(event) {
+    this.setData({ targetLevelIndex: Number(event.detail.value) }, () => this.onDraftChanged())
   },
 
   onDraftChanged() {
@@ -120,6 +130,7 @@ Page({
     const result = saveTargetDraft({
       currentScore: this.data.currentScore,
       targetScore: this.data.targetScore,
+      targetLevel: this.data.targetLevels[this.data.targetLevelIndex].value,
       note: this.data.note
     })
     if (result.ok) {
@@ -165,10 +176,11 @@ Page({
     }
 
     const result = saveTargetRecord({
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: createTargetId(),
       currentScore: current,
       targetScore: target,
+      targetLevel: this.data.targetLevels[this.data.targetLevelIndex].value,
       note: this.data.note.trim(),
       createdAt: new Date().toISOString()
     })
@@ -190,7 +202,14 @@ Page({
     }
     this.draftDirty = false
     this.draftErrorShown = false
-    this.setData({ currentScore: '', targetScore: '', note: '', ...gapSummary('', '') })
+    const targetLevelIndex = APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target')
+    this.setData({
+      currentScore: '',
+      targetScore: '',
+      targetLevelIndex,
+      note: '',
+      ...gapSummary('', '')
+    })
   },
 
   deleteRecord(event) {

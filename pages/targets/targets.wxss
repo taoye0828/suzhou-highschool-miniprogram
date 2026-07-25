@@ -3,8 +3,21 @@
 .target-notice { margin-top: 12rpx; padding: 18rpx; background: #f5fbfa; border-radius: 16rpx; }
 .summary-box { margin-top: 24rpx; padding: 24rpx; background: #edf8f5; border-radius: 18rpx; }
 .summary-title { margin-bottom: 8rpx; color: #0f766e; font-weight: 700; }
+.picker-input { display: flex; align-items: center; color: #334155; }
 .section-row { margin-top: 4rpx; }
 .records-title { margin: 24rpx 0 18rpx; }
 .gap-line { margin: 18rpx 0 8rpx; color: #0f766e; font-weight: 600; }
 .record-note { margin-top: 16rpx; padding: 18rpx; background: #f5f7f6; border-radius: 14rpx; line-height: 1.6; }
+.record-level {
+  display: inline-flex;
+  margin-bottom: 10rpx;
+  padding: 7rpx 14rpx;
+  color: #0f766e;
+  background: #e7f6f3;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
 .record-time { margin-top: 14rpx; }
+.target-boundary { margin-top: 30rpx; border-left: 8rpx solid #f59e0b; }
+.target-boundary-text { margin: 10rpx 0 6rpx; }

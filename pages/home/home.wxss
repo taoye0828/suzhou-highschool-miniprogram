@@ -11,6 +11,21 @@
 .entry { display: flex; align-items: center; }
 .entry:active { background: #f0f8f6; }
 .entry-subtitle { margin-top: 8rpx; }
+.countdown-card { border-left: 8rpx solid #0f766e; }
+.countdown-head { align-items: flex-start; }
+.countdown-date { margin-top: 8rpx; }
+.year-picker {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  padding: 14rpx 18rpx;
+  color: #0f766e;
+  background: #e7f6f3;
+  border-radius: 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+.planning-notice { margin-top: 30rpx; border-left: 8rpx solid #f59e0b; }
+.planning-notice-text { margin-top: 10rpx; }
 .check-item,
 .limit-item {
   display: flex;

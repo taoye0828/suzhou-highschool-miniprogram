@@ -1,0 +1,62 @@
+<view class="page">
+  <view class="hero compact-hero">
+    <view class="hero-title">高中对比</view>
+    <view class="hero-subtitle">从正式本地数据中选择 2 至 3 所学校横向核对</view>
+  </view>
+
+  <view class="card selector-card">
+    <view class="row between">
+      <view class="card-title">已选择 {{selectedSchools.length}} / 3</view>
+      <view class="muted small">至少 2 所</view>
+    </view>
+    <picker
+      wx:if="{{canAdd}}"
+      range="{{availableSchools}}"
+      range-key="name"
+      value="{{pickerIndex}}"
+      bindchange="onSchoolChange"
+    >
+      <view class="input picker-input">＋ 添加学校</view>
+    </picker>
+    <view wx:if="{{selectedSchools.length >= 3}}" class="limit-note">已达到 3 所上限</view>
+    <view wx:if="{{selectedSchools.length === 0}}" class="muted small empty-selection">请选择学校开始对比。</view>
+    <view class="selected-list">
+      <view wx:for="{{selectedSchools}}" wx:key="id" class="selected-chip">
+        <text class="grow">{{item.name}}</text>
+        <text class="remove-chip" data-id="{{item.id}}" bindtap="removeSchool">移除</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!canCompare}}" class="card empty compact-empty">
+    至少选择 2 所学校后显示对比内容。
+  </view>
+
+  <block wx:if="{{canCompare}}">
+    <view class="section-title">对比结果</view>
+    <view
+      wx:for="{{selectedSchools}}"
+      wx:key="id"
+      class="card compare-card"
+      data-id="{{item.id}}"
+      bindtap="openDetail"
+    >
+      <view class="row between compare-title">
+        <view class="card-title grow">{{item.name}}</view>
+        <view class="list-arrow">›</view>
+      </view>
+      <view class="info-row"><text class="info-label">地区</text><text class="info-value">{{item.district}}</text></view>
+      <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{item.schoolType}}</text></view>
+      <view class="info-row"><text class="info-label">办学性质</text><text class="info-value">{{item.ownershipText}}</text></view>
+      <view class="info-row"><text class="info-label">标签</text><text class="info-value">{{item.tagsText}}</text></view>
+      <view class="info-row"><text class="info-label">历史分数线</text><text class="info-value">{{item.scoreSummary}}</text></view>
+      <view class="info-row"><text class="info-label">地址</text><text class="info-value">{{item.addressText}}</text></view>
+      <view class="info-row"><text class="info-label">收藏状态</text><text class="info-value">{{item.favoriteText}}</text></view>
+    </view>
+  </block>
+
+  <view class="card disclaimer-card">
+    <view class="card-title">使用边界</view>
+    <view class="muted small disclaimer-text">{{planningDisclaimer}}</view>
+  </view>
+</view>

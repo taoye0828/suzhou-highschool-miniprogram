@@ -1,0 +1,115 @@
+const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
+
+const root = path.resolve(__dirname, '..')
+const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
+const { schools } = require('../data/schools')
+const { admissionScores } = require('../data/admission-scores')
+const {
+  classifyDifference,
+  latestReferenceScore,
+  analyzeScore
+} = require('../utils/score-analysis')
+const { calculateExamCountdown } = require('../utils/countdown')
+const { KEYS } = require('../utils/storage')
+
+const expectedPages = [
+  'pages/target-analysis/target-analysis',
+  'pages/school-compare/school-compare',
+  'pages/score-trend/score-trend'
+]
+
+function read(relative) {
+  return fs.readFileSync(path.join(root, relative), 'utf8')
+}
+
+function walk(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(directory, entry.name)
+    if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === 'miniprogram_npm') return []
+    return entry.isDirectory() ? walk(full) : [full]
+  })
+}
+
+assert.strictEqual(APP_CONFIG.version, '1.6.0')
+assert.strictEqual(APP_CONFIG.countdown.defaultYear, 2027)
+assert.strictEqual(APP_CONFIG.targetScore.max, EXAM_TOTAL_SCORE)
+assert.deepStrictEqual(
+  APP_CONFIG.targetScore.levels.map((item) => item.value),
+  ['challenge', 'target', 'safe']
+)
+
+const appJson = JSON.parse(read('app.json'))
+for (const page of expectedPages) {
+  assert.ok(appJson.pages.includes(page), `${page} must be registered`)
+  for (const extension of ['js', 'json', 'wxml', 'wxss']) {
+    assert.ok(fs.existsSync(path.join(root, `${page}.${extension}`)), `${page}.${extension} must exist`)
+  }
+}
+assert.strictEqual(appJson.tabBar.list.length, 5)
+
+assert.strictEqual(schools.length, 55)
+assert.strictEqual(admissionScores.length, 146)
+assert.strictEqual(admissionScores.filter((item) => item.year === 2025).length, 103)
+assert.strictEqual(admissionScores.filter((item) => item.year === 2026).length, 43)
+assert.ok(admissionScores.every((item) => item.minScore <= EXAM_TOTAL_SCORE))
+
+assert.strictEqual(classifyDifference(-31), null)
+assert.strictEqual(classifyDifference(-30), 'challenge')
+assert.strictEqual(classifyDifference(-1), 'challenge')
+assert.strictEqual(classifyDifference(0), 'match')
+assert.strictEqual(classifyDifference(15), 'match')
+assert.strictEqual(classifyDifference(16), 'safe')
+assert.strictEqual(
+  latestReferenceScore([
+    { year: 2025, minScore: 690 },
+    { year: 2026, minScore: 675 },
+    { year: 2026, minScore: 680 }
+  ], 2027).minScore,
+  680
+)
+assert.ok(analyzeScore({ userScore: 650, targetYear: 2027 }).length > 0)
+
+const countdown = calculateExamCountdown(2027, new Date(2026, 6, 25))
+assert.strictEqual(countdown.targetDate, '2027-06-17')
+assert.strictEqual(countdown.daysRemaining, 327)
+
+assert.ok(KEYS.scoreRecords)
+assert.ok(KEYS.examYear)
+
+const runtimeFiles = ['app.js', 'app.json', 'config', 'data', 'pages', 'utils']
+  .flatMap((relative) => {
+    const target = path.join(root, relative)
+    return fs.statSync(target).isDirectory() ? walk(target) : [target]
+  })
+  .filter((file) => /\.(?:js|json|wxml|wxss)$/.test(file))
+
+const runtimeText = runtimeFiles.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
+for (const forbidden of [
+  'wx.' + 'login',
+  'wx.' + 'request',
+  'wx.' + 'cloud',
+  'wx.' + 'getLocation',
+  'wx.' + 'requestPayment',
+  'getPhoneNumber'
+]) {
+  assert.strictEqual(runtimeText.includes(forbidden), false, `forbidden runtime API: ${forbidden}`)
+}
+for (const phrase of [
+  '固定历史分差区间',
+  '成绩记录和中考目标年份只保存在本机',
+  '实际录取情况以当年招生政策和考试成绩为准'
+]) {
+  assert.ok(runtimeText.includes(phrase), `missing boundary copy: ${phrase}`)
+}
+
+const suspiciousBackups = walk(root)
+  .map((file) => path.relative(root, file))
+  .filter((relative) => /\.bak(?:_|$)/i.test(path.basename(relative)))
+assert.deepStrictEqual(suspiciousBackups, [])
+
+console.log('FINAL-RC6 UPGRADE VERIFY PASSED')
+console.log(`- 页面：${expectedPages.length} 个新增页面，tabBar 保持 5 项`)
+console.log(`- 数据：${schools.length} 所学校，${admissionScores.length} 条历史分数线`)
+console.log('- 本地增强：成绩分析、学校对比、中考倒计时、成绩趋势、目标等级')
