@@ -78,6 +78,20 @@ assert.strictEqual(countdown.daysRemaining, 327)
 assert.ok(KEYS.scoreRecords)
 assert.ok(KEYS.examYear)
 
+const targetStorageSource = read('utils/storage.js')
+for (const field of ['schoolId', 'schoolName', 'level']) {
+  assert.ok(targetStorageSource.includes(field), `target record must include ${field}`)
+}
+const schoolDetailSource = read('pages/school-detail/school-detail.js')
+assert.ok(schoolDetailSource.includes('saveSchoolTarget'))
+assert.ok(schoolDetailSource.includes('saveTargetRecord'))
+const targetsPageSource = [
+  read('pages/targets/targets.js'),
+  read('pages/targets/targets.wxml')
+].join('\n')
+assert.ok(targetsPageSource.includes('schoolName'))
+assert.ok(targetsPageSource.includes('levelLabel'))
+
 const runtimeFiles = ['app.js', 'app.json', 'config', 'data', 'pages', 'utils']
   .flatMap((relative) => {
     const target = path.join(root, relative)

@@ -33,18 +33,18 @@ global.wx = {
 const storage = require('../utils/storage')
 const baseRecord = {
   id: 'score_max_check',
-  currentScore: 700,
-  targetScore: EXAM_TOTAL_SCORE,
-  note: '',
+  date: '2026-07-09',
+  examName: '满分边界测试',
+  score: EXAM_TOTAL_SCORE,
   createdAt: '2026-07-09T00:00:00.000Z'
 }
-assert.strictEqual(storage.saveTargetRecord(baseRecord).ok, true)
-assert.strictEqual(storage.saveTargetRecord({ ...baseRecord, id: 'above_by_one', targetScore: EXAM_TOTAL_SCORE + 1 }).ok, false)
-assert.strictEqual(storage.saveTargetRecord({ ...baseRecord, id: 'old_wrong_max', targetScore: EXAM_TOTAL_SCORE + 10 }).ok, false)
+assert.strictEqual(storage.saveScoreRecord(baseRecord).ok, true)
+assert.strictEqual(storage.saveScoreRecord({ ...baseRecord, id: 'above_by_one', score: EXAM_TOTAL_SCORE + 1 }).ok, false)
+assert.strictEqual(storage.saveScoreRecord({ ...baseRecord, id: 'old_wrong_max', score: EXAM_TOTAL_SCORE + 10 }).ok, false)
 
-const legacyRecord = { ...baseRecord, id: 'legacy_record', targetScore: EXAM_TOTAL_SCORE + 10 }
-memory.set(storage.KEYS.targets, [legacyRecord])
-assert.deepStrictEqual(storage.getTargetRecords(), [])
+const legacyRecord = { ...baseRecord, id: 'legacy_record', score: EXAM_TOTAL_SCORE + 10 }
+memory.set(storage.KEYS.scoreRecords, [legacyRecord])
+assert.deepStrictEqual(storage.getScoreRecords(), [])
 
 const runtimeFiles = ['pages', 'components', 'config', 'utils', 'app.js', 'app.json', 'app.wxss']
   .flatMap(walk)

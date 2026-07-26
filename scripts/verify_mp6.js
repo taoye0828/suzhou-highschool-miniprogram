@@ -205,10 +205,21 @@ for (const { relative, source } of runtimeSources) {
   }
 }
 
-const targetsSource = read('pages/targets/targets.js')
+const targetsSource = [
+  read('pages/targets/targets.js'),
+  read('pages/targets/targets.wxml')
+].join('\n')
 if (targetsSource.includes('admission-scores')) fail('targets 页面不得 require admission-scores')
-for (const field of ['schoolId', 'targetSchool', 'admissionResult', 'admissionScore']) {
-  if (targetsSource.includes(field)) fail(`目标记录页面不得保存或引用 ${field}`)
+for (const field of ['schoolId', 'schoolName', 'level']) {
+  if (!targetsSource.includes(field)) fail(`目标记录页面必须展示或引用 ${field}`)
+}
+const targetStorageSource = read('utils/storage.js')
+for (const field of ['schoolId', 'schoolName', 'level']) {
+  if (!targetStorageSource.includes(field)) fail(`目标记录存储必须包含 ${field}`)
+}
+const schoolDetailSource = read('pages/school-detail/school-detail.js')
+for (const phrase of ['saveTargetRecord', 'saveSchoolTarget', 'onTargetLevelChange']) {
+  if (!schoolDetailSource.includes(phrase)) fail(`学校详情缺少目标绑定流程：${phrase}`)
 }
 
 for (const { relative, source } of allTextSources()) {

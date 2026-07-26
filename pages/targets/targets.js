@@ -1,155 +1,27 @@
 const { APP_CONFIG } = require('../../config/app-config')
 const {
   getTargetRecordsResult,
-  saveTargetRecord,
   deleteTargetRecord,
-  clearTargetRecords,
-  getTargetDraftResult,
-  saveTargetDraft,
-  clearTargetDraft
+  clearTargetRecords
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 
-function scoreNumber(value) {
-  if (value === '' || value === null || value === undefined) return null
-  const result = Number(value)
-  return Number.isInteger(result) ? result : null
-}
-
-function gapSummary(currentScore, targetScore) {
-  const current = scoreNumber(currentScore)
-  const target = scoreNumber(targetScore)
-  if (current === null || target === null) return { gapText: '填写分数后显示学习差距', reminder: '建议先记录一次真实学习测评结果。' }
-  const { min, max } = APP_CONFIG.targetScore
-  if (current < min || current > max || target < min || target > max) {
-    return { gapText: `分数需在 ${min} 至 ${max} 之间`, reminder: '请先修正分数，再查看学习差距。' }
-  }
-  const gap = target - current
-  if (gap > 0) return { gapText: `距离本阶段学习目标还有 ${gap} 分`, reminder: gap >= 50 ? '差距较大，建议拆分为每周小目标并定期复盘。' : '建议保持练习节奏，持续记录阶段变化。' }
-  if (gap === 0) return { gapText: '阶段测评分数与阶段目标一致', reminder: '建议继续巩固薄弱知识点。' }
-  return { gapText: `阶段测评分数已超过本阶段学习目标 ${Math.abs(gap)} 分`, reminder: '可根据近期学习情况设置下一阶段目标。' }
-}
-
-let targetIdSequence = 0
-
-function createTargetId() {
-  targetIdSequence = (targetIdSequence + 1) % 1000000
-  const suffix = Math.random().toString(36).slice(2, 10)
-  return `target_${Date.now()}_${targetIdSequence}_${suffix}`
-}
-
-function formatDisplayTime(isoTime) {
-  const date = new Date(isoTime)
-  const twoDigits = (value) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())} ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`
-}
-
 function presentRecord(record) {
-  const level = APP_CONFIG.targetScore.levels.find((item) => item.value === record.targetLevel)
+  const level = APP_CONFIG.targetScore.levels.find((item) => item.value === record.level)
   return {
     ...record,
-    ...gapSummary(record.currentScore, record.targetScore),
-    targetLevelLabel: level ? level.label : '目标学校',
-    displayTime: formatDisplayTime(record.createdAt)
+    levelLabel: level ? level.label : '目标'
   }
 }
 
 Page({
   data: {
-    currentScore: '',
-    targetScore: '',
-    note: '',
-    targetLevels: APP_CONFIG.targetScore.levels,
-    targetLevelIndex: APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target'),
-    gapText: '填写分数后显示学习差距',
-    reminder: '建议先记录一次真实学习测评结果。',
     records: [],
-    scoreMin: APP_CONFIG.targetScore.min,
-    scoreMax: APP_CONFIG.targetScore.max,
-    scoreMaxLength: APP_CONFIG.targetScore.maxLength,
     targetLevelLabel: APP_CONFIG.policy.targetHint
   },
 
-  onLoad() {
-    this.draftTimer = null
-    this.draftDirty = false
-    this.draftErrorShown = false
-    const draftResult = getTargetDraftResult()
-    notifyStorageReadResult(this, draftResult)
-    const draft = draftResult.draft
-    this.setData({
-      currentScore: draft.currentScore || '',
-      targetScore: draft.targetScore || '',
-      targetLevelIndex: Math.max(0, APP_CONFIG.targetScore.levels.findIndex((item) => item.value === (draft.targetLevel || 'target'))),
-      note: draft.note || ''
-    }, () => this.refreshSummary())
-  },
-
-  onShow() { this.loadRecords() },
-
-  onHide() { this.flushDraft(false) },
-
-  onUnload() { this.flushDraft(false) },
-
-  onCurrentInput(event) {
-    this.setData({ currentScore: event.detail.value }, () => this.onDraftChanged())
-  },
-
-  onTargetInput(event) {
-    this.setData({ targetScore: event.detail.value }, () => this.onDraftChanged())
-  },
-
-  onNoteInput(event) {
-    this.setData({ note: event.detail.value }, () => this.onDraftChanged())
-  },
-
-  onTargetLevelChange(event) {
-    this.setData({ targetLevelIndex: Number(event.detail.value) }, () => this.onDraftChanged())
-  },
-
-  onDraftChanged() {
-    this.draftDirty = true
-    this.refreshSummary()
-    this.scheduleDraftSave()
-  },
-
-  scheduleDraftSave() {
-    clearTimeout(this.draftTimer)
-    this.draftTimer = setTimeout(() => {
-      this.draftTimer = null
-      const result = this.persistDraft()
-      if (!result.ok && !this.draftErrorShown) {
-        this.draftErrorShown = true
-        wx.showToast({ title: result.message, icon: 'none' })
-      }
-    }, APP_CONFIG.targetScore.draftDebounceMs)
-  },
-
-  persistDraft() {
-    if (!this.draftDirty) return { ok: true }
-    const result = saveTargetDraft({
-      currentScore: this.data.currentScore,
-      targetScore: this.data.targetScore,
-      targetLevel: this.data.targetLevels[this.data.targetLevelIndex].value,
-      note: this.data.note
-    })
-    if (result.ok) {
-      this.draftDirty = false
-      this.draftErrorShown = false
-    }
-    return result
-  },
-
-  flushDraft(showError) {
-    clearTimeout(this.draftTimer)
-    this.draftTimer = null
-    const result = this.persistDraft()
-    if (showError && !result.ok) wx.showToast({ title: result.message, icon: 'none' })
-    return result
-  },
-
-  refreshSummary() {
-    this.setData(gapSummary(this.data.currentScore, this.data.targetScore))
+  onShow() {
+    this.loadRecords()
   },
 
   loadRecords() {
@@ -158,58 +30,14 @@ Page({
     this.setData({ records: result.records.map(presentRecord) })
   },
 
-  saveRecord() {
-    const current = scoreNumber(this.data.currentScore)
-    const target = scoreNumber(this.data.targetScore)
-    const { min, max } = APP_CONFIG.targetScore
-    if (current === null || target === null || current < min || target < min) {
-      wx.showToast({ title: `请输入 ${min} 至 ${max} 的整数`, icon: 'none' })
-      return
-    }
-    if (current > max) {
-      wx.showToast({ title: `当前分数不能超过 ${max} 分`, icon: 'none' })
-      return
-    }
-    if (target > max) {
-      wx.showToast({ title: `目标分不能超过 ${max} 分`, icon: 'none' })
-      return
-    }
-
-    const result = saveTargetRecord({
-      schemaVersion: 2,
-      id: createTargetId(),
-      currentScore: current,
-      targetScore: target,
-      targetLevel: this.data.targetLevels[this.data.targetLevelIndex].value,
-      note: this.data.note.trim(),
-      createdAt: new Date().toISOString()
-    })
-    if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
-      return
-    }
-
-    wx.showToast({ title: '学习目标已保存', icon: 'success' })
-    this.loadRecords()
+  openSchools() {
+    wx.switchTab({ url: '/pages/schools/schools' })
   },
 
-  clearInputs() {
-    clearTimeout(this.draftTimer)
-    const result = clearTargetDraft()
-    if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
-      return
-    }
-    this.draftDirty = false
-    this.draftErrorShown = false
-    const targetLevelIndex = APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target')
-    this.setData({
-      currentScore: '',
-      targetScore: '',
-      targetLevelIndex,
-      note: '',
-      ...gapSummary('', '')
-    })
+  openSchool(event) {
+    const schoolId = event.currentTarget.dataset.schoolId
+    if (!schoolId) return
+    wx.navigateTo({ url: `/pages/school-detail/school-detail?id=${schoolId}` })
   },
 
   deleteRecord(event) {
@@ -218,15 +46,15 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
-    wx.showToast({ title: '记录已删除', icon: 'success' })
+    wx.showToast({ title: '目标学校已删除', icon: 'success' })
     this.loadRecords()
   },
 
   clearAllRecords() {
     if (!this.data.records.length) return
     wx.showModal({
-      title: '清空全部学习目标记录',
-      content: '此操作只删除本机学习目标记录，且无法撤销。',
+      title: '清空全部目标学校',
+      content: '此操作只删除本机保存的目标学校和等级，且无法撤销。',
       confirmText: '确认清空',
       confirmColor: '#b42318',
       success: (modalResult) => {

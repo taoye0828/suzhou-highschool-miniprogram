@@ -37,8 +37,14 @@ assert.ok(externalLink.externalLinkRoute('https://www.suzhou.gov.cn/example').st
 assert.strictEqual(externalLink.externalLinkRoute('http://example.com'), '')
 assert.strictEqual(externalLink.externalLinkRoute('javascript:alert(1)'), '')
 
-function target(id, createdAt = '2026-07-02T00:00:00.000Z') {
-  return { id, currentScore: 500, targetScore: 550, note: '复盘数学', createdAt }
+function target(schoolId, schoolName, level = 'target', createdAt = '2026-07-02T00:00:00.000Z') {
+  return {
+    id: `target_${schoolId}`,
+    schoolId,
+    schoolName,
+    level,
+    createdAt
+  }
 }
 
 assert.ok(schools.length >= 50)
@@ -77,54 +83,55 @@ assert.deepStrictEqual(splitIds.invalid, ['old_id'])
 assert.strictEqual(storage.replaceFavoriteIds(splitIds.valid).ok, true)
 assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
 
-assert.strictEqual(storage.saveTargetRecord(target('target_1')).ok, true)
-assert.strictEqual(storage.saveTargetRecord(target('target_2', '2026-07-02T01:00:00.000Z')).ok, true)
-assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['target_2', 'target_1'])
+assert.strictEqual(storage.saveTargetRecord(target('school_a', '学校A', 'challenge')).ok, true)
+assert.strictEqual(storage.saveTargetRecord(target('school_b', '学校B', 'target', '2026-07-02T01:00:00.000Z')).ok, true)
+assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.schoolId), ['school_b', 'school_a'])
+assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.level), ['target', 'challenge'])
 for (const item of storage.getTargetRecords()) {
-  assert.strictEqual(item.targetLevel, 'target')
-  assert.strictEqual(Object.hasOwn(item, 'schoolId'), false)
-  assert.strictEqual(Object.hasOwn(item, 'targetSchool'), false)
-  assert.strictEqual(Object.hasOwn(item, 'admissionResult'), false)
-  assert.strictEqual(Object.hasOwn(item, 'admissionScore'), false)
+  assert.ok(item.schoolId)
+  assert.ok(item.schoolName)
+  assert.ok(item.level)
+  assert.strictEqual(item.schemaVersion, 3)
 }
-assert.strictEqual(storage.deleteTargetRecord('target_1').ok, true)
-assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['target_2'])
+assert.strictEqual(storage.saveTargetRecord(target('school_a', '学校A', 'safe', '2026-07-02T02:00:00.000Z')).ok, true)
+assert.strictEqual(storage.getTargetRecords().filter((item) => item.schoolId === 'school_a').length, 1)
+assert.strictEqual(storage.getTargetRecords().find((item) => item.schoolId === 'school_a').level, 'safe')
+assert.strictEqual(storage.deleteTargetRecord('target_school_a').ok, true)
+assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.schoolId), ['school_b'])
 
 for (const record of [
-  { ...target('zero_boundary'), currentScore: 0, targetScore: 0 },
-  { ...target('max_boundary'), currentScore: EXAM_TOTAL_SCORE, targetScore: EXAM_TOTAL_SCORE }
-]) {
-  assert.strictEqual(storage.saveTargetRecord(record).ok, true)
-}
-for (const record of [
-  { ...target('negative'), currentScore: -1 },
-  { ...target('above_max'), targetScore: EXAM_TOTAL_SCORE + 1 },
-  { ...target('decimal'), targetScore: 500.5 },
-  { ...target('empty'), targetScore: '' }
+  {},
+  { schoolId: '', schoolName: '无标识学校' },
+  { schoolId: 'missing_name', schoolName: '' },
+  { id: 'old_generic', currentScore: 500, targetScore: 550, createdAt: '2026-07-02T00:00:00.000Z' }
 ]) {
   assert.strictEqual(storage.saveTargetRecord(record).ok, false)
 }
 
 memory.set(storage.KEYS.targets, [
   {},
-  { id: 'broken', currentScore: 500, targetScore: 550, createdAt: 123 },
-  { id: 'empty-score', currentScore: '', targetScore: '', createdAt: '2026-07-02T00:00:00.000Z' },
-  target('valid')
+  { id: 'old_generic', currentScore: 500, targetScore: 550, createdAt: '2026-07-02T00:00:00.000Z' },
+  {
+    schoolId: 'legacy_school',
+    schoolName: '旧数据学校',
+    createdAt: '2026-07-02T00:00:00.000Z'
+  }
 ])
-assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id), ['valid'])
+const legacySchoolTarget = storage.getTargetRecords()
+assert.strictEqual(legacySchoolTarget.length, 1)
+assert.strictEqual(legacySchoolTarget[0].schoolId, 'legacy_school')
+assert.strictEqual(legacySchoolTarget[0].level, 'target')
 
-const legacyTarget = target('legacy_above_max')
-legacyTarget.targetScore = EXAM_TOTAL_SCORE + 10
-memory.set(storage.KEYS.targets, [legacyTarget])
-assert.deepStrictEqual(storage.getTargetRecords(), [])
-assert.strictEqual(storage.saveTargetRecord(legacyTarget).ok, false)
-assert.strictEqual(storage.saveTargetRecord({ ...legacyTarget, targetScore: EXAM_TOTAL_SCORE }).ok, true)
-
-memory.set(storage.KEYS.targets, Array.from({ length: 120 }, (_, index) => target(`record_${index}`, new Date(2026, 6, 2, 0, index).toISOString())))
+memory.set(storage.KEYS.targets, Array.from({ length: 120 }, (_, index) => target(
+  `school_${index}`,
+  `学校${index}`,
+  'target',
+  new Date(2026, 6, 2, 0, index).toISOString()
+)))
 assert.strictEqual(storage.getTargetRecords().length, APP_CONFIG.targetScore.maxRecords)
 
 writeFailure = true
-assert.strictEqual(storage.saveTargetRecord(target('quota_failure')).ok, false)
+assert.strictEqual(storage.saveTargetRecord(target('quota_failure', '写入失败学校')).ok, false)
 assert.strictEqual(storage.saveTargetDraft({ currentScore: '500' }).ok, false)
 writeFailure = false
 
@@ -132,7 +139,7 @@ readFailure = true
 const recordsBeforeReadFailure = memory.get(storage.KEYS.targets)
 assert.strictEqual(storage.getTargetRecordsResult().ok, false)
 assert.deepStrictEqual(storage.getTargetRecords(), [])
-assert.strictEqual(storage.saveTargetRecord(target('must_not_overwrite')).ok, false)
+assert.strictEqual(storage.saveTargetRecord(target('must_not_overwrite', '不得覆盖学校')).ok, false)
 assert.strictEqual(memory.get(storage.KEYS.targets), recordsBeforeReadFailure)
 assert.strictEqual(storage.getFavoriteIdsResult().ok, false)
 assert.deepStrictEqual(storage.getFavoriteIds(), [])

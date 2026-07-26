@@ -83,114 +83,59 @@ function testHomePage() {
   assert.strictEqual(memory.get('mp1.exam_year'), APP_CONFIG.countdown.defaultYear + 1)
 }
 
-async function testTargetsPage() {
+function testTargetsPage() {
   const definition = loadPage('pages/targets/targets')
   const page = createPageInstance(definition)
-  page.onLoad()
   page.onShow()
 
-  page.onCurrentInput({ detail: { value: '500' } })
-  page.onTargetInput({ detail: { value: '550' } })
-  page.onTargetLevelChange({ detail: { value: '0' } })
-  page.onNoteInput({ detail: { value: '复盘数学' } })
+  assert.strictEqual(page.data.records.length, 3)
+  assert.deepStrictEqual(
+    page.data.records.map((record) => [record.schoolName, record.levelLabel]).sort(),
+    [
+      ['江苏省苏州中学校', '冲刺'],
+      ['江苏省苏州中学园区校', '目标'],
+      ['江苏省苏州第十中学校', '保底']
+    ].sort()
+  )
+  page.openSchool({ currentTarget: { dataset: { schoolId: 'suzhou_high_school' } } })
+  assert.ok(navigations.includes('/pages/school-detail/school-detail?id=suzhou_high_school'))
 
-  assert.strictEqual(memory.has('mp1.target_draft'), false)
-  await new Promise((resolve) => setTimeout(resolve, APP_CONFIG.targetScore.draftDebounceMs + 50))
-  assert.deepStrictEqual(memory.get('mp1.target_draft'), {
-    currentScore: '500',
-    targetScore: '550',
-    targetLevel: 'challenge',
-    note: '复盘数学'
-  })
-  assert.ok(page.data.gapText.includes('还有 50 分'))
-
-  page.onCurrentInput({ detail: { value: '550' } })
-  page.onTargetInput({ detail: { value: '550' } })
-  assert.ok(page.data.gapText.includes('一致'))
-  page.onCurrentInput({ detail: { value: '600' } })
-  assert.ok(page.data.gapText.includes('已超过'))
-  page.onCurrentInput({ detail: { value: '500' } })
-
-  page.saveRecord()
-  const firstRecords = memory.get('mp1.target_records')
-  assert.strictEqual(firstRecords.length, 1)
-  assert.strictEqual(Object.hasOwn(firstRecords[0], 'schoolId'), false)
-  assert.strictEqual(Object.hasOwn(firstRecords[0], 'admissionScore'), false)
-  assert.strictEqual(firstRecords[0].targetLevel, 'challenge')
-  assert.ok(toastTitles.includes('学习目标已保存'))
+  memory.set('mp1.target_records', [{
+    schoolId: 'suzhou_high_school',
+    schoolName: '江苏省苏州中学校',
+    createdAt: '2026-07-02T00:00:00.000Z'
+  }])
+  page.onShow()
   assert.strictEqual(page.data.records.length, 1)
+  assert.strictEqual(page.data.records[0].levelLabel, '目标')
+  assert.strictEqual(page.data.records[0].schoolId, 'suzhou_high_school')
 
-  page.onCurrentInput({ detail: { value: '0' } })
-  page.onTargetInput({ detail: { value: String(APP_CONFIG.targetScore.max) } })
-  page.onNoteInput({ detail: { value: '  边界记录  ' } })
-  page.saveRecord()
-  const zeroRecord = memory.get('mp1.target_records').find((item) => item.currentScore === 0)
-  assert.strictEqual(zeroRecord.targetScore, APP_CONFIG.targetScore.max)
-  assert.strictEqual(zeroRecord.note, '边界记录')
-  assert.strictEqual(zeroRecord.schemaVersion, 2)
-  assert.ok(Number.isFinite(Date.parse(zeroRecord.createdAt)))
-  assert.strictEqual(new Set(memory.get('mp1.target_records').map((item) => item.id)).size, memory.get('mp1.target_records').length)
-
-  page.onCurrentInput({ detail: { value: '700' } })
-  page.onTargetInput({ detail: { value: String(APP_CONFIG.targetScore.max) } })
-  page.saveRecord()
-  assert.ok(toastTitles.includes('学习目标已保存'))
-
-  for (const invalidTarget of [APP_CONFIG.targetScore.max + 1, APP_CONFIG.targetScore.max + 10]) {
-    const countBefore = memory.get('mp1.target_records').length
-    page.onTargetInput({ detail: { value: String(invalidTarget) } })
-    page.saveRecord()
-    assert.strictEqual(memory.get('mp1.target_records').length, countBefore)
-    assert.ok(toastTitles.includes(`目标分不能超过 ${APP_CONFIG.targetScore.max} 分`))
-  }
-  for (const [currentValue, targetValue] of [['', '550'], ['-1', '550'], ['500.5', '550']]) {
-    const countBefore = memory.get('mp1.target_records').length
-    page.onCurrentInput({ detail: { value: currentValue } })
-    page.onTargetInput({ detail: { value: targetValue } })
-    page.saveRecord()
-    assert.strictEqual(memory.get('mp1.target_records').length, countBefore)
-  }
-  const boundaryRecords = memory.get('mp1.target_records').filter((item) => item.targetScore === APP_CONFIG.targetScore.max)
-  for (const boundaryRecord of boundaryRecords) {
-    page.deleteRecord({ currentTarget: { dataset: { id: boundaryRecord.id } } })
-  }
-
-  page.onCurrentInput({ detail: { value: 'abc' } })
-  page.saveRecord()
-  assert.ok(toastTitles.some((title) => title.includes('请输入')))
-
-  page.deleteRecord({ currentTarget: { dataset: { id: firstRecords[0].id } } })
-  assert.ok(toastTitles.includes('记录已删除'))
+  page.deleteRecord({ currentTarget: { dataset: { id: page.data.records[0].id } } })
+  assert.ok(toastTitles.includes('目标学校已删除'))
   assert.strictEqual(memory.has('mp1.target_records'), false)
 
-  page.onCurrentInput({ detail: { value: '500' } })
-  page.onTargetInput({ detail: { value: '560' } })
-  page.saveRecord()
-  assert.strictEqual(memory.get('mp1.target_records').length, 1)
+  memory.set('mp1.target_records', [{
+    id: 'target_suzhou_high_school',
+    schoolId: 'suzhou_high_school',
+    schoolName: '江苏省苏州中学校',
+    level: 'challenge',
+    createdAt: '2026-07-02T00:00:00.000Z'
+  }])
+  page.onShow()
   page.clearAllRecords()
   assert.strictEqual(memory.has('mp1.target_records'), false)
   assert.ok(toastTitles.includes('已清空'))
-  page.clearInputs()
-  assert.strictEqual(page.data.currentScore, '')
+  page.onShow()
+  assert.strictEqual(page.data.records.length, 0)
 
-  const targetSource = fs.readFileSync(path.join(__dirname, '..', 'pages/targets/targets.js'), 'utf8')
+  const targetSource = [
+    fs.readFileSync(path.join(__dirname, '..', 'pages/targets/targets.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, '..', 'pages/targets/targets.wxml'), 'utf8')
+  ].join('\n')
   assert.strictEqual(targetSource.includes('admission-scores'), false)
-  for (const forbiddenField of ['schoolId', 'targetSchool', 'admissionResult', 'admissionScore']) {
-    assert.strictEqual(targetSource.includes(forbiddenField), false)
+  for (const requiredField of ['schoolId', 'schoolName', 'level']) {
+    assert.strictEqual(targetSource.includes(requiredField), true)
   }
-
-  const originalConsoleError = console.error
-  const expectedErrorLogs = []
-  console.error = (...values) => expectedErrorLogs.push(values.join(' '))
-  page.onCurrentInput({ detail: { value: '500' } })
-  page.onTargetInput({ detail: { value: '550' } })
-  writeFailure = true
-  page.saveRecord()
-  writeFailure = false
-  console.error = originalConsoleError
-  assert.strictEqual(memory.has('mp1.target_records'), false)
-  assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
-  assert.strictEqual(expectedErrorLogs.length, 1)
 }
 
 function testSchoolDetailPage() {
@@ -211,6 +156,30 @@ function testSchoolDetailPage() {
     assert.ok(navigations.some((url) => url.startsWith('/pages/web-view/web-view?url=')))
   }
   assert.strictEqual(page.data.emptyScoreText, EMPTY_SCORE_TEXT)
+
+  const targetCases = [
+    { id: 'suzhou_high_school', levelIndex: 0, level: 'challenge', schoolName: '江苏省苏州中学校' },
+    { id: 'suzhou_high_school_sip', levelIndex: 1, level: 'target', schoolName: '江苏省苏州中学园区校' },
+    { id: 'suzhou_no10_high_school', levelIndex: 2, level: 'safe', schoolName: '江苏省苏州第十中学校' }
+  ]
+  for (const targetCase of targetCases) {
+    const targetPage = createPageInstance(definition)
+    targetPage.onLoad({ id: targetCase.id })
+    targetPage.onTargetLevelChange({ detail: { value: String(targetCase.levelIndex) } })
+    targetPage.saveSchoolTarget()
+    const saved = memory.get('mp1.target_records').find((record) => record.schoolId === targetCase.id)
+    assert.strictEqual(saved.schoolName, targetCase.schoolName)
+    assert.strictEqual(saved.level, targetCase.level)
+  }
+  assert.strictEqual(memory.get('mp1.target_records').length, 3)
+
+  const failedTargetPage = createPageInstance(definition)
+  failedTargetPage.onLoad({ id: 'suzhou_no10_high_school_jinchang' })
+  writeFailure = true
+  failedTargetPage.saveSchoolTarget()
+  writeFailure = false
+  assert.strictEqual(memory.get('mp1.target_records').length, 3)
+  assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
 
   page.toggleFavorite()
   assert.ok(memory.get('mp1.favorite_school_ids').includes('suzhou_high_school'))
@@ -285,7 +254,13 @@ function testFavoritesPage() {
 
 function testProfilePage() {
   memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
-  memory.set('mp1.target_records', [{ id: 'target_1', currentScore: 500, targetScore: 550, note: '', createdAt: '2026-07-02T00:00:00.000Z' }])
+  memory.set('mp1.target_records', [{
+    id: 'target_suzhou_high_school',
+    schoolId: 'suzhou_high_school',
+    schoolName: '江苏省苏州中学校',
+    level: 'challenge',
+    createdAt: '2026-07-02T00:00:00.000Z'
+  }])
   memory.set('mp1.target_draft', { currentScore: '500' })
   memory.set('mp1.score_records', [{
     id: 'score_profile',
@@ -313,7 +288,13 @@ function testProfilePage() {
   assert.strictEqual(memory.has('mp1.exam_year'), false)
 
   memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
-  memory.set('mp1.target_records', [{ id: 'target_2', currentScore: 500, targetScore: 550, note: '', createdAt: '2026-07-02T00:00:00.000Z' }])
+  memory.set('mp1.target_records', [{
+    id: 'target_suzhou_high_school',
+    schoolId: 'suzhou_high_school',
+    schoolName: '江苏省苏州中学校',
+    level: 'target',
+    createdAt: '2026-07-02T00:00:00.000Z'
+  }])
   removeFailure = true
   page.clearLocalData()
   removeFailure = false
@@ -412,8 +393,8 @@ function testWebViewPage() {
 
 async function run() {
   testHomePage()
-  await testTargetsPage()
   testSchoolDetailPage()
+  testTargetsPage()
   testSchoolsPage()
   testFavoritesPage()
   testTargetAnalysisPage()

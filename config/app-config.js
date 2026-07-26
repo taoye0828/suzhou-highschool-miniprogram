@@ -2,9 +2,9 @@ const EXAM_TOTAL_SCORE = 740
 const SOURCE_CHECKED_AT = '2026-07-09'
 const DEFAULT_EXAM_YEAR = 2027
 const TARGET_LEVELS = [
-  { value: 'challenge', label: '冲刺目标' },
-  { value: 'target', label: '目标学校' },
-  { value: 'safe', label: '保底目标' }
+  { value: 'challenge', label: '冲刺' },
+  { value: 'target', label: '目标' },
+  { value: 'safe', label: '保底' }
 ]
 
 const APP_CONFIG = {
@@ -68,7 +68,7 @@ const APP_CONFIG = {
       '最多对比 3 所高中',
       '查看本地中考倒计时',
       '记录本机成绩趋势',
-      '记录阶段学习目标'
+      '为具体学校记录冲刺、目标或保底等级'
     ],
     currentLimits: [
       '不做录取预测',
@@ -82,10 +82,10 @@ const APP_CONFIG = {
       '先进入学校库筛选或搜索学校',
       '再打开详情查看来源和历史分数线说明',
       '需要时使用成绩分析或学校对比辅助核对',
-      '成绩趋势、收藏和阶段学习目标可在本机记录和清除'
+      '成绩趋势、收藏和目标学校等级可在本机记录和清除'
     ],
-    targetHint: '本页只用于记录阶段学习目标和目标等级，不根据分数判断录取结果。',
-    targetStorageHint: '学习目标记录只保存在本机，可在我的页面清除。',
+    targetHint: '目标等级只与已选择的具体学校绑定，不根据分数判断录取结果。',
+    targetStorageHint: '目标学校和等级只保存在本机，可在我的页面清除。',
     schoolDetailNotice: '学校信息以公开来源为准，未核实字段不进入正式页面。',
     scoreSafetyNotice: '历史录取分数线仅供了解，不代表未来录取结果。本小程序不做录取预测，不提供志愿填报结论。',
     planningDisclaimer: '以上分析基于已收录的历史公开数据和固定分差区间，仅作为高中目标参考，实际录取情况以当年招生政策和考试成绩为准。',

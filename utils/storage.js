@@ -92,34 +92,39 @@ function normalizeTargetLevel(value) {
 
 function normalizeTargetRecord(value, options = {}) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  if (typeof value.id !== 'string' || !value.id.trim()) return null
-  if (typeof value.createdAt !== 'string' || !Number.isFinite(Date.parse(value.createdAt))) return null
-
-  const currentScore = value.currentScore
-  const targetScore = value.targetScore
-  const { min, max } = APP_CONFIG.targetScore
-  if (!Number.isInteger(currentScore) || !Number.isInteger(targetScore)) return null
-  if (currentScore < min || targetScore < min) return null
-  if (options.enforceScoreMax && (currentScore > max || targetScore > max)) return null
+  const schoolId = typeof value.schoolId === 'string' ? value.schoolId.trim() : ''
+  const schoolName = typeof value.schoolName === 'string' ? value.schoolName.trim() : ''
+  if (!schoolId || !schoolName) return null
+  const id = typeof value.id === 'string' && value.id.trim()
+    ? value.id.trim()
+    : `target_${schoolId}`
+  const createdAt = typeof value.createdAt === 'string' && Number.isFinite(Date.parse(value.createdAt))
+    ? new Date(value.createdAt).toISOString()
+    : new Date(0).toISOString()
 
   return {
-    schemaVersion: 2,
-    id: value.id.trim(),
-    currentScore,
-    targetScore,
-    targetLevel: normalizeTargetLevel(value.targetLevel),
-    note: typeof value.note === 'string' ? value.note.slice(0, 200) : '',
-    createdAt: new Date(value.createdAt).toISOString()
+    schemaVersion: 3,
+    id,
+    schoolId,
+    schoolName: schoolName.slice(0, 100),
+    level: normalizeTargetLevel(value.level || value.targetLevel),
+    createdAt
   }
 }
 
 function getTargetRecordsResult() {
   const readResult = readStorage(KEYS.targets, [])
   const value = readResult.value
+  const seenSchoolIds = new Set()
   const records = (Array.isArray(value) ? value : [])
-    .map((record) => normalizeTargetRecord(record, { enforceScoreMax: true }))
+    .map((record) => normalizeTargetRecord(record))
     .filter(Boolean)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .filter((record) => {
+      if (seenSchoolIds.has(record.schoolId)) return false
+      seenSchoolIds.add(record.schoolId)
+      return true
+    })
     .slice(0, APP_CONFIG.targetScore.maxRecords)
   return readResult.ok ? { ok: true, records } : { ok: false, records, message: readResult.message }
 }
@@ -129,14 +134,14 @@ function getTargetRecords() {
 }
 
 function saveTargetRecord(record) {
-  const normalized = normalizeTargetRecord(record, { enforceScoreMax: true })
+  const normalized = normalizeTargetRecord(record)
   if (!normalized) return { ok: false, message: '目标记录格式无效，请检查后重试。' }
 
   const existingResult = getTargetRecordsResult()
   if (!existingResult.ok) return { ok: false, message: existingResult.message }
   const records = [
     normalized,
-    ...existingResult.records.filter((item) => item.id !== normalized.id)
+    ...existingResult.records.filter((item) => item.schoolId !== normalized.schoolId)
   ].slice(0, APP_CONFIG.targetScore.maxRecords)
 
   const result = writeStorage(KEYS.targets, records)

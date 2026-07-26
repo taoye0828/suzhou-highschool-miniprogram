@@ -27,6 +27,15 @@
       <view class="muted small detail-notice">{{detailNotice}}</view>
     </view>
 
+    <view class="card target-plan-card">
+      <view class="section-heading">目标规划</view>
+      <view class="muted small target-plan-note">为 {{school.name}} 选择一个目标等级，保存后可在“学习目标”页面查看。</view>
+      <picker range="{{targetLevels}}" range-key="label" value="{{targetLevelIndex}}" bindchange="onTargetLevelChange">
+        <view class="input picker-input">{{targetLevels[targetLevelIndex].label}}⌄</view>
+      </picker>
+      <button class="button target-save-button" bindtap="saveSchoolTarget">{{isTargetSchool ? '更新目标等级' : '加入目标'}}</button>
+    </view>
+
     <view wx:if="{{school.intro}}" class="card">
       <view class="section-heading">学校简介</view>
       <view class="notice">{{school.intro}}</view>

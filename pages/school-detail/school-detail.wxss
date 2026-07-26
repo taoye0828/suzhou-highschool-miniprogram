@@ -15,3 +15,7 @@
 .list-item { margin-top: 10rpx; }
 .copy-source { margin-top: 20rpx; }
 .empty-button { margin: 24rpx auto 0; width: 320rpx; }
+.target-plan-card { border-left: 8rpx solid #0f766e; }
+.target-plan-note { margin-bottom: 18rpx; }
+.picker-input { display: flex; align-items: center; color: #334155; }
+.target-save-button { margin-top: 18rpx; }

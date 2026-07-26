@@ -1,5 +1,10 @@
 const { getSchoolById, presentSchool } = require('../../utils/school')
-const { getFavoriteIdsResult, setFavorite } = require('../../utils/storage')
+const {
+  getFavoriteIdsResult,
+  setFavorite,
+  getTargetRecordsResult,
+  saveTargetRecord
+} = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { mapSearchKeyword, copyText } = require('../../utils/map')
 const { openExternalLink } = require('../../utils/external-link')
@@ -16,6 +21,9 @@ Page({
     school: null,
     scoreGroups: [],
     isFavorite: false,
+    isTargetSchool: false,
+    targetLevels: APP_CONFIG.targetScore.levels,
+    targetLevelIndex: APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target'),
     mapKeyword: '',
     emptyScoreText: EMPTY_SCORE_TEXT,
     scoreSafetyNotice: SCORE_SAFETY_NOTICE,
@@ -34,10 +42,19 @@ Page({
   refresh() {
     const school = getSchoolById(this.data.schoolId)
     const favoriteResult = getFavoriteIdsResult()
-    notifyStorageReadResult(this, favoriteResult)
+    const targetResult = getTargetRecordsResult()
+    const targetRecord = school
+      ? targetResult.records.find((record) => record.schoolId === school.id)
+      : null
+    const targetLevelIndex = targetRecord
+      ? APP_CONFIG.targetScore.levels.findIndex((item) => item.value === targetRecord.level)
+      : APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target')
+    notifyStorageReadResult(this, !favoriteResult.ok ? favoriteResult : targetResult)
     this.setData({
       school: school ? presentSchool(school, favoriteResult.ids) : null,
       isFavorite: school ? favoriteResult.ids.includes(school.id) : false,
+      isTargetSchool: Boolean(targetRecord),
+      targetLevelIndex: Math.max(0, targetLevelIndex),
       scoreGroups: school ? groupScoresByYear(school.id) : [],
       mapKeyword: school ? mapSearchKeyword(school.name) : ''
     })
@@ -53,6 +70,36 @@ Page({
     }
     this.setData({ isFavorite: nextValue })
     wx.showToast({ title: nextValue ? '已收藏' : '已取消收藏', icon: 'success' })
+  },
+
+  onTargetLevelChange(event) {
+    this.setData({ targetLevelIndex: Number(event.detail.value) })
+  },
+
+  saveSchoolTarget() {
+    if (!this.data.school) return
+    const level = this.data.targetLevels[this.data.targetLevelIndex]
+    if (!level) {
+      wx.showToast({ title: '目标等级无效，请重新选择。', icon: 'none' })
+      return
+    }
+    const wasTargetSchool = this.data.isTargetSchool
+    const result = saveTargetRecord({
+      id: `target_${this.data.school.id}`,
+      schoolId: this.data.school.id,
+      schoolName: this.data.school.name,
+      level: level.value,
+      createdAt: new Date().toISOString()
+    })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.setData({ isTargetSchool: true })
+    wx.showToast({
+      title: wasTargetSchool ? '目标等级已更新' : '已加入目标',
+      icon: 'success'
+    })
   },
 
   copySchoolName() {
