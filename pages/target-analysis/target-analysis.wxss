@@ -12,3 +12,13 @@
 .result-card:active { background: #f0f8f6; }
 .disclaimer-card { margin-top: 34rpx; border-left: 8rpx solid #f59e0b; }
 .disclaimer-text { margin-top: 10rpx; }
+.target-link-badge {
+  display: inline-flex;
+  margin-top: 12rpx;
+  padding: 7rpx 14rpx;
+  color: #0f766e;
+  background: #e7f6f3;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}

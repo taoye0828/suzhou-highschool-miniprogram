@@ -4,6 +4,7 @@ const { APP_CONFIG } = require('../../config/app-config')
 const { getExamYearResult, saveExamYear } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { calculateExamCountdown, examYearOptions } = require('../../utils/countdown')
+const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 
 function uniqueScoreYears() {
   return Array.from(new Set(admissionScores.map((item) => item.year))).sort((left, right) => left - right)
@@ -39,7 +40,10 @@ Page({
     scoreStats,
     examYears: [],
     examYearIndex: 0,
-    countdown: null
+    countdown: null,
+    schoolKeyword: '',
+    schoolSearchActive: false,
+    schoolSearchResults: []
   },
 
   onLoad() {
@@ -75,6 +79,24 @@ Page({
       countdown: calculateExamCountdown(year)
     })
     wx.showToast({ title: '目标年份已保存在本机', icon: 'success' })
+  },
+
+  onSchoolKeywordInput(event) {
+    const schoolKeyword = event.detail.value
+    const schoolSearchActive = Boolean(normalizeSearchText(schoolKeyword))
+    this.setData({
+      schoolKeyword,
+      schoolSearchActive,
+      schoolSearchResults: schoolSearchActive
+        ? searchSchools({ keyword: schoolKeyword, limit: 5 })
+        : []
+    })
+  },
+
+  openSchoolResult(event) {
+    wx.navigateTo({
+      url: `/pages/school-detail/school-detail?id=${event.currentTarget.dataset.id}`
+    })
   },
 
   openEntry(event) {

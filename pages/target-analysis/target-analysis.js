@@ -1,16 +1,29 @@
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../../config/app-config')
 const { analyzeScore } = require('../../utils/score-analysis')
+const { getTargetRecordsResult } = require('../../utils/storage')
+const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 
 function buildSections(results) {
   return APP_CONFIG.scoreAnalysis.levels.map((level) => ({
     ...level,
-    results: results.filter((item) => item.level === level.value)
+    results: results
+      .filter((item) => item.level === level.value)
+      .map((item) => {
+        const targetLevel = APP_CONFIG.targetScore.levels.find(
+          (candidate) => candidate.value === item.targetLevel
+        )
+        return {
+          ...item,
+          targetLevelLabel: targetLevel ? targetLevel.label : ''
+        }
+      })
   }))
 }
 
 Page({
   data: {
     scoreInput: '',
+    schoolKeyword: '',
     targetYears: APP_CONFIG.scoreAnalysis.targetYears,
     targetYearIndex: Math.max(
       0,
@@ -27,6 +40,12 @@ Page({
 
   onScoreInput(event) {
     this.setData({ scoreInput: event.detail.value, inputError: '' })
+  },
+
+  onSchoolKeywordInput(event) {
+    this.setData({ schoolKeyword: event.detail.value }, () => {
+      if (this.data.hasAnalyzed) this.analyze()
+    })
   },
 
   onTargetYearChange(event) {
@@ -51,7 +70,14 @@ Page({
       return
     }
     const targetYear = this.data.targetYears[this.data.targetYearIndex]
-    const results = analyzeScore({ userScore: score, targetYear })
+    const targetResult = getTargetRecordsResult()
+    notifyStorageReadResult(this, targetResult)
+    const results = analyzeScore({
+      userScore: score,
+      targetYear,
+      keyword: this.data.schoolKeyword,
+      targetRecords: targetResult.records
+    })
     this.setData({
       inputError: '',
       hasAnalyzed: true,

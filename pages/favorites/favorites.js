@@ -1,11 +1,15 @@
 const { schools, withFavoriteState, splitFavoriteIdsByValidity } = require('../../utils/school')
 const { getFavoriteIdsResult, setFavorite, replaceFavoriteIds } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
+const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 
 Page({
   data: {
     favorites: [],
-    invalidCount: 0
+    invalidCount: 0,
+    keyword: '',
+    hasFavoriteSchools: false,
+    searchActive: false
   },
 
   onShow() { this.refresh() },
@@ -18,9 +22,28 @@ Page({
     if (!cleanupResult.ok) {
       wx.showToast({ title: cleanupResult.message, icon: 'none' })
     }
+    this._favoriteSchools = withFavoriteState(
+      schools.filter((school) => valid.includes(school.id)),
+      valid
+    )
     this.setData({
-      favorites: withFavoriteState(schools.filter((school) => valid.includes(school.id)), valid),
-      invalidCount: cleanupResult.ok ? 0 : invalid.length
+      invalidCount: cleanupResult.ok ? 0 : invalid.length,
+      hasFavoriteSchools: this._favoriteSchools.length > 0
+    }, () => this.applySearch())
+  },
+
+  onKeywordInput(event) {
+    this.setData({ keyword: event.detail.value }, () => this.applySearch())
+  },
+
+  applySearch() {
+    const searchActive = Boolean(normalizeSearchText(this.data.keyword))
+    this.setData({
+      searchActive,
+      favorites: searchSchools({
+        schools: this._favoriteSchools || [],
+        keyword: this.data.keyword
+      })
     })
   },
 

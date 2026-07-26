@@ -33,3 +33,5 @@
 .compare-card:active { background: #f0f8f6; }
 .disclaimer-card { margin-top: 34rpx; border-left: 8rpx solid #f59e0b; }
 .disclaimer-text { margin-top: 10rpx; }
+.compare-search-input { margin-top: 20rpx; }
+.search-empty { padding-top: 18rpx; text-align: center; }

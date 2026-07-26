@@ -1,6 +1,7 @@
 const { EXAM_TOTAL_SCORE } = require('../config/app-config')
 const { schools: defaultSchools } = require('../data/schools')
 const { admissionScores: defaultScores } = require('../data/admission-scores')
+const { searchSchools } = require('./school-search')
 
 const LEVEL_ORDER = ['challenge', 'match', 'safe']
 
@@ -33,7 +34,9 @@ function analyzeScore({
   userScore,
   targetYear,
   schools = defaultSchools,
-  scores = defaultScores
+  scores = defaultScores,
+  keyword = '',
+  targetRecords = []
 }) {
   if (!Number.isInteger(userScore) || userScore < 0 || userScore > EXAM_TOTAL_SCORE) {
     throw new TypeError(`userScore must be an integer from 0 to ${EXAM_TOTAL_SCORE}`)
@@ -46,12 +49,20 @@ function analyzeScore({
     scoreGroups.set(item.schoolId, [...(scoreGroups.get(item.schoolId) || []), item])
   }
 
-  return schools.flatMap((school) => {
+  const targetBySchoolId = new Map(
+    (Array.isArray(targetRecords) ? targetRecords : [])
+      .filter((record) => record && record.schoolId)
+      .map((record) => [record.schoolId, record])
+  )
+
+  return searchSchools({ schools, keyword }).flatMap((school) => {
     const reference = latestReferenceScore(scoreGroups.get(school.id), targetYear)
     if (!reference) return []
     const difference = userScore - reference.minScore
     const level = classifyDifference(difference)
     if (!level) return []
+    const targetRecord = targetBySchoolId.get(school.id)
+    const improvement = Math.max(0, -difference)
     return [{
       schoolId: school.id,
       schoolName: school.name,
@@ -62,6 +73,13 @@ function analyzeScore({
       differenceText: difference < 0
         ? `${difference} 分（当前低于参考分）`
         : `+${difference} 分（当前高于或等于参考分）`,
+      gap: reference.minScore - userScore,
+      improvement,
+      improvementText: improvement > 0
+        ? `需要提升 ${improvement} 分`
+        : '当前已达到或高于该历史参考分',
+      isTargetSchool: Boolean(targetRecord),
+      targetLevel: targetRecord ? targetRecord.level : '',
       level
     }]
   }).sort((left, right) => {
@@ -72,6 +90,13 @@ function analyzeScore({
       ? differenceCompare
       : left.schoolName.localeCompare(right.schoolName, 'zh-Hans-CN')
   })
+}
+
+function referenceForSchool(schoolId, targetYear, scores = defaultScores) {
+  return latestReferenceScore(
+    (Array.isArray(scores) ? scores : []).filter((item) => item.schoolId === schoolId),
+    targetYear
+  )
 }
 
 function scoreSummaryForSchool(schoolId, scores = defaultScores) {
@@ -90,6 +115,7 @@ function scoreSummaryForSchool(schoolId, scores = defaultScores) {
 module.exports = {
   LEVEL_ORDER,
   latestReferenceScore,
+  referenceForSchool,
   classifyDifference,
   analyzeScore,
   scoreSummaryForSchool

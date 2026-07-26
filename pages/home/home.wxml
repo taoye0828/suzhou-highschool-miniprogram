@@ -4,6 +4,32 @@
     <view class="hero-subtitle">{{homeTagline}}</view>
   </view>
 
+  <view class="section-title">快速查学校</view>
+  <view class="card home-search-card">
+    <input
+      class="input"
+      value="{{schoolKeyword}}"
+      placeholder="输入学校名称或简称，如：南航、苏中"
+      bindinput="onSchoolKeywordInput"
+    />
+    <view
+      wx:for="{{schoolSearchResults}}"
+      wx:key="id"
+      class="home-search-result row between"
+      data-id="{{item.id}}"
+      bindtap="openSchoolResult"
+    >
+      <view class="grow">
+        <view class="card-title">{{item.name}}</view>
+        <view class="muted small">{{item.district}} · {{item.schoolType}}</view>
+      </view>
+      <view class="list-arrow">›</view>
+    </view>
+    <view wx:if="{{schoolSearchActive && schoolSearchResults.length === 0}}" class="muted small search-empty">
+      没有找到匹配学校。
+    </view>
+  </view>
+
   <view class="section-title">中考倒计时</view>
   <view class="card countdown-card" wx:if="{{countdown}}">
     <view class="row between countdown-head">

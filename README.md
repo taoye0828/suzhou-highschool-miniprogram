@@ -16,15 +16,25 @@
 ## 当前功能
 
 - 首页展示中考倒计时、产品功能、数据概况和必要免责声明；目标年份只保存在本机
-- 学校库名称/别名搜索，以及区域、类型、办学性质、正式标签和分数线状态组合筛选
+- 首页、学校库、收藏、目标学校选择、高中对比和成绩分析共用学校智能匹配；支持去空格、大小写归一、名称/别名、顺序字符和分散字符匹配
 - 学校详情展示基础信息、历史分数线、来源说明和安全提示；HTTPS 官方来源可在受控页面打开，并保留复制回退
 - 成绩分析按固定历史分差区间展示冲刺、匹配、稳妥三类目标参考；每校使用不晚于目标年份的最新已收录年份最高参考分
 - 高中对比支持同时选择 2 至 3 所学校，核对地区、类型、标签、历史分数线、地址和收藏状态
 - 成绩趋势支持最多 100 条本机记录，并展示最近 12 条变化
 - 本地收藏、取消收藏、失效收藏 ID 自动清理及失败重试
-- 阶段学习目标支持冲刺、目标、保底三个本地等级，以及记录、删除、清空和草稿
+- 阶段学习目标支持冲刺、目标、保底三个本地等级，以及添加、列表内改级、删除、清空、详情跳转、参考分/年份和当前差距
 - 学习目标总分上限已统一按苏州中考满分 740 分处理
 - 数据说明、隐私说明、我的页本地数据管理
+
+## RC7-1 功能增强（未发布）
+
+- 新增统一搜索服务 `utils/school-search.js`，不再由各页面各写一套学校匹配逻辑。
+- 搜索排序固定为：完整名称包含、别名包含、顺序字符匹配、分散字符匹配；`南航`、`十中`、`园区`、带空格关键词和无结果均有自动测试。
+- 首页可直接搜索并打开学校详情；收藏、目标学校选择、高中对比和成绩分析均接入相同服务。
+- 学校详情继续作为加入目标的正式入口，可选择冲刺、目标或保底；目标列表按三个等级排序，并显示历史参考分、参考年份、我的成绩和当前差距。
+- 成绩分析可按学校名称或简称筛选，标识已加入目标的学校，并显示“需要提升 N 分”或已达到历史参考分。
+- 本轮只做功能增强，未执行微信审核、体验版上传、备案或其他发布步骤。
+- 完整记录见 [docs/rc7_1_feature_upgrade_report.md](docs/rc7_1_feature_upgrade_report.md)。
 
 ## FINAL-RC6 状态
 
@@ -110,6 +120,7 @@ node scripts/verify_score_max_740.js
 node scripts/verify_mp13_2026_scores.js
 node scripts/verify_upload_package_ignore.js
 node scripts/verify_rc6_upgrade.js
+node scripts/verify_rc7_1.js
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
 node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app
@@ -127,7 +138,7 @@ git diff --check
 6. 如仍看到旧文案，优先检查是否打开了旧项目路径、是否未重新编译、是否命中了微信开发者工具缓存。
 7. 官方来源页需要在微信公众平台配置对应 HTTPS 业务域名；未配置时应出现明确失败提示，仍可复制链接用系统浏览器打开。
 
-完整人工检查步骤见 [docs/manual_wechat_release_checks.md](docs/manual_wechat_release_checks.md)，本轮升级结果见 [docs/final_rc6_upgrade_report.md](docs/final_rc6_upgrade_report.md)，双端数据结果见 [docs/cross_platform_consistency_report.md](docs/cross_platform_consistency_report.md)。
+完整人工检查步骤见 [docs/manual_wechat_release_checks.md](docs/manual_wechat_release_checks.md)，RC7-1 升级结果见 [docs/rc7_1_feature_upgrade_report.md](docs/rc7_1_feature_upgrade_report.md)，双端数据结果见 [docs/cross_platform_consistency_report.md](docs/cross_platform_consistency_report.md)。
 
 ## 回滚方式
 

@@ -3,6 +3,7 @@ const { getFavoriteIdsResult } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { scoreSummaryForSchool } = require('../../utils/score-analysis')
 const { APP_CONFIG } = require('../../config/app-config')
+const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 
 function presentSchool(school, favoriteIds) {
   return {
@@ -20,6 +21,8 @@ Page({
     selectedIds: [],
     selectedSchools: [],
     availableSchools: schools,
+    schoolKeyword: '',
+    schoolSearchActive: false,
     pickerIndex: 0,
     canAdd: true,
     canCompare: false,
@@ -42,15 +45,24 @@ Page({
       .map((id) => schools.find((school) => school.id === id))
       .filter(Boolean)
       .map((school) => presentSchool(school, favoriteResult.ids))
-    const availableSchools = schools.filter((school) => !selectedIds.includes(school.id))
+    const schoolSearchActive = Boolean(normalizeSearchText(this.data.schoolKeyword))
+    const availableSchools = searchSchools({
+      schools: schools.filter((school) => !selectedIds.includes(school.id)),
+      keyword: this.data.schoolKeyword
+    })
     this.setData({
       selectedIds,
       selectedSchools,
       availableSchools,
+      schoolSearchActive,
       pickerIndex: 0,
       canAdd: selectedSchools.length < 3 && availableSchools.length > 0,
       canCompare: selectedSchools.length >= 2
     })
+  },
+
+  onSchoolKeywordInput(event) {
+    this.setData({ schoolKeyword: event.detail.value }, () => this.refresh())
   },
 
   onSchoolChange(event) {
@@ -60,7 +72,10 @@ Page({
     }
     const school = this.data.availableSchools[Number(event.detail.value)]
     if (!school || this.data.selectedIds.includes(school.id)) return
-    this.setData({ selectedIds: [...this.data.selectedIds, school.id] }, () => this.refresh())
+    this.setData({
+      selectedIds: [...this.data.selectedIds, school.id],
+      schoolKeyword: ''
+    }, () => this.refresh())
   },
 
   removeSchool(event) {

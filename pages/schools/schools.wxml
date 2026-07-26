@@ -4,7 +4,7 @@
     <view class="hero-subtitle">查看苏州高中阶段学校基础信息、来源和分数线收录情况</view>
   </view>
 
-  <input class="input search-input" value="{{keyword}}" placeholder="搜索学校、简称、区域、类型、地址、特色或项目" bindinput="onKeywordInput" />
+  <input class="input search-input" value="{{keyword}}" placeholder="智能搜索学校名称或简称，如：南航、苏中、园区" bindinput="onKeywordInput" />
 
   <view class="filter-grid">
     <picker range="{{districts}}" value="{{districtIndex}}" bindchange="onDistrictChange">

@@ -4,6 +4,32 @@
     <view class="hero-subtitle">每所学校对应一个冲刺、目标或保底等级</view>
   </view>
 
+  <view class="card target-search-card">
+    <view class="card-title">搜索并添加目标学校</view>
+    <input
+      class="input target-search-input"
+      value="{{keyword}}"
+      placeholder="输入学校名称或简称"
+      bindinput="onKeywordInput"
+    />
+    <view
+      wx:for="{{searchResults}}"
+      wx:key="id"
+      class="target-search-result row between"
+      data-school-id="{{item.id}}"
+      bindtap="openSchool"
+    >
+      <view class="grow">
+        <view class="card-title">{{item.name}}</view>
+        <view class="muted small">{{item.district}} · 打开详情选择等级</view>
+      </view>
+      <view class="list-arrow">›</view>
+    </view>
+    <view wx:if="{{searchActive && searchResults.length === 0}}" class="muted small search-empty">
+      没有找到可添加的匹配学校。
+    </view>
+  </view>
+
   <view class="row between section-row">
     <view class="section-title records-title">目标学校（{{records.length}}）</view>
     <button wx:if="{{records.length > 0}}" class="button danger small-button" bindtap="clearAllRecords">清空全部</button>
@@ -23,7 +49,22 @@
       </view>
       <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
     </view>
-    <button class="button secondary detail-button" data-school-id="{{item.schoolId}}" bindtap="openSchool">查看或修改等级</button>
+    <view class="target-metrics">
+      <view class="info-row"><text class="info-label">参考分数</text><text class="info-value">{{item.referenceScoreText}}</text></view>
+      <view class="info-row"><text class="info-label">参考年份</text><text class="info-value">{{item.referenceYearText}}</text></view>
+      <view class="info-row"><text class="info-label">我的成绩</text><text class="info-value">{{item.currentScoreText}}</text></view>
+      <view class="info-row"><text class="info-label">当前差距</text><text class="info-value">{{item.gapText}}</text></view>
+    </view>
+    <picker
+      range="{{targetLevels}}"
+      range-key="label"
+      value="{{item.levelIndex}}"
+      data-id="{{item.id}}"
+      bindchange="onLevelChange"
+    >
+      <view class="input level-picker">修改等级：{{item.levelLabel}}⌄</view>
+    </picker>
+    <button class="button secondary detail-button" data-school-id="{{item.schoolId}}" bindtap="openSchool">查看学校详情</button>
   </view>
 
   <view class="card target-boundary">

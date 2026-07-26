@@ -14,6 +14,13 @@
       placeholder="请输入 0 至 {{scoreMax}} 的整数"
       bindinput="onScoreInput"
     />
+    <text class="field-label">筛选分析学校（可选）</text>
+    <input
+      class="input"
+      value="{{schoolKeyword}}"
+      placeholder="输入学校名称或简称，如：南航"
+      bindinput="onSchoolKeywordInput"
+    />
     <text class="field-label">目标考试年份</text>
     <picker range="{{targetYears}}" value="{{targetYearIndex}}" bindchange="onTargetYearChange">
       <view class="input picker-input">{{targetYears[targetYearIndex]}} 年⌄</view>
@@ -47,9 +54,13 @@
           <view class="card-title grow">{{result.schoolName}}</view>
           <view class="list-arrow">›</view>
         </view>
+        <view wx:if="{{result.isTargetSchool}}" class="target-link-badge">
+          已加入目标 · {{result.targetLevelLabel}}
+        </view>
         <view class="info-row"><text class="info-label">历史参考分</text><text class="info-value">{{result.schoolScore}} 分（{{result.year}} 年）</text></view>
         <view class="info-row"><text class="info-label">当前成绩</text><text class="info-value">{{result.userScore}} 分</text></view>
         <view class="info-row"><text class="info-label">分差</text><text class="info-value">{{result.differenceText}}</text></view>
+        <view class="info-row"><text class="info-label">提升空间</text><text class="info-value">{{result.improvementText}}</text></view>
       </view>
     </view>
   </block>
