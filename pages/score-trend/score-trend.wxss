@@ -6,41 +6,19 @@
 .section-row { margin-top: 4rpx; }
 .records-title { margin: 24rpx 0 18rpx; }
 .chart-card { overflow: hidden; }
-.chart-scroll { width: 100%; margin-top: 24rpx; }
-.chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 18rpx;
-  min-width: 100%;
-  height: 360rpx;
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12rpx;
+  margin-top: 22rpx;
 }
-.chart-column {
-  display: flex;
-  flex: 0 0 92rpx;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-}
-.chart-score { height: 38rpx; color: #0f766e; font-size: 22rpx; font-weight: 600; }
-.bar-track {
-  position: relative;
-  width: 42rpx;
-  height: 220rpx;
-  overflow: hidden;
-  background: #edf2f1;
-  border-radius: 12rpx 12rpx 4rpx 4rpx;
-}
-.bar {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: linear-gradient(180deg, #14b8a6, #0f766e);
-  border-radius: 12rpx 12rpx 4rpx 4rpx;
-}
-.chart-label {
-  width: 92rpx;
-  margin-top: 10rpx;
+.stat-item { padding: 18rpx 10rpx; background: #f1f8f6; border-radius: 14rpx; text-align: center; }
+.stat-value { margin-top: 6rpx; color: #0f766e; font-size: 28rpx; font-weight: 700; }
+.trend-canvas { width: 100%; height: 280rpx; margin-top: 22rpx; background: #f8fbfa; border-radius: 14rpx; }
+.chart-label-scroll { width: 100%; margin-top: 8rpx; }
+.chart-label-row { display: flex; min-width: 100%; }
+.chart-label-item {
+  flex: 0 0 128rpx;
   overflow: hidden;
   color: #334155;
   font-size: 20rpx;
@@ -49,6 +27,12 @@
   white-space: nowrap;
 }
 .chart-date { margin-top: 4rpx; color: #94a3b8; font-size: 19rpx; }
+.change-card { display: flex; justify-content: space-between; gap: 20rpx; margin-top: 22rpx; padding: 18rpx; background: #f8fafc; border-radius: 14rpx; }
+.change-route { color: #334155; font-weight: 650; }
+.change-value { flex-shrink: 0; font-weight: 700; }
+.change-value.up { color: #0f766e; }
+.change-value.down { color: #b42318; }
+.change-value.flat { color: #64748b; }
 .chart-note { margin-top: 14rpx; }
 .record-date { margin-top: 8rpx; }
 .disclaimer-card { margin-top: 34rpx; border-left: 8rpx solid #f59e0b; }

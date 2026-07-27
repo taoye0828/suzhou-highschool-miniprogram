@@ -27,6 +27,16 @@
       <view class="muted small detail-notice">{{detailNotice}}</view>
     </view>
 
+    <view wx:if="{{targetAnalysis}}" class="card my-target-card">
+      <view class="section-heading">我的目标分析</view>
+      <view class="info-row"><text class="info-label">当前成绩</text><text class="info-value">{{targetAnalysis.currentScoreText}}</text></view>
+      <view class="info-row"><text class="info-label">历史参考分</text><text class="info-value">{{targetAnalysis.referenceScoreText}}</text></view>
+      <view class="info-row"><text class="info-label">参考年份</text><text class="info-value">{{targetAnalysis.referenceYearText}}</text></view>
+      <view class="info-row"><text class="info-label">当前差距</text><text class="info-value">{{targetAnalysis.gapText}}</text></view>
+      <view class="info-row"><text class="info-label">目标等级</text><text class="info-value">{{targetAnalysis.targetLevelText}}</text></view>
+      <view class="muted small target-analysis-note">本卡片展示历史参考目标，不判断未来录取结果。</view>
+    </view>
+
     <view class="card target-plan-card">
       <view class="section-heading">目标规划</view>
       <view class="muted small target-plan-note">为 {{school.name}} 选择一个目标等级，保存后可在“学习目标”页面查看。</view>

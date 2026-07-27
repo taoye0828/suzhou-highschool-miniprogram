@@ -38,6 +38,15 @@ Page({
     planningDisclaimer: APP_CONFIG.policy.planningDisclaimer
   },
 
+  onLoad(options = {}) {
+    const raw = String(options.score || '').trim()
+    const score = Number(raw)
+    if (!/^\d+$/.test(raw) || !Number.isInteger(score) || score < 0 || score > EXAM_TOTAL_SCORE) {
+      return
+    }
+    this.setData({ scoreInput: raw }, () => this.analyze())
+  },
+
   onScoreInput(event) {
     this.setData({ scoreInput: event.detail.value, inputError: '' })
   },

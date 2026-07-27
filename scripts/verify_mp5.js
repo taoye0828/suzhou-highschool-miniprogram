@@ -126,7 +126,7 @@ for (const relative of requiredFiles) if (!exists(relative)) fail(`缺少必要�
 verifyReadmeCounts(Array.isArray(schools) ? schools.length : 0, Array.isArray(admissionScores) ? admissionScores.length : 0)
 if (admissionScores.filter((item) => item.year === 2025).length !== 103) fail('2025 分数线数量必须保持 103')
 if (admissionScores.filter((item) => item.year === 2026).length !== MP13_2026_VERIFIED_COUNT) fail('2026 分数线数量与 MP13 常量不一致')
-if (!['1.4.0', '1.5.0', '1.6.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.4.0、1.5.0 或 1.6.0')
+if (!['1.4.0', '1.5.0', '1.6.0', '1.7.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为已支持的正式版本')
 verifySecrets()
 
 if (failures.length) {

@@ -1,7 +1,7 @@
 <view class="page">
   <view class="hero compact-hero">
     <view class="hero-title">成绩趋势记录</view>
-    <view class="hero-subtitle">记录本机考试成绩，查看最近 12 条变化</view>
+    <view class="hero-subtitle">记录本机考试成绩，查看最近 10 次变化</view>
   </view>
 
   <view class="card input-card">
@@ -41,18 +41,26 @@
   </view>
 
   <view wx:if="{{chartRecords.length > 0}}" class="card chart-card">
-    <view class="card-title">最近 {{chartRecords.length}} 条成绩趋势</view>
-    <scroll-view class="chart-scroll" scroll-x="true" enhanced="true">
-      <view class="chart">
-        <view wx:for="{{chartRecords}}" wx:key="id" class="chart-column">
-          <view class="chart-score">{{item.score}}</view>
-          <view class="bar-track"><view class="bar" style="height: {{item.height}}%;"></view></view>
-          <view class="chart-label">{{item.shortName}}</view>
+    <view class="card-title">最近 {{chartRecords.length}} 次成绩折线</view>
+    <view class="stats-grid">
+      <view class="stat-item"><view class="muted small">最高分</view><view class="stat-value">{{highestText}}</view></view>
+      <view class="stat-item"><view class="muted small">最低分</view><view class="stat-value">{{lowestText}}</view></view>
+      <view class="stat-item"><view class="muted small">平均分</view><view class="stat-value">{{averageText}}</view></view>
+    </view>
+    <canvas canvas-id="scoreTrendChart" class="trend-canvas" width="640" height="280"></canvas>
+    <scroll-view class="chart-label-scroll" scroll-x="true" enhanced="true">
+      <view class="chart-label-row">
+        <view wx:for="{{chartRecords}}" wx:key="id" class="chart-label-item">
+          <view>{{item.shortName}}</view>
           <view class="chart-date">{{item.shortDate}}</view>
         </view>
       </view>
     </scroll-view>
-    <view class="muted small chart-note">纵向高度按 740 分满分换算，仅用于观察本机记录变化。</view>
+    <view class="change-card">
+      <view class="change-route">{{changeText}}</view>
+      <view class="change-value {{changeClass}}">{{changeValueText}}</view>
+    </view>
+    <view class="muted small chart-note">折线仅展示最近 10 次本机记录，用于观察成绩变化。</view>
   </view>
 
   <view class="card record-card" wx:for="{{records}}" wx:key="id">

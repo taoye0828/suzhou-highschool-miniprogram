@@ -6,6 +6,7 @@ const {
   clearScoreRecords
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
+const { summarizeScoreRecords, chartPoints } = require('../../utils/score-trend')
 
 let recordSequence = 0
 
@@ -23,15 +24,21 @@ function createRecordId() {
 }
 
 function presentRecords(records) {
-  const chartRecords = records.slice(-12).map((record) => ({
+  const summary = summarizeScoreRecords(records)
+  const chartRecords = summary.recentRecords.map((record) => ({
     ...record,
-    height: Math.max(6, Math.round(record.score / EXAM_TOTAL_SCORE * 100)),
     shortName: record.examName.length > 6 ? `${record.examName.slice(0, 6)}…` : record.examName,
     shortDate: record.date.slice(5)
   }))
   return {
     records: [...records].reverse(),
-    chartRecords
+    chartRecords,
+    highestText: summary.highestText,
+    lowestText: summary.lowestText,
+    averageText: summary.averageText,
+    changeText: summary.changeText,
+    changeValueText: summary.changeValueText,
+    changeClass: summary.changeClass
   }
 }
 
@@ -43,6 +50,12 @@ Page({
     inputError: '',
     records: [],
     chartRecords: [],
+    highestText: '—',
+    lowestText: '—',
+    averageText: '—',
+    changeText: '暂无变化',
+    changeValueText: '—',
+    changeClass: 'flat',
     maxRecords: APP_CONFIG.scoreRecord.maxRecords,
     scoreMax: EXAM_TOTAL_SCORE,
     planningDisclaimer: APP_CONFIG.policy.planningDisclaimer
@@ -59,7 +72,51 @@ Page({
   loadRecords() {
     const result = getScoreRecordsResult()
     notifyStorageReadResult(this, result)
-    this.setData(presentRecords(result.records))
+    this.setData(presentRecords(result.records), () => this.drawTrendChart())
+  },
+
+  drawTrendChart() {
+    if (!this.data.chartRecords.length || typeof wx.createCanvasContext !== 'function') return
+    const width = 640
+    const height = 280
+    const points = chartPoints(this.data.chartRecords, width, height, 38)
+    const context = wx.createCanvasContext('scoreTrendChart', this)
+
+    context.setFillStyle('#f8fbfa')
+    context.fillRect(0, 0, width, height)
+    context.setStrokeStyle('#dbe5e2')
+    context.setLineWidth(1)
+    for (const y of [38, 106, 174, 242]) {
+      context.beginPath()
+      context.moveTo(28, y)
+      context.lineTo(width - 28, y)
+      context.stroke()
+    }
+
+    if (points.length > 1) {
+      context.setStrokeStyle('#0f766e')
+      context.setLineWidth(4)
+      context.setLineJoin('round')
+      context.setLineCap('round')
+      context.beginPath()
+      points.forEach((point, index) => {
+        if (index === 0) context.moveTo(point.x, point.y)
+        else context.lineTo(point.x, point.y)
+      })
+      context.stroke()
+    }
+
+    points.forEach((point) => {
+      context.setFillStyle('#0f766e')
+      context.beginPath()
+      context.arc(point.x, point.y, 7, 0, Math.PI * 2)
+      context.fill()
+      context.setFillStyle('#0f766e')
+      context.setFontSize(20)
+      context.setTextAlign('center')
+      context.fillText(String(point.score), point.x, Math.max(22, point.y - 14))
+    })
+    context.draw()
   },
 
   onDateChange(event) {
@@ -103,7 +160,7 @@ Page({
       scoreInput: '',
       inputError: '',
       ...presentRecords(result.records)
-    })
+    }, () => this.drawTrendChart())
     wx.showToast({ title: '成绩记录已保存在本机', icon: 'success' })
   },
 
@@ -121,7 +178,7 @@ Page({
           wx.showToast({ title: result.message, icon: 'none' })
           return
         }
-        this.setData(presentRecords(result.records))
+        this.setData(presentRecords(result.records), () => this.drawTrendChart())
         wx.showToast({ title: '成绩记录已删除', icon: 'success' })
       }
     })

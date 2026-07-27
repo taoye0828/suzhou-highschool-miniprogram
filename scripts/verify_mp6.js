@@ -162,7 +162,7 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
 }
 
 const { APP_CONFIG } = require('../config/app-config')
-if (!['1.4.0', '1.5.0', '1.6.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为 1.4.0、1.5.0 或 1.6.0')
+if (!['1.4.0', '1.5.0', '1.6.0', '1.7.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为已支持的正式版本')
 const privacyText = JSON.stringify(APP_CONFIG.policy.privacySections)
 for (const phrase of ['不上传收藏、学习目标记录、成绩记录、目标年份或输入草稿', '不进行后台网络请求或用户行为追踪']) {
   if (!privacyText.includes(phrase)) fail(`隐私说明缺少：${phrase}`)

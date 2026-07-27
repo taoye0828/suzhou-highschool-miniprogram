@@ -66,6 +66,12 @@ function testHomePage() {
   assert.ok(page.data.homeBoundary.includes('不判断未来录取结果'))
   assert.ok(page.data.localBoundary.includes('只保存在本机'))
   assert.strictEqual(page.data.countdown.targetYear, APP_CONFIG.countdown.defaultYear)
+  page.onScoreInput({ detail: { value: '650' } })
+  page.startScoreAnalysis()
+  assert.ok(navigations.includes('/pages/target-analysis/target-analysis?score=650'))
+  page.onScoreInput({ detail: { value: '741' } })
+  page.startScoreAnalysis()
+  assert.ok(page.data.scoreInputError.includes('0 至 740'))
 
   for (const entry of page.data.entries) {
     page.openEntry({ currentTarget: { dataset: entry } })
@@ -118,7 +124,7 @@ function testTargetsPage() {
     id: 'target_suzhou_high_school',
     schoolId: 'suzhou_high_school',
     schoolName: '江苏省苏州中学校',
-    level: 'challenge',
+    level: 'sprint',
     createdAt: '2026-07-02T00:00:00.000Z'
   }])
   page.onShow()
@@ -158,7 +164,7 @@ function testSchoolDetailPage() {
   assert.strictEqual(page.data.emptyScoreText, EMPTY_SCORE_TEXT)
 
   const targetCases = [
-    { id: 'suzhou_high_school', levelIndex: 0, level: 'challenge', schoolName: '江苏省苏州中学校' },
+    { id: 'suzhou_high_school', levelIndex: 0, level: 'sprint', schoolName: '江苏省苏州中学校' },
     { id: 'suzhou_high_school_sip', levelIndex: 1, level: 'target', schoolName: '江苏省苏州中学园区校' },
     { id: 'suzhou_no10_high_school', levelIndex: 2, level: 'safe', schoolName: '江苏省苏州第十中学校' }
   ]
@@ -172,6 +178,8 @@ function testSchoolDetailPage() {
     assert.strictEqual(saved.level, targetCase.level)
   }
   assert.strictEqual(memory.get('mp1.target_records').length, 3)
+  assert.ok(page.data.targetAnalysis)
+  assert.ok(page.data.targetAnalysis.referenceScoreText.endsWith('分'))
 
   const failedTargetPage = createPageInstance(definition)
   failedTargetPage.onLoad({ id: 'suzhou_no10_high_school_jinchang' })
@@ -206,6 +214,20 @@ function testSchoolsPage() {
   assert.ok(page.data.results.length >= 50)
   page.onKeywordInput({ detail: { value: '南航苏附' } })
   assert.ok(page.data.results.some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
+  page.resetFilters()
+  page.onKeywordInput({ detail: { value: '南航' } })
+  page.onScoreRangeChange({ detail: { value: String(page.data.scoreRanges.indexOf('650以上')) } })
+  assert.ok(page.data.results.some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
+  page.resetFilters()
+  memory.set('mp1.target_records', [{
+    id: 'target_suzhou_high_school',
+    schoolId: 'suzhou_high_school',
+    schoolName: '江苏省苏州中学校',
+    level: 'sprint',
+    createdAt: '2026-07-27T00:00:00.000Z'
+  }])
+  page.onTargetFilterChange({ detail: { value: String(page.data.targetFilters.findIndex((item) => item.value === 'sprint')) } })
+  assert.deepStrictEqual(page.data.results.map((item) => item.id), ['suzhou_high_school'])
   page.resetFilters()
   page.onKeywordInput({ detail: { value: '不存在的学校关键词' } })
   assert.strictEqual(page.data.results.length, 0)
@@ -258,7 +280,7 @@ function testProfilePage() {
     id: 'target_suzhou_high_school',
     schoolId: 'suzhou_high_school',
     schoolName: '江苏省苏州中学校',
-    level: 'challenge',
+    level: 'sprint',
     createdAt: '2026-07-02T00:00:00.000Z'
   }])
   memory.set('mp1.target_draft', { currentScore: '500' })
@@ -316,6 +338,13 @@ function testTargetAnalysisPage() {
   page.openDetail({ currentTarget: { dataset: { id: firstResult.schoolId } } })
   assert.ok(navigations.includes(`/pages/school-detail/school-detail?id=${firstResult.schoolId}`))
 
+  for (const score of ['0', '740']) {
+    page.onScoreInput({ detail: { value: score } })
+    page.analyze()
+    assert.strictEqual(page.data.inputError, '')
+    assert.strictEqual(page.data.hasAnalyzed, true)
+  }
+
   page.onScoreInput({ detail: { value: '741' } })
   page.analyze()
   assert.strictEqual(page.data.hasAnalyzed, false)
@@ -328,15 +357,24 @@ function testSchoolComparePage() {
   const page = createPageInstance(definition)
   page.onLoad()
   page.onSchoolChange({ detail: { value: '0' } })
+  assert.strictEqual(page.data.selectedSchools.length, 1)
+  assert.strictEqual(page.data.canCompare, true)
   page.onSchoolChange({ detail: { value: '0' } })
   assert.strictEqual(page.data.selectedSchools.length, 2)
   assert.strictEqual(page.data.canCompare, true)
   assert.ok(page.data.selectedSchools.every((school) => school.scoreSummary))
+  assert.ok(page.data.selectedSchools.every((school) => school.targetLevelText))
+  assert.ok(page.data.selectedSchools.every((school) => school.referenceScoreText))
+  page.onSchoolChange({ detail: { value: '0' } })
+  assert.strictEqual(page.data.selectedSchools.length, 3)
+  page.onSchoolChange({ detail: { value: '0' } })
+  assert.strictEqual(page.data.selectedSchools.length, 3)
+  assert.ok(toastTitles.includes('最多对比 3 所学校'))
   const firstId = page.data.selectedSchools[0].id
   page.openDetail({ currentTarget: { dataset: { id: firstId } } })
   assert.ok(navigations.includes(`/pages/school-detail/school-detail?id=${firstId}`))
   page.removeSchool({ currentTarget: { dataset: { id: firstId } } })
-  assert.strictEqual(page.data.selectedSchools.length, 1)
+  assert.strictEqual(page.data.selectedSchools.length, 2)
 }
 
 function testScoreTrendPage() {
@@ -350,6 +388,8 @@ function testScoreTrendPage() {
   page.saveRecord()
   assert.strictEqual(page.data.records.length, 1)
   assert.strictEqual(page.data.chartRecords.length, 1)
+  assert.strictEqual(page.data.highestText, '650 分')
+  assert.strictEqual(page.data.changeValueText, '暂无变化')
   assert.ok(toastTitles.includes('成绩记录已保存在本机'))
 
   page.onExamNameInput({ detail: { value: '无效成绩' } })
@@ -359,6 +399,23 @@ function testScoreTrendPage() {
   assert.ok(page.data.inputError.includes('0 至 740'))
 
   page.deleteRecord({ currentTarget: { dataset: { id: page.data.records[0].id } } })
+  assert.strictEqual(page.data.records.length, 0)
+  assert.strictEqual(memory.has('mp1.score_records'), false)
+
+  for (let index = 0; index < 12; index += 1) {
+    page.onDateChange({ detail: { value: `2026-10-${String(index + 1).padStart(2, '0')}` } })
+    page.onExamNameInput({ detail: { value: `第${index + 1}次考试` } })
+    page.onScoreInput({ detail: { value: String(600 + index * 5) } })
+    page.saveRecord()
+  }
+  assert.strictEqual(page.data.records.length, 12)
+  assert.strictEqual(page.data.chartRecords.length, 10)
+  assert.strictEqual(page.data.highestText, '655 分')
+  assert.strictEqual(page.data.lowestText, '610 分')
+  assert.strictEqual(page.data.averageText, '632.5 分')
+  assert.strictEqual(page.data.changeText, '610 → 655')
+  assert.strictEqual(page.data.changeValueText, '提升 +45 分')
+  page.clearAllRecords()
   assert.strictEqual(page.data.records.length, 0)
   assert.strictEqual(memory.has('mp1.score_records'), false)
 }

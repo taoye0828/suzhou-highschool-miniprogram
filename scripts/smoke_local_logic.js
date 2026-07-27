@@ -83,10 +83,10 @@ assert.deepStrictEqual(splitIds.invalid, ['old_id'])
 assert.strictEqual(storage.replaceFavoriteIds(splitIds.valid).ok, true)
 assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
 
-assert.strictEqual(storage.saveTargetRecord(target('school_a', '学校A', 'challenge')).ok, true)
+assert.strictEqual(storage.saveTargetRecord(target('school_a', '学校A', 'sprint')).ok, true)
 assert.strictEqual(storage.saveTargetRecord(target('school_b', '学校B', 'target', '2026-07-02T01:00:00.000Z')).ok, true)
 assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.schoolId), ['school_b', 'school_a'])
-assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.level), ['target', 'challenge'])
+assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.level), ['target', 'sprint'])
 for (const item of storage.getTargetRecords()) {
   assert.ok(item.schoolId)
   assert.ok(item.schoolName)
@@ -149,11 +149,11 @@ readFailure = false
 assert.strictEqual(storage.saveTargetDraft({
   currentScore: '500',
   targetScore: '550',
-  targetLevel: 'challenge',
+  targetLevel: 'sprint',
   note: '复盘数学'
 }).ok, true)
 assert.strictEqual(storage.getTargetDraft().targetScore, '550')
-assert.strictEqual(storage.getTargetDraft().targetLevel, 'challenge')
+assert.strictEqual(storage.getTargetDraft().targetLevel, 'sprint')
 memory.set(storage.KEYS.targetDraft, [])
 assert.deepStrictEqual(storage.getTargetDraft(), {})
 

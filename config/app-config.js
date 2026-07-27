@@ -2,15 +2,15 @@ const EXAM_TOTAL_SCORE = 740
 const SOURCE_CHECKED_AT = '2026-07-09'
 const DEFAULT_EXAM_YEAR = 2027
 const TARGET_LEVELS = [
-  { value: 'challenge', label: '冲刺' },
+  { value: 'sprint', label: '冲刺' },
   { value: 'target', label: '目标' },
   { value: 'safe', label: '保底' }
 ]
 
 const APP_CONFIG = {
   name: '苏州高中目标查询助手',
-  version: '1.6.0',
-  releaseStatus: '本地数据增强版',
+  version: '1.7.0',
+  releaseStatus: '高中目标规划完整升级版',
   targetScore: {
     min: 0,
     max: EXAM_TOTAL_SCORE,
@@ -55,7 +55,7 @@ const APP_CONFIG = {
     sourceCheckedAt: SOURCE_CHECKED_AT
   },
   policy: {
-    homeTagline: '查询苏州高中信息，按固定历史分差区间进行目标参考，并在本机记录成绩与学习目标。',
+    homeTagline: '从当前成绩出发，分析、选择并持续跟进自己的高中目标。',
     homeBoundary: '历史分数线和固定分差区间仅供参考，不判断未来录取结果。',
     localBoundary: '不登录、不上传，收藏、成绩和学习目标只保存在本机。',
     currentCapabilities: [
@@ -79,10 +79,11 @@ const APP_CONFIG = {
       '不请求定位'
     ],
     usageSteps: [
-      '先进入学校库筛选或搜索学校',
-      '再打开详情查看来源和历史分数线说明',
-      '需要时使用成绩分析或学校对比辅助核对',
-      '成绩趋势、收藏和目标学校等级可在本机记录和清除'
+      '输入成绩',
+      '分析目标高中',
+      '选择目标学校',
+      '记录成绩变化',
+      '查看提升趋势'
     ],
     targetHint: '目标等级只与已选择的具体学校绑定，不根据分数判断录取结果。',
     targetStorageHint: '目标学校和等级只保存在本机，可在我的页面清除。',

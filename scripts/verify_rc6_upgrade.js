@@ -32,12 +32,12 @@ function walk(directory) {
   })
 }
 
-assert.strictEqual(APP_CONFIG.version, '1.6.0')
+assert.ok(['1.6.0', '1.7.0'].includes(APP_CONFIG.version))
 assert.strictEqual(APP_CONFIG.countdown.defaultYear, 2027)
 assert.strictEqual(APP_CONFIG.targetScore.max, EXAM_TOTAL_SCORE)
 assert.deepStrictEqual(
   APP_CONFIG.targetScore.levels.map((item) => item.value),
-  ['challenge', 'target', 'safe']
+  ['sprint', 'target', 'safe']
 )
 
 const appJson = JSON.parse(read('app.json'))

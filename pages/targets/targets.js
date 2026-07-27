@@ -13,7 +13,7 @@ const { schools } = require('../../data/schools')
 const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 const { referenceForSchool } = require('../../utils/score-analysis')
 
-const LEVEL_ORDER = ['challenge', 'target', 'safe']
+const LEVEL_ORDER = ['sprint', 'target', 'safe']
 
 function currentScoreFrom(scoreRecords, draft) {
   const latest = Array.isArray(scoreRecords) && scoreRecords.length
@@ -38,9 +38,9 @@ function presentRecord(record, currentScore, targetYear) {
     gapText: gap === null
       ? '待记录成绩后计算'
       : gap > 0
-        ? `需提升 ${gap} 分`
+        ? `距离历史参考目标还有 ${gap} 分`
         : gap === 0
-          ? '与历史参考分持平'
+          ? '已达到该历史参考目标'
           : `高于历史参考分 ${Math.abs(gap)} 分`
   }
 }

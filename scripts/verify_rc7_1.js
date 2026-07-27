@@ -72,7 +72,7 @@ global.wx = {
 
 const storage = require('../utils/storage')
 const targetCases = [
-  ['suzhou_high_school', '江苏省苏州中学校', 'challenge'],
+  ['suzhou_high_school', '江苏省苏州中学校', 'sprint'],
   ['suzhou_high_school_sip', '江苏省苏州中学园区校', 'target'],
   ['suzhou_no10_high_school', '江苏省苏州第十中学校', 'safe']
 ]
@@ -88,17 +88,17 @@ targetCases.forEach(([schoolId, schoolName, level], index) => {
 })
 assert.deepStrictEqual(
   new Set(storage.getTargetRecords().map((record) => record.level)),
-  new Set(['challenge', 'target', 'safe'])
+  new Set(['sprint', 'target', 'safe'])
 )
 
 const updateResult = storage.saveTargetRecord({
   ...storage.getTargetRecords().find((record) => record.schoolId === 'suzhou_high_school_sip'),
-  level: 'challenge'
+  level: 'sprint'
 })
 assert.strictEqual(updateResult.ok, true)
 assert.strictEqual(
   storage.getTargetRecords().find((record) => record.schoolId === 'suzhou_high_school_sip').level,
-  'challenge'
+  'sprint'
 )
 
 const deleteTarget = storage.getTargetRecords().find(
@@ -120,7 +120,7 @@ const targetResults = analyzeScore({
   targetRecords: [{
     schoolId: 'nuaa_suzhou_affiliated_high_school',
     schoolName: '南京航空航天大学苏州附属中学',
-    level: 'challenge'
+    level: 'sprint'
   }]
 })
 const linkedTarget = targetResults.find(
@@ -128,7 +128,7 @@ const linkedTarget = targetResults.find(
 )
 assert.ok(linkedTarget)
 assert.strictEqual(linkedTarget.isTargetSchool, true)
-assert.strictEqual(linkedTarget.targetLevel, 'challenge')
+assert.strictEqual(linkedTarget.targetLevel, 'sprint')
 assert.strictEqual(linkedTarget.improvement, 10)
 assert.strictEqual(linkedTarget.improvementText, '需要提升 10 分')
 

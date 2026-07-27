@@ -22,6 +22,12 @@
     <picker range="{{scoreStatuses}}" value="{{scoreStatusIndex}}" bindchange="onScoreStatusChange">
       <view class="filter-control">分数线：{{scoreStatuses[scoreStatusIndex]}}</view>
     </picker>
+    <picker range="{{scoreRanges}}" value="{{scoreRangeIndex}}" bindchange="onScoreRangeChange">
+      <view class="filter-control">分数范围：{{scoreRanges[scoreRangeIndex]}}</view>
+    </picker>
+    <picker range="{{targetFilters}}" range-key="label" value="{{targetFilterIndex}}" bindchange="onTargetFilterChange">
+      <view class="filter-control">目标类型：{{targetFilters[targetFilterIndex].label}}</view>
+    </picker>
   </view>
 
   <view class="row between result-line">
@@ -31,7 +37,7 @@
 
   <view wx:if="{{results.length === 0}}" class="card empty">
     <view class="card-title">没有找到匹配学校</view>
-    <view class="muted small">请调整名称、区域、类型或分数线筛选条件。</view>
+    <view class="muted small">请调整名称、区域、类型、分数范围或目标类型筛选条件。</view>
     <button class="button empty-button" bindtap="resetFilters">重置筛选</button>
   </view>
 

@@ -87,6 +87,7 @@ function replaceFavoriteIds(ids) {
 
 function normalizeTargetLevel(value) {
   const levels = APP_CONFIG.targetScore.levels.map((item) => item.value)
+  if (value === 'challenge') return 'sprint'
   return levels.includes(value) ? value : 'target'
 }
 

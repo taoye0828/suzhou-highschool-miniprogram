@@ -65,3 +65,37 @@
 .home-search-result:last-child { border-bottom: none; }
 .home-search-result:active { background: #f0f8f6; }
 .search-empty { padding: 24rpx 0 6rpx; text-align: center; }
+.score-start-card { border-left: 8rpx solid #0f766e; }
+.score-start-row {
+  display: flex;
+  align-items: stretch;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+.score-start-input { flex: 1; min-width: 0; }
+.score-start-button {
+  display: flex;
+  flex: 0 0 210rpx;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+.score-start-note { margin-top: 14rpx; }
+.input-error { margin-top: 14rpx; color: #b42318; font-size: 24rpx; }
+.journey-card { padding-top: 10rpx; padding-bottom: 10rpx; }
+.journey-item { display: flex; align-items: center; min-height: 76rpx; }
+.journey-index {
+  display: flex;
+  flex: 0 0 46rpx;
+  align-items: center;
+  justify-content: center;
+  width: 46rpx;
+  height: 46rpx;
+  color: #ffffff;
+  background: #0f766e;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+.journey-label { flex: 1; margin-left: 18rpx; color: #334155; font-weight: 600; }
+.journey-arrow { color: #94a3b8; font-size: 30rpx; }

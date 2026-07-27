@@ -3,6 +3,9 @@ const {
   getFavoriteIdsResult,
   setFavorite,
   getTargetRecordsResult,
+  getTargetDraftResult,
+  getScoreRecordsResult,
+  getExamYearResult,
   saveTargetRecord
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
@@ -14,6 +17,39 @@ const {
   groupScoresByYear
 } = require('../../utils/admission-scores')
 const { APP_CONFIG } = require('../../config/app-config')
+const { referenceForSchool } = require('../../utils/score-analysis')
+
+function currentScoreFrom(scoreRecords, draft) {
+  const latest = Array.isArray(scoreRecords) && scoreRecords.length
+    ? scoreRecords[scoreRecords.length - 1].score
+    : Number(String(draft && draft.currentScore || '').trim())
+  return Number.isInteger(latest) && latest >= 0 && latest <= APP_CONFIG.targetScore.max
+    ? latest
+    : null
+}
+
+function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYear) {
+  if (!school) return null
+  const reference = referenceForSchool(school.id, targetYear)
+  const currentScore = currentScoreFrom(scoreRecords, draft)
+  const gap = reference && currentScore !== null ? reference.minScore - currentScore : null
+  const level = APP_CONFIG.targetScore.levels.find(
+    (item) => targetRecord && item.value === targetRecord.level
+  )
+  return {
+    currentScoreText: currentScore === null ? '尚未记录' : `${currentScore} 分`,
+    referenceScoreText: reference ? `${reference.minScore} 分` : '暂未收录',
+    referenceYearText: reference ? `${reference.year} 年` : '—',
+    gapText: gap === null
+      ? '待记录成绩后计算'
+      : gap > 0
+        ? `还有 ${gap} 分`
+        : gap === 0
+          ? '与历史参考分持平'
+          : `高于历史参考分 ${Math.abs(gap)} 分`,
+    targetLevelText: level ? level.label : '未设置'
+  }
+}
 
 Page({
   data: {
@@ -24,6 +60,7 @@ Page({
     isTargetSchool: false,
     targetLevels: APP_CONFIG.targetScore.levels,
     targetLevelIndex: APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target'),
+    targetAnalysis: null,
     mapKeyword: '',
     emptyScoreText: EMPTY_SCORE_TEXT,
     scoreSafetyNotice: SCORE_SAFETY_NOTICE,
@@ -43,18 +80,30 @@ Page({
     const school = getSchoolById(this.data.schoolId)
     const favoriteResult = getFavoriteIdsResult()
     const targetResult = getTargetRecordsResult()
+    const scoreResult = getScoreRecordsResult()
+    const draftResult = getTargetDraftResult()
+    const yearResult = getExamYearResult()
     const targetRecord = school
       ? targetResult.records.find((record) => record.schoolId === school.id)
       : null
     const targetLevelIndex = targetRecord
       ? APP_CONFIG.targetScore.levels.findIndex((item) => item.value === targetRecord.level)
       : APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target')
-    notifyStorageReadResult(this, !favoriteResult.ok ? favoriteResult : targetResult)
+    const failedResult = [favoriteResult, targetResult, scoreResult, draftResult, yearResult]
+      .find((result) => !result.ok)
+    notifyStorageReadResult(this, failedResult || favoriteResult)
     this.setData({
       school: school ? presentSchool(school, favoriteResult.ids) : null,
       isFavorite: school ? favoriteResult.ids.includes(school.id) : false,
       isTargetSchool: Boolean(targetRecord),
       targetLevelIndex: Math.max(0, targetLevelIndex),
+      targetAnalysis: buildTargetAnalysis(
+        school,
+        targetRecord,
+        scoreResult.records,
+        draftResult.draft,
+        yearResult.year
+      ),
       scoreGroups: school ? groupScoresByYear(school.id) : [],
       mapKeyword: school ? mapSearchKeyword(school.name) : ''
     })
@@ -95,7 +144,7 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
-    this.setData({ isTargetSchool: true })
+    this.setData({ isTargetSchool: true }, () => this.refresh())
     wx.showToast({
       title: wasTargetSchool ? '目标等级已更新' : '已加入目标',
       icon: 'success'

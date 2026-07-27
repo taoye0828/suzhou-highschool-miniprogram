@@ -4,6 +4,33 @@
     <view class="hero-subtitle">{{homeTagline}}</view>
   </view>
 
+  <view class="section-title">从成绩开始</view>
+  <view class="card score-start-card">
+    <view class="card-title">输入当前成绩，先看看目标高中</view>
+    <view class="score-start-row">
+      <input
+        class="input score-start-input"
+        type="number"
+        maxlength="3"
+        value="{{scoreInput}}"
+        placeholder="0 至 {{scoreMax}}"
+        bindinput="onScoreInput"
+      />
+      <button class="button score-start-button" bindtap="startScoreAnalysis">开始分析</button>
+    </view>
+    <view wx:if="{{scoreInputError}}" class="input-error">{{scoreInputError}}</view>
+    <view class="muted small score-start-note">只使用本机输入和已收录历史数据，不做录取预测。</view>
+  </view>
+
+  <view class="section-title">目标规划步骤</view>
+  <view class="card journey-card">
+    <view class="journey-item" wx:for="{{journeySteps}}" wx:key="number">
+      <view class="journey-index">{{item.number}}</view>
+      <view class="journey-label">{{item.label}}</view>
+      <view wx:if="{{item.hasNext}}" class="journey-arrow">↓</view>
+    </view>
+  </view>
+
   <view class="section-title">快速查学校</view>
   <view class="card home-search-card">
     <input
@@ -68,11 +95,6 @@
       <view class="muted small entry-subtitle">{{item.subtitle}}</view>
     </view>
     <view class="list-arrow">›</view>
-  </view>
-
-  <view class="section-title">使用步骤</view>
-  <view class="card step-card">
-    <view class="step-item" wx:for="{{usageSteps}}" wx:key="*this">{{item}}</view>
   </view>
 
   <view class="card planning-notice">

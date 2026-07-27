@@ -1,6 +1,6 @@
 const { schools } = require('../../data/schools')
 const { admissionScores } = require('../../data/admission-scores')
-const { APP_CONFIG } = require('../../config/app-config')
+const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../../config/app-config')
 const { getExamYearResult, saveExamYear } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { calculateExamCountdown, examYearOptions } = require('../../utils/countdown')
@@ -27,6 +27,11 @@ const entries = [
   { title: '学习目标记录', subtitle: '在本机记录阶段目标', route: '/pages/targets/targets', tab: true },
   { title: '我的收藏', subtitle: '查看本机收藏学校', route: '/pages/favorites/favorites', tab: true }
 ]
+const journeySteps = APP_CONFIG.policy.usageSteps.map((label, index, items) => ({
+  label,
+  number: index + 1,
+  hasNext: index < items.length - 1
+}))
 
 Page({
   data: {
@@ -37,10 +42,14 @@ Page({
     localBoundary: APP_CONFIG.policy.localBoundary,
     sourceCheckedAt: APP_CONFIG.schoolData.sourceCheckedAt,
     usageSteps: APP_CONFIG.policy.usageSteps,
+    journeySteps,
     scoreStats,
     examYears: [],
     examYearIndex: 0,
     countdown: null,
+    scoreInput: '',
+    scoreInputError: '',
+    scoreMax: EXAM_TOTAL_SCORE,
     schoolKeyword: '',
     schoolSearchActive: false,
     schoolSearchResults: []
@@ -90,6 +99,25 @@ Page({
       schoolSearchResults: schoolSearchActive
         ? searchSchools({ keyword: schoolKeyword, limit: 5 })
         : []
+    })
+  },
+
+  onScoreInput(event) {
+    this.setData({
+      scoreInput: event.detail.value,
+      scoreInputError: ''
+    })
+  },
+
+  startScoreAnalysis() {
+    const raw = String(this.data.scoreInput || '').trim()
+    const score = Number(raw)
+    if (!/^\d+$/.test(raw) || !Number.isInteger(score) || score < 0 || score > EXAM_TOTAL_SCORE) {
+      this.setData({ scoreInputError: `成绩必须是 0 至 ${EXAM_TOTAL_SCORE} 的整数。` })
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/target-analysis/target-analysis?score=${score}`
     })
   },
 

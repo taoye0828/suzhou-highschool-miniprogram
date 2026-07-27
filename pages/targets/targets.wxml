@@ -50,7 +50,7 @@
       <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
     </view>
     <view class="target-metrics">
-      <view class="info-row"><text class="info-label">参考分数</text><text class="info-value">{{item.referenceScoreText}}</text></view>
+      <view class="info-row"><text class="info-label">历史参考目标</text><text class="info-value">{{item.referenceScoreText}}</text></view>
       <view class="info-row"><text class="info-label">参考年份</text><text class="info-value">{{item.referenceYearText}}</text></view>
       <view class="info-row"><text class="info-label">我的成绩</text><text class="info-value">{{item.currentScoreText}}</text></view>
       <view class="info-row"><text class="info-label">当前差距</text><text class="info-value">{{item.gapText}}</text></view>
