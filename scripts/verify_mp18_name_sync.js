@@ -4,6 +4,7 @@ const path = require('path')
 
 const root = path.resolve(__dirname, '..')
 const expectedName = '苏程记录'
+const previousName = ['苏简', '记录'].join('')
 const expectedAppId = 'wx17e903f81714736f'
 const deprecatedParts = ['苏州', '高中', '目标', '查询', '助手']
 const deprecatedName = deprecatedParts.join('')
@@ -41,17 +42,28 @@ function occurrences(source, needle) {
   return source.split(needle).length - 1
 }
 
+function sourceFor(relative) {
+  const target = path.join(root, relative)
+  if (fs.statSync(target).isDirectory()) {
+    return walk(target).map((file) => fs.readFileSync(file, 'utf8')).join('\n')
+  }
+  return fs.readFileSync(target, 'utf8')
+}
+
 const textSources = walk(root).map((file) => ({
   relative: path.relative(root, file),
   source: fs.readFileSync(file, 'utf8')
 }))
-
+const previousMatches = []
 const deprecatedMatches = []
 const variantMatches = []
 const unicodeMatches = []
 let currentNameCount = 0
 
 for (const { relative, source } of textSources) {
+  const previousCount = occurrences(source, previousName)
+  if (previousCount) previousMatches.push({ relative, count: previousCount })
+
   const exactCount = occurrences(source, deprecatedName)
   if (exactCount) deprecatedMatches.push({ relative, count: exactCount })
 
@@ -65,24 +77,10 @@ for (const { relative, source } of textSources) {
   currentNameCount += occurrences(source, expectedName)
 }
 
-assert.deepStrictEqual(deprecatedMatches, [], `旧名称残留：${JSON.stringify(deprecatedMatches)}`)
-assert.deepStrictEqual(variantMatches, [], `旧名称变体残留：${JSON.stringify(variantMatches)}`)
-assert.deepStrictEqual(unicodeMatches, [], `旧名称 Unicode 转义残留：${unicodeMatches.join(', ')}`)
-
-const appJson = JSON.parse(read('app.json'))
-const projectConfig = JSON.parse(read('project.config.json'))
-const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
-const { schools } = require('../data/schools')
-const { admissionScores } = require('../data/admission-scores')
-
-assert.strictEqual(APP_CONFIG.name, expectedName)
-assert.strictEqual(projectConfig.appid, expectedAppId)
-assert.strictEqual(appJson.window.navigationBarTitleText, expectedName)
-assert.strictEqual(JSON.parse(read('pages/home/home.json')).navigationBarTitleText, expectedName)
-assert.ok(read('app.js').includes('appName: APP_CONFIG.name'))
-assert.ok(read('pages/data-info/data-info.wxml').includes('{{appName}}'))
-assert.ok(read('pages/privacy/privacy.wxml').includes('{{appName}}'))
-assert.ok(read('README.md').includes(`# ${expectedName}`))
+assert.deepStrictEqual(previousMatches, [], `上一正式名称残留：${JSON.stringify(previousMatches)}`)
+assert.deepStrictEqual(deprecatedMatches, [], `更早旧品牌残留：${JSON.stringify(deprecatedMatches)}`)
+assert.deepStrictEqual(variantMatches, [], `更早旧品牌变体残留：${JSON.stringify(variantMatches)}`)
+assert.deepStrictEqual(unicodeMatches, [], `更早旧品牌 Unicode 转义残留：${unicodeMatches.join(', ')}`)
 
 for (const relative of [
   'app.js',
@@ -96,17 +94,51 @@ for (const relative of [
   'scripts'
 ]) {
   assert.ok(fs.existsSync(path.join(root, relative)), `缺少扫描目标：${relative}`)
+  assert.strictEqual(sourceFor(relative).includes(previousName), false, `${relative} 含上一正式名称`)
 }
 
+const appJson = JSON.parse(read('app.json'))
+const projectConfig = JSON.parse(read('project.config.json'))
+const homeConfig = JSON.parse(read('pages/home/home.json'))
+const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
+const { schools } = require('../data/schools')
+const { admissionScores } = require('../data/admission-scores')
+
+assert.strictEqual(APP_CONFIG.name, expectedName)
+assert.strictEqual(appJson.window.navigationBarTitleText, expectedName)
+assert.strictEqual(homeConfig.navigationBarTitleText, expectedName)
+assert.strictEqual(projectConfig.description, expectedName)
+assert.strictEqual(projectConfig.appid, expectedAppId)
+assert.strictEqual(projectConfig.compileType, 'miniprogram')
+assert.strictEqual(projectConfig.miniprogramRoot, './')
+assert.ok(read('app.js').includes('appName: APP_CONFIG.name'))
+assert.strictEqual(read('app.js').includes(previousName), false)
+assert.ok(read('pages/data-info/data-info.wxml').includes('{{appName}}'))
+assert.ok(read('pages/privacy/privacy.wxml').includes('{{appName}}'))
+assert.ok(read('utils/onboarding.js').includes('`欢迎使用${APP_CONFIG.name}`'))
+assert.ok(read('components/onboarding-overlay/onboarding-overlay.wxml').includes('开始使用'))
+assert.ok(read('README.md').includes(`# ${expectedName}`))
+assert.ok(read('docs/mp18_name_sync_report.md').includes(expectedName))
+
+assert.deepStrictEqual(
+  appJson.tabBar.list.map((item) => [item.pagePath, item.text]),
+  [
+    ['pages/home/home', '首页'],
+    ['pages/schools/schools', '学校库'],
+    ['pages/target-analysis/target-analysis', '成绩分析'],
+    ['pages/targets/targets', '目标规划'],
+    ['pages/profile/profile', '我的']
+  ]
+)
 const pageTitles = appJson.pages.map((page) => {
   const config = JSON.parse(read(`${page}.json`))
   return config.navigationBarTitleText || appJson.window.navigationBarTitleText
 })
-assert.ok(new Set(pageTitles).size > 1, '页面标题不得全部改成同一标题')
-assert.ok(pageTitles.includes('学校库'))
-assert.ok(pageTitles.includes('成绩分析'))
-assert.ok(pageTitles.includes('目标规划'))
-assert.ok(pageTitles.includes('我的'))
+assert.ok(new Set(pageTitles).size > 1, '页面标题不得全部改成正式名称')
+assert.strictEqual(pageTitles.filter((title) => title === expectedName).length, 1)
+for (const title of ['学校库', '成绩分析', '目标规划', '我的']) {
+  assert.ok(pageTitles.includes(title), `缺少功能页标题：${title}`)
+}
 
 assert.strictEqual(schools.length, 55)
 assert.strictEqual(admissionScores.length, 146)
@@ -122,27 +154,44 @@ const runtimeSources = [
     walk(path.join(root, relative)).map((file) => path.relative(root, file))
   )
 ].map(read).join('\n')
-
 assert.ok(runtimeSources.includes(expectedName), '运行文件中缺少当前正式名称')
-for (const marker of [
+
+const forbiddenCapabilities = [
   'wx.' + 'login',
   'wx.' + 'cloud',
   'wx.' + 'request',
+  'wx.' + 'uploadFile',
+  'wx.' + 'downloadFile',
+  'wx.' + 'connectSocket',
+  'wx.' + 'getUserProfile',
+  'getPhoneNumber',
   'cloudfunctionRoot',
-  'cloudbaseRoot'
-]) {
-  assert.strictEqual(runtimeSources.includes(marker), false, `运行文件不得出现：${marker}`)
+  'cloudbaseRoot',
+  'openai',
+  'chatgpt',
+  'generative-ai',
+  'ai-sdk'
+]
+const runtimeLower = runtimeSources.toLowerCase()
+for (const marker of forbiddenCapabilities) {
+  assert.strictEqual(runtimeLower.includes(marker.toLowerCase()), false, `运行文件不得出现能力：${marker}`)
 }
 
 const secretPattern = /(?:appSecret|APP_SECRET)\s*[:=]\s*["'][^"']{8,}["']/
 for (const { relative, source } of textSources) {
   assert.strictEqual(secretPattern.test(source), false, `${relative} 发现疑似 AppSecret`)
 }
+assert.strictEqual(
+  Object.keys(projectConfig).some((key) => key.toLowerCase().includes('secret')),
+  false,
+  'project.config.json 不得包含 secret 字段'
+)
 
-console.log('MP17 NAME SYNC VERIFY PASSED')
+console.log('MP18 NAME SYNC VERIFY PASSED')
 console.log(`- 正式名称：${expectedName}`)
-console.log(`- 旧名称精确命中：${deprecatedMatches.length}`)
-console.log(`- 旧名称变体命中：${variantMatches.length}`)
+console.log(`- 上一正式名称精确命中：${previousMatches.length}`)
+console.log(`- 更早旧品牌精确命中：${deprecatedMatches.length}`)
+console.log(`- 更早旧品牌变体命中：${variantMatches.length}`)
 console.log(`- 新名称命中：${currentNameCount}`)
 console.log(`- 页面标题种类：${new Set(pageTitles).size}`)
 console.log(`- 数据：学校 ${schools.length}，分数线 ${admissionScores.length}（2025=${admissionScores.filter((item) => item.year === 2025).length}，2026=${admissionScores.filter((item) => item.year === 2026).length}），上限 ${EXAM_TOTAL_SCORE}`)

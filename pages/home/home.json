@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "苏简记录",
+  "navigationBarTitleText": "苏程记录",
   "usingComponents": {
     "onboarding-overlay": "/components/onboarding-overlay/onboarding-overlay"
   }

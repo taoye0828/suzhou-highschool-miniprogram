@@ -1,6 +1,6 @@
-# 苏简记录
+# 苏程记录
 
-项目名称：苏简记录
+项目名称：苏程记录
 
 项目定位：面向苏州初中学生和家长的高中信息查询、历史分数线参考、成绩记录和目标学校规划工具。
 
@@ -152,6 +152,9 @@ node scripts/verify_upload_package_ignore.js
 node scripts/verify_rc6_upgrade.js
 node scripts/verify_rc7_1.js
 node scripts/verify_rc7_full.js
+node scripts/verify_rc8.js
+node scripts/verify_mp17_name_sync.js
+node scripts/verify_mp18_name_sync.js
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
 node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app
