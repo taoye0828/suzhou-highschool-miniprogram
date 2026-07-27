@@ -1,0 +1,14 @@
+<view class="page">
+  <view class="card">
+    <view class="card-title">本机数据</view>
+    <view class="info-row"><text class="info-label">收藏</text><text class="info-value">{{favoriteCount}} 所</text></view>
+    <view class="info-row"><text class="info-label">目标学校</text><text class="info-value">{{targetCount}} 所</text></view>
+    <view class="info-row"><text class="info-label">阶段目标</text><text class="info-value">{{learningTargetCount}} 条</text></view>
+    <view class="info-row"><text class="info-label">成绩记录</text><text class="info-value">{{scoreCount}} 条</text></view>
+  </view>
+  <view class="card management-card">
+    <view class="card-title">清除全部本地数据</view>
+    <view class="muted small management-note">清除前会再次确认。学校资料和历史分数线不会被删除。</view>
+    <button class="button danger" bindtap="clearAllLocalData">清除全部本地数据</button>
+  </view>
+</view>

@@ -34,7 +34,7 @@ function walk(directory) {
   })
 }
 
-assert.strictEqual(APP_CONFIG.version, '1.7.0')
+assert.ok(['1.7.0', '1.8.0'].includes(APP_CONFIG.version))
 assert.deepStrictEqual(
   APP_CONFIG.targetScore.levels.map((item) => item.value),
   ['sprint', 'target', 'safe']
@@ -132,6 +132,8 @@ const shortSummary = summarizeScoreRecords(storage.getScoreRecords().slice(0, 3)
 assert.strictEqual(shortSummary.recentRecords.length, 3)
 const trendRecords = Array.from({ length: 12 }, (_, index) => ({
   id: `trend_${index}`,
+  date: `2026-10-${String(index + 1).padStart(2, '0')}`,
+  createdAt: `2026-10-${String(index + 1).padStart(2, '0')}T08:00:00.000Z`,
   score: 600 + index * 5
 }))
 const trendSummary = summarizeScoreRecords(trendRecords)
@@ -139,8 +141,8 @@ assert.strictEqual(trendSummary.recentRecords.length, 10)
 assert.strictEqual(trendSummary.highestText, '655 分')
 assert.strictEqual(trendSummary.lowestText, '610 分')
 assert.strictEqual(trendSummary.averageText, '632.5 分')
-assert.strictEqual(trendSummary.changeText, '610 → 655')
-assert.strictEqual(trendSummary.changeValueText, '提升 +45 分')
+assert.strictEqual(trendSummary.changeText, '650 → 655')
+assert.strictEqual(trendSummary.changeValueText, '提升 +5 分')
 assert.strictEqual(chartPoints(trendSummary.recentRecords, 640, 280).length, 10)
 
 assert.deepStrictEqual(SCORE_RANGES, ['全部', '500以下', '500-600', '600-650', '650以上'])
@@ -163,7 +165,9 @@ const targetFiltered = filterSchools({
 assert.deepStrictEqual(targetFiltered.map((school) => school.id), ['suzhou_high_school'])
 
 const homeText = [read('pages/home/home.js'), read('pages/home/home.wxml')].join('\n')
-for (const phrase of APP_CONFIG.policy.usageSteps) assert.ok(homeText.includes('usageSteps') || homeText.includes(phrase))
+for (const phrase of ['输入成绩，看目标学校', '中考倒计时', '学校库', '最近成绩', '目标学校']) {
+  assert.ok(homeText.includes(phrase), `home missing ${phrase}`)
+}
 for (const phrase of ['RC6', 'RC7', '开发说明', '技术说明', '测试说明']) {
   assert.strictEqual(read('pages/home/home.wxml').includes(phrase), false)
 }

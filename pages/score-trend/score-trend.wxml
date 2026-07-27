@@ -1,9 +1,4 @@
 <view class="page">
-  <view class="hero compact-hero">
-    <view class="hero-title">成绩趋势记录</view>
-    <view class="hero-subtitle">记录本机考试成绩，查看最近 10 次变化</view>
-  </view>
-
   <view class="card input-card">
     <text class="field-label">考试日期</text>
     <picker mode="date" value="{{selectedDate}}" start="2020-01-01" end="2100-12-31" bindchange="onDateChange">
@@ -47,7 +42,7 @@
       <view class="stat-item"><view class="muted small">最低分</view><view class="stat-value">{{lowestText}}</view></view>
       <view class="stat-item"><view class="muted small">平均分</view><view class="stat-value">{{averageText}}</view></view>
     </view>
-    <canvas canvas-id="scoreTrendChart" class="trend-canvas" width="640" height="280"></canvas>
+    <canvas id="scoreTrendChart" canvas-id="scoreTrendChart" class="trend-canvas" width="{{canvasWidth}}" height="280"></canvas>
     <scroll-view class="chart-label-scroll" scroll-x="true" enhanced="true">
       <view class="chart-label-row">
         <view wx:for="{{chartRecords}}" wx:key="id" class="chart-label-item">
@@ -71,10 +66,5 @@
       </view>
       <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteRecord">删除</button>
     </view>
-  </view>
-
-  <view class="card disclaimer-card">
-    <view class="card-title">使用边界</view>
-    <view class="muted small disclaimer-text">{{planningDisclaimer}}</view>
   </view>
 </view>

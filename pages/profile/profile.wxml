@@ -1,58 +1,12 @@
 <view class="page">
-  <view class="hero profile-hero">
-    <view class="hero-title">{{appName}}</view>
-    <view class="hero-subtitle">版本 {{version}} · {{releaseStatus}}</view>
-  </view>
-
-  <view class="summary-grid">
-    <view class="card summary-card">
-      <view class="summary-number">{{favoriteCount}}</view>
-      <view class="muted small">收藏</view>
-    </view>
-    <view class="card summary-card">
-      <view class="summary-number">{{targetCount}}</view>
-      <view class="muted small">学习目标</view>
-    </view>
-    <view class="card summary-card">
-      <view class="summary-number">{{scoreRecordCount}}</view>
-      <view class="muted small">成绩记录</view>
-    </view>
-    <view class="card summary-card">
-      <view class="summary-number">{{examYear}}</view>
-      <view class="muted small">中考年份</view>
-    </view>
-    <view class="card summary-card">
-      <view class="summary-number">{{schoolCount}}</view>
-      <view class="muted small">学校</view>
-    </view>
-    <view class="card summary-card">
-      <view class="summary-number">{{scoreCount}}</view>
-      <view class="muted small">历史分数线</view>
-    </view>
-  </view>
-
-  <view class="section-title">我的</view>
+  <view class="section-title">我的工具</view>
   <view class="card menu-card" bindtap="openFavorites"><view class="grow"><view class="card-title">我的收藏</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openTargets"><view class="grow"><view class="card-title">学习目标</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openScoreTrend"><view class="grow"><view class="card-title">成绩趋势</view></view><view class="list-arrow">›</view></view>
-
-  <view class="section-title">目标工具</view>
-  <view class="card menu-card" bindtap="openTargetAnalysis"><view class="grow"><view class="card-title">成绩分析</view><view class="muted small menu-note">固定历史分差区间参考</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openSchoolCompare"><view class="grow"><view class="card-title">高中对比</view><view class="muted small menu-note">最多选择 3 所学校</view></view><view class="list-arrow">›</view></view>
-
-  <view class="section-title">设置</view>
+  <view class="card menu-card" bindtap="openScoreTrend"><view class="grow"><view class="card-title">成绩趋势</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openDataInfo"><view class="grow"><view class="card-title">数据说明</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openPrivacy"><view class="grow"><view class="card-title">隐私说明</view></view><view class="list-arrow">›</view></view>
 
-  <view class="card local-card">
-    <view class="card-title">本地保存</view>
-    <view class="muted small clear-note">内置数据核对日期：{{sourceCheckedAt}}</view>
-    <view class="muted small clear-note">收藏、学习目标、成绩记录、目标年份和输入草稿只保存在当前设备。</view>
-  </view>
-
-  <view class="card clear-card">
-    <view class="card-title danger-text">清除本地数据</view>
-    <view class="muted small clear-note">清除收藏、学习目标、成绩记录、目标年份和输入草稿。</view>
-    <button class="button danger" bindtap="clearLocalData">清除本地数据</button>
-  </view>
+  <view class="section-title">设置</view>
+  <view class="card menu-card" bindtap="openDataManagement"><view class="grow"><view class="card-title">数据管理</view><view class="muted small menu-note">管理本机保存的数据</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu-card" bindtap="replayOnboarding"><view class="grow"><view class="card-title">新手教程</view><view class="muted small menu-note">重新查看主要功能介绍</view></view><view class="list-arrow">›</view></view>
 </view>

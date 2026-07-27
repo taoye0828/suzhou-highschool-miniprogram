@@ -6,7 +6,7 @@ const {
   clearScoreRecords
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
-const { summarizeScoreRecords, chartPoints } = require('../../utils/score-trend')
+const { summarizeScoreRecords, calculateChartPoints } = require('../../utils/score-trend')
 
 let recordSequence = 0
 
@@ -58,7 +58,7 @@ Page({
     changeClass: 'flat',
     maxRecords: APP_CONFIG.scoreRecord.maxRecords,
     scoreMax: EXAM_TOTAL_SCORE,
-    planningDisclaimer: APP_CONFIG.policy.planningDisclaimer
+    canvasWidth: 640
   },
 
   onLoad() {
@@ -76,14 +76,25 @@ Page({
   },
 
   drawTrendChart() {
-    if (!this.data.chartRecords.length || typeof wx.createCanvasContext !== 'function') return
-    const width = 640
-    const height = 280
-    const points = chartPoints(this.data.chartRecords, width, height, 38)
-    const context = wx.createCanvasContext('scoreTrendChart', this)
-
-    context.setFillStyle('#f8fbfa')
-    context.fillRect(0, 0, width, height)
+    if (typeof wx.createCanvasContext !== 'function') return
+    const query = wx.createSelectorQuery()
+    query.select('#scoreTrendChart').boundingClientRect()
+    query.exec((results) => {
+      const width = Math.max(280, Math.round(results && results[0] && results[0].width || 320))
+      const height = 280
+      if (this.data.canvasWidth !== width) {
+        this.setData({ canvasWidth: width }, () => this.drawTrendChart())
+        return
+      }
+      const points = calculateChartPoints(this.data.chartRecords, width, height, 38)
+      const context = wx.createCanvasContext('scoreTrendChart', this)
+      context.clearRect(0, 0, width, height)
+      context.setFillStyle('#f8fbfa')
+      context.fillRect(0, 0, width, height)
+      if (!points.length) {
+        context.draw()
+        return
+      }
     context.setStrokeStyle('#dbe5e2')
     context.setLineWidth(1)
     for (const y of [38, 106, 174, 242]) {
@@ -117,6 +128,7 @@ Page({
       context.fillText(String(point.score), point.x, Math.max(22, point.y - 14))
     })
     context.draw()
+    })
   },
 
   onDateChange(event) {
@@ -198,7 +210,7 @@ Page({
           wx.showToast({ title: result.message, icon: 'none' })
           return
         }
-        this.setData(presentRecords([]))
+        this.setData(presentRecords([]), () => this.drawTrendChart())
         wx.showToast({ title: '成绩记录已清空', icon: 'success' })
       }
     })

@@ -1,13 +1,8 @@
 <view class="page">
-  <view class="hero compact-hero">
-    <view class="hero-title">成绩分析</view>
-    <view class="hero-subtitle">使用已收录历史分数线和固定分差区间整理目标参考</view>
-  </view>
-
   <view class="card input-card">
     <text class="field-label">当前成绩</text>
     <input
-      class="input"
+      class="input onboarding-score-input"
       type="number"
       maxlength="3"
       value="{{scoreInput}}"
@@ -26,14 +21,16 @@
       <view class="input picker-input">{{targetYears[targetYearIndex]}} 年⌄</view>
     </picker>
     <view wx:if="{{inputError}}" class="input-error">{{inputError}}</view>
-    <button class="button analyze-button" bindtap="analyze">开始分析</button>
+    <button class="button analyze-button onboarding-analyze-button" bindtap="analyze">开始分析</button>
   </view>
 
   <block wx:if="{{hasAnalyzed}}">
-    <view class="card method-card">
-      <view class="card-title">分析口径</view>
-      <view class="muted small method-text">{{analysisNotice}}</view>
-      <view class="muted small">本次共整理 {{resultCount}} 所学校。</view>
+    <view class="card result-actions">
+      <view class="muted small">结果根据历史公开数据整理，仅供目标规划参考。</view>
+      <view class="row result-action-buttons">
+        <button class="button secondary grow" bindtap="saveCurrentScore">{{scoreSaved ? '成绩已保存' : '保存本次成绩'}}</button>
+        <button class="button secondary grow onboarding-trend-entry" bindtap="openScoreTrend">查看成绩趋势</button>
+      </view>
     </view>
 
     <view wx:for="{{sections}}" wx:key="value" wx:for-item="section" class="analysis-section">
@@ -47,26 +44,30 @@
         wx:key="schoolId"
         wx:for-item="result"
         class="card result-card"
-        data-id="{{result.schoolId}}"
-        bindtap="openDetail"
       >
-        <view class="row between">
+        <view class="row between" data-id="{{result.schoolId}}" bindtap="openDetail">
           <view class="card-title grow">{{result.schoolName}}</view>
           <view class="list-arrow">›</view>
         </view>
         <view wx:if="{{result.isTargetSchool}}" class="target-link-badge">
           已加入目标 · {{result.targetLevelLabel}}
         </view>
+        <view class="info-row"><text class="info-label">地区</text><text class="info-value">{{result.district}}</text></view>
+        <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{result.schoolType}}</text></view>
         <view class="info-row"><text class="info-label">历史参考分</text><text class="info-value">{{result.schoolScore}} 分（{{result.year}} 年）</text></view>
         <view class="info-row"><text class="info-label">当前成绩</text><text class="info-value">{{result.userScore}} 分</text></view>
         <view class="info-row"><text class="info-label">分差</text><text class="info-value">{{result.differenceText}}</text></view>
         <view class="info-row"><text class="info-label">提升空间</text><text class="info-value">{{result.improvementText}}</text></view>
+        <view class="row result-buttons">
+          <button class="button secondary grow" data-id="{{result.schoolId}}" bindtap="openDetail">查看详情</button>
+          <button class="button grow" data-id="{{result.schoolId}}" bindtap="addTarget">{{result.isTargetSchool ? '更新目标等级' : '加入我的目标'}}</button>
+        </view>
       </view>
     </view>
   </block>
-
-  <view class="card disclaimer-card">
-    <view class="card-title">使用边界</view>
-    <view class="muted small disclaimer-text">{{planningDisclaimer}}</view>
-  </view>
+  <onboarding-overlay
+    visible="{{onboarding.visible}}"
+    step="{{onboarding.step}}"
+    bind:action="onOnboardingAction"
+  />
 </view>

@@ -4,8 +4,10 @@ const KEYS = {
   favorites: 'mp1.favorite_school_ids',
   targets: 'mp1.target_records',
   targetDraft: 'mp1.target_draft',
+  learningTargets: 'rc8.learning_target_records.v1',
   scoreRecords: 'mp1.score_records',
-  examYear: 'mp1.exam_year'
+  examYear: 'mp1.exam_year',
+  onboarding: 'rc8.onboarding.v1'
 }
 
 const STORAGE_ERROR_MESSAGE = '本地存储失败，请清理空间后重试。'
@@ -109,6 +111,8 @@ function normalizeTargetRecord(value, options = {}) {
     schoolId,
     schoolName: schoolName.slice(0, 100),
     level: normalizeTargetLevel(value.level || value.targetLevel),
+    referenceScore: Number.isInteger(value.referenceScore) ? value.referenceScore : null,
+    referenceYear: Number.isInteger(value.referenceYear) ? value.referenceYear : null,
     createdAt
   }
 }
@@ -169,7 +173,8 @@ function getTargetDraftResult() {
     currentScore: typeof value.currentScore === 'string' ? value.currentScore.slice(0, APP_CONFIG.targetScore.maxLength) : '',
     targetScore: typeof value.targetScore === 'string' ? value.targetScore.slice(0, APP_CONFIG.targetScore.maxLength) : '',
     targetLevel: normalizeTargetLevel(value.targetLevel),
-    note: typeof value.note === 'string' ? value.note.slice(0, 200) : ''
+    stage: typeof value.stage === 'string' ? value.stage.slice(0, APP_CONFIG.learningTarget.stageMaxLength) : '',
+    note: typeof value.note === 'string' ? value.note.slice(0, APP_CONFIG.learningTarget.noteMaxLength) : ''
   }
   return readResult.ok ? { ok: true, draft } : { ok: false, draft, message: readResult.message }
 }
@@ -186,12 +191,94 @@ function saveTargetDraft(draft) {
     currentScore: String(currentScore).slice(0, APP_CONFIG.targetScore.maxLength),
     targetScore: String(targetScore).slice(0, APP_CONFIG.targetScore.maxLength),
     targetLevel: normalizeTargetLevel(safeDraft.targetLevel),
-    note: String(safeDraft.note || '').slice(0, 200)
+    stage: String(safeDraft.stage || '').slice(0, APP_CONFIG.learningTarget.stageMaxLength),
+    note: String(safeDraft.note || '').slice(0, APP_CONFIG.learningTarget.noteMaxLength)
   })
 }
 
 function clearTargetDraft() {
   return removeStorage(KEYS.targetDraft)
+}
+
+function normalizeLearningTarget(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = typeof value.id === 'string' ? value.id.trim() : ''
+  const stage = typeof value.stage === 'string' ? value.stage.trim() : ''
+  const targetScore = Number(value.targetScore)
+  if (!id || !stage || stage.length > APP_CONFIG.learningTarget.stageMaxLength) return null
+  if (!Number.isInteger(targetScore) || targetScore < 0 || targetScore > APP_CONFIG.targetScore.max) return null
+  const createdAt = typeof value.createdAt === 'string' && Number.isFinite(Date.parse(value.createdAt))
+    ? new Date(value.createdAt).toISOString()
+    : new Date(0).toISOString()
+  return {
+    schemaVersion: 1,
+    id,
+    stage,
+    targetScore,
+    note: String(value.note || '').trim().slice(0, APP_CONFIG.learningTarget.noteMaxLength),
+    createdAt
+  }
+}
+
+function getLearningTargetRecordsResult() {
+  const readResult = readStorage(KEYS.learningTargets, [])
+  const records = (Array.isArray(readResult.value) ? readResult.value : [])
+    .map(normalizeLearningTarget)
+    .filter(Boolean)
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+    .slice(0, APP_CONFIG.learningTarget.maxRecords)
+  return readResult.ok ? { ok: true, records } : { ok: false, records, message: readResult.message }
+}
+
+function getLearningTargetRecords() {
+  return getLearningTargetRecordsResult().records
+}
+
+function saveLearningTargetRecord(record) {
+  const normalized = normalizeLearningTarget(record)
+  if (!normalized) return { ok: false, message: '阶段目标格式无效，请检查后重试。' }
+  const existingResult = getLearningTargetRecordsResult()
+  if (!existingResult.ok) return { ok: false, message: existingResult.message }
+  const records = [
+    normalized,
+    ...existingResult.records.filter((item) => item.id !== normalized.id)
+  ].slice(0, APP_CONFIG.learningTarget.maxRecords)
+  const result = writeStorage(KEYS.learningTargets, records)
+  return result.ok ? { ok: true, records } : result
+}
+
+function deleteLearningTargetRecord(id) {
+  const existingResult = getLearningTargetRecordsResult()
+  if (!existingResult.ok) return { ok: false, message: existingResult.message }
+  const records = existingResult.records.filter((item) => item.id !== id)
+  const result = records.length ? writeStorage(KEYS.learningTargets, records) : removeStorage(KEYS.learningTargets)
+  return result.ok ? { ok: true, records } : result
+}
+
+function clearLearningTargetRecords() {
+  return removeStorage(KEYS.learningTargets)
+}
+
+function getOnboardingState() {
+  const result = readStorage(KEYS.onboarding, {})
+  const value = result.value && typeof result.value === 'object' ? result.value : {}
+  return {
+    version: Number(value.version) || 0,
+    completed: Boolean(value.completed),
+    skipped: Boolean(value.skipped),
+    currentStep: Number.isInteger(value.currentStep) ? value.currentStep : 0,
+    active: Boolean(value.active)
+  }
+}
+
+function saveOnboardingState(state) {
+  return writeStorage(KEYS.onboarding, {
+    version: Number(state.version) || 0,
+    completed: Boolean(state.completed),
+    skipped: Boolean(state.skipped),
+    currentStep: Number.isInteger(state.currentStep) ? state.currentStep : 0,
+    active: Boolean(state.active)
+  })
 }
 
 function isValidDateLabel(value) {
@@ -322,6 +409,11 @@ module.exports = {
   getTargetDraft,
   saveTargetDraft,
   clearTargetDraft,
+  getLearningTargetRecordsResult,
+  getLearningTargetRecords,
+  saveLearningTargetRecord,
+  deleteLearningTargetRecord,
+  clearLearningTargetRecords,
   getScoreRecordsResult,
   getScoreRecords,
   saveScoreRecord,
@@ -330,6 +422,8 @@ module.exports = {
   getExamYearResult,
   getExamYear,
   saveExamYear,
+  getOnboardingState,
+  saveOnboardingState,
   clearLocalData,
   clearLocalDemoData
 }

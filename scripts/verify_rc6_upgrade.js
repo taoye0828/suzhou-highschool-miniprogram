@@ -32,7 +32,7 @@ function walk(directory) {
   })
 }
 
-assert.ok(['1.6.0', '1.7.0'].includes(APP_CONFIG.version))
+assert.ok(['1.6.0', '1.7.0', '1.8.0'].includes(APP_CONFIG.version))
 assert.strictEqual(APP_CONFIG.countdown.defaultYear, 2027)
 assert.strictEqual(APP_CONFIG.targetScore.max, EXAM_TOTAL_SCORE)
 assert.deepStrictEqual(
@@ -56,10 +56,10 @@ assert.strictEqual(admissionScores.filter((item) => item.year === 2026).length, 
 assert.ok(admissionScores.every((item) => item.minScore <= EXAM_TOTAL_SCORE))
 
 assert.strictEqual(classifyDifference(-31), null)
-assert.strictEqual(classifyDifference(-30), 'challenge')
-assert.strictEqual(classifyDifference(-1), 'challenge')
-assert.strictEqual(classifyDifference(0), 'match')
-assert.strictEqual(classifyDifference(15), 'match')
+assert.strictEqual(classifyDifference(-30), 'sprint')
+assert.strictEqual(classifyDifference(-1), 'sprint')
+assert.strictEqual(classifyDifference(0), 'target')
+assert.strictEqual(classifyDifference(15), 'target')
 assert.strictEqual(classifyDifference(16), 'safe')
 assert.strictEqual(
   latestReferenceScore([

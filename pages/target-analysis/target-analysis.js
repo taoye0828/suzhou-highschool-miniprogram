@@ -1,13 +1,22 @@
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../../config/app-config')
 const { analyzeScore } = require('../../utils/score-analysis')
-const { getTargetRecordsResult } = require('../../utils/storage')
+const {
+  getTargetRecordsResult,
+  getTargetDraftResult,
+  getScoreRecordsResult,
+  saveTargetDraft,
+  saveTargetRecord,
+  saveScoreRecord
+} = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
+const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 
 function buildSections(results) {
   return APP_CONFIG.scoreAnalysis.levels.map((level) => ({
     ...level,
     results: results
       .filter((item) => item.level === level.value)
+      .slice(0, 5)
       .map((item) => {
         const targetLevel = APP_CONFIG.targetScore.levels.find(
           (candidate) => candidate.value === item.targetLevel
@@ -34,8 +43,9 @@ Page({
     hasAnalyzed: false,
     resultCount: 0,
     sections: buildSections([]),
-    analysisNotice: APP_CONFIG.policy.scoreAnalysisNotice,
-    planningDisclaimer: APP_CONFIG.policy.planningDisclaimer
+    currentScore: null,
+    scoreSaved: false,
+    onboarding: { visible: false, step: null }
   },
 
   onLoad(options = {}) {
@@ -45,6 +55,15 @@ Page({
       return
     }
     this.setData({ scoreInput: raw }, () => this.analyze())
+  },
+
+  onShow() {
+    if (!this.data.scoreInput) {
+      const draft = getTargetDraftResult().draft
+      const raw = String(draft.currentScore || '').trim()
+      if (/^\d+$/.test(raw)) this.setData({ scoreInput: raw })
+    }
+    this.syncOnboarding()
   },
 
   onScoreInput(event) {
@@ -91,13 +110,83 @@ Page({
       inputError: '',
       hasAnalyzed: true,
       resultCount: results.length,
-      sections: buildSections(results)
+      sections: buildSections(results),
+      currentScore: score,
+      scoreSaved: false
     })
+    const draftResult = getTargetDraftResult()
+    saveTargetDraft({ ...draftResult.draft, currentScore: raw })
+  },
+
+  addTarget(event) {
+    const schoolId = event.currentTarget.dataset.id
+    const resultItem = this.data.sections
+      .flatMap((section) => section.results)
+      .find((item) => item.schoolId === schoolId)
+    if (!resultItem) return
+    const result = saveTargetRecord({
+      id: `target_${resultItem.schoolId}`,
+      schoolId: resultItem.schoolId,
+      schoolName: resultItem.schoolName,
+      level: resultItem.level,
+      referenceScore: resultItem.schoolScore,
+      referenceYear: resultItem.year,
+      createdAt: new Date().toISOString()
+    })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    wx.showToast({ title: resultItem.isTargetSchool ? '目标等级已更新' : '已加入我的目标', icon: 'success' })
+    this.analyze()
+  },
+
+  saveCurrentScore() {
+    if (!Number.isInteger(this.data.currentScore)) return
+    const now = new Date()
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const existing = getScoreRecordsResult()
+    const duplicate = existing.records.some(
+      (item) => item.date === date && item.examName === '成绩分析' && item.score === this.data.currentScore
+    )
+    if (duplicate) {
+      this.setData({ scoreSaved: true })
+      wx.showToast({ title: '相同成绩今天已保存', icon: 'none' })
+      return
+    }
+    const result = saveScoreRecord({
+      id: `analysis_${Date.now()}`,
+      date,
+      examName: '成绩分析',
+      score: this.data.currentScore,
+      createdAt: now.toISOString()
+    })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.setData({ scoreSaved: true })
+    wx.showToast({ title: '成绩已保存', icon: 'success' })
+  },
+
+  openScoreTrend() {
+    wx.navigateTo({ url: '/pages/score-trend/score-trend' })
   },
 
   openDetail(event) {
     wx.navigateTo({
       url: `/pages/school-detail/school-detail?id=${event.currentTarget.dataset.id}`
     })
+  },
+
+  syncOnboarding() {
+    this.setData({
+      onboarding: onboardingForPage('/pages/target-analysis/target-analysis')
+    })
+  },
+
+  onOnboardingAction(event) {
+    handleOnboardingAction(event)
+    this.syncOnboarding()
   }
 })

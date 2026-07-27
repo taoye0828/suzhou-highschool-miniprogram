@@ -22,3 +22,8 @@
   font-size: 22rpx;
   font-weight: 600;
 }
+.result-actions { margin-top: 24rpx; }
+.result-action-buttons,
+.result-buttons { gap: 12rpx; margin-top: 18rpx; }
+.result-action-buttons .button,
+.result-buttons .button { margin: 0; padding-left: 12rpx; padding-right: 12rpx; }

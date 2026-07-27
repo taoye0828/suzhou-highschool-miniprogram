@@ -1,12 +1,15 @@
 <view class="page">
-  <view class="hero">
-    <view class="hero-title">{{appName}}</view>
-    <view class="hero-subtitle">{{homeTagline}}</view>
+  <view class="card overview-card onboarding-home-overview">
+    <view class="card-title">我的中考规划概览</view>
+    <view class="overview-grid">
+      <view><view class="muted small">最近成绩</view><view class="overview-value">{{latestScoreText}}</view></view>
+      <view><view class="muted small">目标学校</view><view class="overview-value">{{targetCount}} 所</view></view>
+    </view>
+    <view class="muted small">{{scoreChangeText}}</view>
   </view>
 
-  <view class="section-title">从成绩开始</view>
+  <view class="section-title">输入成绩，看目标学校</view>
   <view class="card score-start-card">
-    <view class="card-title">输入当前成绩，先看看目标高中</view>
     <view class="score-start-row">
       <input
         class="input score-start-input"
@@ -16,22 +19,12 @@
         placeholder="0 至 {{scoreMax}}"
         bindinput="onScoreInput"
       />
-      <button class="button score-start-button" bindtap="startScoreAnalysis">开始分析</button>
+      <button class="button score-start-button" bindtap="startScoreAnalysis">查看推荐</button>
     </view>
     <view wx:if="{{scoreInputError}}" class="input-error">{{scoreInputError}}</view>
-    <view class="muted small score-start-note">只使用本机输入和已收录历史数据，不做录取预测。</view>
   </view>
 
-  <view class="section-title">目标规划步骤</view>
-  <view class="card journey-card">
-    <view class="journey-item" wx:for="{{journeySteps}}" wx:key="number">
-      <view class="journey-index">{{item.number}}</view>
-      <view class="journey-label">{{item.label}}</view>
-      <view wx:if="{{item.hasNext}}" class="journey-arrow">↓</view>
-    </view>
-  </view>
-
-  <view class="section-title">快速查学校</view>
+  <view class="section-title">学校库</view>
   <view class="card home-search-card">
     <input
       class="input"
@@ -55,10 +48,11 @@
     <view wx:if="{{schoolSearchActive && schoolSearchResults.length === 0}}" class="muted small search-empty">
       没有找到匹配学校。
     </view>
+    <button class="button secondary school-library-button" bindtap="openSchools">打开学校库</button>
   </view>
 
   <view class="section-title">中考倒计时</view>
-  <view class="card countdown-card" wx:if="{{countdown}}">
+  <view class="card countdown-card onboarding-home-overview" wx:if="{{countdown}}">
     <view class="row between countdown-head">
       <view class="grow">
         <view class="card-title">{{countdown.daysText}}</view>
@@ -68,37 +62,10 @@
         <view class="year-picker">{{examYears[examYearIndex]}} 年⌄</view>
       </picker>
     </view>
-    <view class="muted small">目标年份只保存在本机，可随时调整。</view>
   </view>
-
-  <view class="section-title">数据概况</view>
-  <view class="card">
-    <view class="card-title">{{scoreStats.verifiedText}}</view>
-    <view class="notice">学校 {{scoreStats.schoolCount}} 所，历史分数线 {{scoreStats.scoreCount}} 条。</view>
-    <view class="muted small">已收录年份：{{scoreStats.yearsText}}</view>
-    <view class="muted small">数据核对日期：{{sourceCheckedAt}}</view>
-    <view class="muted small">{{homeBoundary}}</view>
-    <view class="muted small">{{localBoundary}}</view>
-  </view>
-
-  <view class="section-title">快捷入口</view>
-  <view
-    class="card entry"
-    wx:for="{{entries}}"
-    wx:key="title"
-    data-route="{{item.route}}"
-    data-tab="{{item.tab}}"
-    bindtap="openEntry"
-  >
-    <view class="grow">
-      <view class="card-title">{{item.title}}</view>
-      <view class="muted small entry-subtitle">{{item.subtitle}}</view>
-    </view>
-    <view class="list-arrow">›</view>
-  </view>
-
-  <view class="card planning-notice">
-    <view class="card-title">使用边界</view>
-    <view class="muted small planning-notice-text">{{homeBoundary}}</view>
-  </view>
+  <onboarding-overlay
+    visible="{{onboarding.visible}}"
+    step="{{onboarding.step}}"
+    bind:action="onOnboardingAction"
+  />
 </view>

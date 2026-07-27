@@ -1,10 +1,11 @@
 <view class="page">
-  <view class="hero compact-hero">
-    <view class="hero-title">目标学校</view>
-    <view class="hero-subtitle">每所学校对应一个冲刺、目标或保底等级</view>
+  <view class="segment-control">
+    <view class="segment {{activeSegment === 'schools' ? 'active' : ''}}" data-segment="schools" bindtap="selectSegment">目标学校</view>
+    <view class="segment {{activeSegment === 'learning' ? 'active' : ''}}" data-segment="learning" bindtap="selectSegment">阶段目标</view>
   </view>
 
-  <view class="card target-search-card">
+  <block wx:if="{{activeSegment === 'schools'}}">
+  <view class="card target-search-card onboarding-target-planning">
     <view class="card-title">搜索并添加目标学校</view>
     <input
       class="input target-search-input"
@@ -67,9 +68,41 @@
     <button class="button secondary detail-button" data-school-id="{{item.schoolId}}" bindtap="openSchool">查看学校详情</button>
   </view>
 
-  <view class="card target-boundary">
-    <view class="card-title">使用边界</view>
-    <view class="muted small target-boundary-text">{{targetLevelLabel}}</view>
-    <view class="muted small">目标学校和等级仅保存在本机，不用于判断录取结果。</view>
+  </block>
+
+  <block wx:if="{{activeSegment === 'learning'}}">
+  <view class="card learning-form">
+    <text class="field-label">阶段目标</text>
+    <input class="input" value="{{learningDraft.stage}}" maxlength="40" placeholder="例如：下次月考" data-field="stage" bindinput="updateLearningDraft" />
+    <text class="field-label">目标分数</text>
+    <input class="input" type="number" maxlength="3" value="{{learningDraft.targetScore}}" placeholder="0 至 740" data-field="targetScore" bindinput="updateLearningDraft" />
+    <text class="field-label">备注</text>
+    <textarea class="input learning-note" value="{{learningDraft.note}}" maxlength="200" placeholder="可选，请勿填写个人敏感信息" data-field="note" bindinput="updateLearningDraft"></textarea>
+    <view wx:if="{{learningError}}" class="input-error">{{learningError}}</view>
+    <button class="button" bindtap="saveLearningTarget">保存阶段目标</button>
   </view>
+  <view class="row between section-row">
+    <view class="section-title records-title">阶段目标（{{learningRecords.length}}）</view>
+    <button wx:if="{{learningRecords.length > 0}}" class="button danger small-button" bindtap="clearLearningTargets">清空全部</button>
+  </view>
+  <view wx:if="{{learningRecords.length === 0}}" class="card empty">
+    <view class="card-title">暂无阶段目标</view>
+    <view class="muted small">保存一个下一阶段的分数目标，方便持续复盘。</view>
+  </view>
+  <view class="card record-card" wx:for="{{learningRecords}}" wx:key="id">
+    <view class="row between">
+      <view class="grow">
+        <view class="card-title">{{item.stage}}</view>
+        <view class="record-level">目标 {{item.targetScore}} 分</view>
+      </view>
+      <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteLearningTarget">删除</button>
+    </view>
+    <view wx:if="{{item.note}}" class="muted small learning-record-note">{{item.note}}</view>
+  </view>
+  </block>
+  <onboarding-overlay
+    visible="{{onboarding.visible}}"
+    step="{{onboarding.step}}"
+    bind:action="onOnboardingAction"
+  />
 </view>

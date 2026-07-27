@@ -3,7 +3,7 @@ const { schools: defaultSchools } = require('../data/schools')
 const { admissionScores: defaultScores } = require('../data/admission-scores')
 const { searchSchools } = require('./school-search')
 
-const LEVEL_ORDER = ['challenge', 'match', 'safe']
+const LEVEL_ORDER = ['sprint', 'target', 'safe']
 
 function isValidReferenceScore(item) {
   return item &&
@@ -24,8 +24,8 @@ function latestReferenceScore(scores, targetYear) {
 }
 
 function classifyDifference(difference) {
-  if (difference >= -30 && difference < 0) return 'challenge'
-  if (difference >= 0 && difference <= 15) return 'match'
+  if (difference >= -30 && difference < 0) return 'sprint'
+  if (difference >= 0 && difference <= 15) return 'target'
   if (difference > 15) return 'safe'
   return null
 }
@@ -66,13 +66,17 @@ function analyzeScore({
     return [{
       schoolId: school.id,
       schoolName: school.name,
+      district: school.district || '—',
+      schoolType: school.schoolType || '—',
       userScore,
       year: reference.year,
       schoolScore: reference.minScore,
       difference,
       differenceText: difference < 0
-        ? `${difference} 分（当前低于参考分）`
-        : `+${difference} 分（当前高于或等于参考分）`,
+        ? `距参考分还差 ${Math.abs(difference)} 分`
+        : difference === 0
+          ? '与参考分一致'
+          : `高于参考分 ${difference} 分`,
       gap: reference.minScore - userScore,
       improvement,
       improvementText: improvement > 0
@@ -85,7 +89,11 @@ function analyzeScore({
   }).sort((left, right) => {
     const levelCompare = LEVEL_ORDER.indexOf(left.level) - LEVEL_ORDER.indexOf(right.level)
     if (levelCompare !== 0) return levelCompare
-    const differenceCompare = Math.abs(left.difference) - Math.abs(right.difference)
+    const differenceCompare = left.level === 'sprint'
+      ? right.difference - left.difference
+      : left.level === 'safe'
+        ? left.difference - right.difference
+        : Math.abs(left.difference) - Math.abs(right.difference)
     return differenceCompare !== 0
       ? differenceCompare
       : left.schoolName.localeCompare(right.schoolName, 'zh-Hans-CN')

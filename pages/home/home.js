@@ -1,49 +1,19 @@
-const { schools } = require('../../data/schools')
-const { admissionScores } = require('../../data/admission-scores')
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../../config/app-config')
-const { getExamYearResult, saveExamYear } = require('../../utils/storage')
+const {
+  getExamYearResult,
+  saveExamYear,
+  getScoreRecordsResult,
+  getTargetRecordsResult,
+  getTargetDraftResult,
+  saveTargetDraft
+} = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { calculateExamCountdown, examYearOptions } = require('../../utils/countdown')
 const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
-
-function uniqueScoreYears() {
-  return Array.from(new Set(admissionScores.map((item) => item.year))).sort((left, right) => left - right)
-}
-
-const scoreYears = uniqueScoreYears()
-const scoreStats = {
-  schoolCount: schools.length,
-  scoreCount: admissionScores.length,
-  yearsText: scoreYears.join('、'),
-  verifiedText: `已收录 ${scoreYears.join('、')} 年官方历史分数线`
-}
-
-const entries = [
-  { title: '查学校', subtitle: '搜索和筛选学校基础信息', route: '/pages/schools/schools', tab: true },
-  { title: '成绩分析', subtitle: '按固定历史分差区间查看目标参考', route: '/pages/target-analysis/target-analysis', tab: false },
-  { title: '高中对比', subtitle: '选择 2 至 3 所学校横向核对', route: '/pages/school-compare/school-compare', tab: false },
-  { title: '成绩趋势', subtitle: '在本机记录考试成绩变化', route: '/pages/score-trend/score-trend', tab: false },
-  { title: '看数据说明', subtitle: '了解来源、口径和边界', route: '/pages/data-info/data-info', tab: false },
-  { title: '学习目标记录', subtitle: '在本机记录阶段目标', route: '/pages/targets/targets', tab: true },
-  { title: '我的收藏', subtitle: '查看本机收藏学校', route: '/pages/favorites/favorites', tab: true }
-]
-const journeySteps = APP_CONFIG.policy.usageSteps.map((label, index, items) => ({
-  label,
-  number: index + 1,
-  hasNext: index < items.length - 1
-}))
+const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 
 Page({
   data: {
-    appName: APP_CONFIG.name,
-    entries,
-    homeTagline: APP_CONFIG.policy.homeTagline,
-    homeBoundary: APP_CONFIG.policy.homeBoundary,
-    localBoundary: APP_CONFIG.policy.localBoundary,
-    sourceCheckedAt: APP_CONFIG.schoolData.sourceCheckedAt,
-    usageSteps: APP_CONFIG.policy.usageSteps,
-    journeySteps,
-    scoreStats,
     examYears: [],
     examYearIndex: 0,
     countdown: null,
@@ -52,7 +22,11 @@ Page({
     scoreMax: EXAM_TOTAL_SCORE,
     schoolKeyword: '',
     schoolSearchActive: false,
-    schoolSearchResults: []
+    schoolSearchResults: [],
+    latestScoreText: '尚未记录',
+    scoreChangeText: '暂无上次成绩可比较',
+    targetCount: 0,
+    onboarding: { visible: false, step: null }
   },
 
   onLoad() {
@@ -61,6 +35,28 @@ Page({
 
   onShow() {
     this.refreshCountdown()
+    this.refreshOverview()
+    this.syncOnboarding()
+  },
+
+  refreshOverview() {
+    const scoreResult = getScoreRecordsResult()
+    const targetResult = getTargetRecordsResult()
+    const scores = scoreResult.records
+    const latest = scores.length ? scores[scores.length - 1].score : null
+    const previous = scores.length > 1 ? scores[scores.length - 2].score : null
+    const change = latest !== null && previous !== null ? latest - previous : null
+    this.setData({
+      latestScoreText: latest === null ? '尚未记录' : `${latest} 分`,
+      scoreChangeText: change === null
+        ? '暂无上次成绩可比较'
+        : change > 0
+          ? `比上次提高 ${change} 分`
+          : change < 0
+            ? `比上次下降 ${Math.abs(change)} 分`
+            : '与上次持平',
+      targetCount: targetResult.records.length
+    })
   },
 
   refreshCountdown() {
@@ -116,9 +112,13 @@ Page({
       this.setData({ scoreInputError: `成绩必须是 0 至 ${EXAM_TOTAL_SCORE} 的整数。` })
       return
     }
-    wx.navigateTo({
-      url: `/pages/target-analysis/target-analysis?score=${score}`
-    })
+    const draftResult = getTargetDraftResult()
+    const saveResult = saveTargetDraft({ ...draftResult.draft, currentScore: raw })
+    if (!saveResult.ok) {
+      wx.showToast({ title: saveResult.message, icon: 'none' })
+      return
+    }
+    wx.switchTab({ url: '/pages/target-analysis/target-analysis' })
   },
 
   openSchoolResult(event) {
@@ -131,5 +131,20 @@ Page({
     const { route, tab } = event.currentTarget.dataset
     if (tab) wx.switchTab({ url: route })
     else wx.navigateTo({ url: route })
+  },
+
+  openSchools() {
+    wx.switchTab({ url: '/pages/schools/schools' })
+  },
+
+  syncOnboarding() {
+    this.setData({
+      onboarding: onboardingForPage('/pages/home/home', { autoStart: true })
+    })
+  },
+
+  onOnboardingAction(event) {
+    handleOnboardingAction(event)
+    this.syncOnboarding()
   }
 })

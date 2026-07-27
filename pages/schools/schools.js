@@ -15,6 +15,7 @@ const {
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { APP_CONFIG } = require('../../config/app-config')
+const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 
 const TARGET_FILTERS = [
   { value: 'all', label: '全部' },
@@ -38,11 +39,15 @@ Page({
     scoreStatusIndex: 0,
     scoreRangeIndex: 0,
     targetFilterIndex: 0,
-    results: []
+    results: [],
+    onboarding: { visible: false, step: null }
   },
 
   onLoad() { this.refresh() },
-  onShow() { this.refresh() },
+  onShow() {
+    this.refresh()
+    this.syncOnboarding()
+  },
 
   onKeywordInput(event) {
     this.setData({ keyword: event.detail.value }, () => this.refresh())
@@ -126,5 +131,16 @@ Page({
 
   openDetail(event) {
     wx.navigateTo({ url: `/pages/school-detail/school-detail?id=${event.currentTarget.dataset.id}` })
+  },
+
+  syncOnboarding() {
+    this.setData({
+      onboarding: onboardingForPage('/pages/schools/schools')
+    })
+  },
+
+  onOnboardingAction(event) {
+    handleOnboardingAction(event)
+    this.syncOnboarding()
   }
 })

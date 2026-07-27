@@ -1,10 +1,5 @@
 <view class="page">
-  <view class="hero compact-hero">
-    <view class="hero-title">学校库</view>
-    <view class="hero-subtitle">查看苏州高中阶段学校基础信息、来源和分数线收录情况</view>
-  </view>
-
-  <input class="input search-input" value="{{keyword}}" placeholder="智能搜索学校名称或简称，如：南航、苏中、园区" bindinput="onKeywordInput" />
+  <input class="input search-input onboarding-school-search" value="{{keyword}}" placeholder="智能搜索学校名称或简称，如：南航、苏中、园区" bindinput="onKeywordInput" />
 
   <view class="filter-grid">
     <picker range="{{districts}}" value="{{districtIndex}}" bindchange="onDistrictChange">
@@ -42,7 +37,7 @@
   </view>
 
   <view
-    class="card school-card"
+    class="card school-card onboarding-school-card"
     wx:for="{{results}}"
     wx:key="id"
     data-id="{{item.id}}"
@@ -65,4 +60,9 @@
     <view wx:if="{{item.addressShort}}" class="muted small">{{item.addressShort}}</view>
     <view class="muted small source-line">{{item.sourceTypeLabel}} · {{item.sourceCheckedAt}}</view>
   </view>
+  <onboarding-overlay
+    visible="{{onboarding.visible}}"
+    step="{{onboarding.step}}"
+    bind:action="onOnboardingAction"
+  />
 </view>

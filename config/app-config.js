@@ -9,8 +9,8 @@ const TARGET_LEVELS = [
 
 const APP_CONFIG = {
   name: '苏州高中目标查询助手',
-  version: '1.7.0',
-  releaseStatus: '高中目标规划完整升级版',
+  version: '1.8.0',
+  releaseStatus: 'RC8 产品体验升级版',
   targetScore: {
     min: 0,
     max: EXAM_TOTAL_SCORE,
@@ -23,6 +23,14 @@ const APP_CONFIG = {
     maxRecords: 100,
     examNameMaxLength: 40
   },
+  learningTarget: {
+    maxRecords: 100,
+    stageMaxLength: 40,
+    noteMaxLength: 200
+  },
+  onboarding: {
+    version: 1
+  },
   countdown: {
     defaultYear: DEFAULT_EXAM_YEAR,
     examMonth: 6,
@@ -34,18 +42,18 @@ const APP_CONFIG = {
     targetYears: [2026, 2027],
     levels: [
       {
-        value: 'challenge',
-        label: '冲刺目标',
+        value: 'sprint',
+        label: '冲刺',
         description: '历史参考分高于当前成绩 1 至 30 分。'
       },
       {
-        value: 'match',
-        label: '匹配目标',
+        value: 'target',
+        label: '目标',
         description: '当前成绩与历史参考分相差 0 至 15 分。'
       },
       {
         value: 'safe',
-        label: '稳妥目标',
+        label: '保底',
         description: '当前成绩高于历史参考分 15 分以上。'
       }
     ]
@@ -117,6 +125,16 @@ const APP_CONFIG = {
           '历史录取分数线不代表未来录取结果。',
           '本小程序不做录取预测，不提供志愿填报结论。',
           '成绩分析只执行固定历史分差区间分类，不判断学校能否录取。'
+        ]
+      },
+      {
+        title: '成绩分析口径',
+        items: [
+          '每所学校使用不晚于目标考试年份的最新已收录分数线。',
+          '同一学校同一年有多条记录时，使用其中最高参考分。',
+          '冲刺为当前成绩低于参考分 1 至 30 分；目标为达到参考分且高出不超过 15 分；保底为高出参考分 15 分以上。',
+          '各分类按分差稳定排序，每组最多展示 5 所学校。',
+          '结果根据历史公开数据整理，仅供目标规划参考。'
         ]
       },
       {

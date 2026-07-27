@@ -4,14 +4,20 @@ const {
   getTargetDraftResult,
   getScoreRecordsResult,
   getExamYearResult,
+  getLearningTargetRecordsResult,
   saveTargetRecord,
   deleteTargetRecord,
-  clearTargetRecords
+  clearTargetRecords,
+  saveTargetDraft,
+  saveLearningTargetRecord,
+  deleteLearningTargetRecord,
+  clearLearningTargetRecords
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { schools } = require('../../data/schools')
 const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 const { referenceForSchool } = require('../../utils/score-analysis')
+const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 
 const LEVEL_ORDER = ['sprint', 'target', 'safe']
 
@@ -47,16 +53,111 @@ function presentRecord(record, currentScore, targetYear) {
 
 Page({
   data: {
+    activeSegment: 'schools',
     records: [],
     targetLevels: APP_CONFIG.targetScore.levels,
     targetLevelLabel: APP_CONFIG.policy.targetHint,
     keyword: '',
     searchActive: false,
-    searchResults: []
+    searchResults: [],
+    learningDraft: { stage: '', targetScore: '', note: '' },
+    learningRecords: [],
+    learningError: '',
+    onboarding: { visible: false, step: null }
   },
 
   onShow() {
     this.loadRecords()
+    this.loadLearningTargets()
+    this.syncOnboarding()
+  },
+
+  selectSegment(event) {
+    this.setData({ activeSegment: event.currentTarget.dataset.segment })
+  },
+
+  loadLearningTargets() {
+    const draftResult = getTargetDraftResult()
+    const recordsResult = getLearningTargetRecordsResult()
+    notifyStorageReadResult(this, !draftResult.ok ? draftResult : recordsResult)
+    this.setData({
+      learningDraft: {
+        stage: draftResult.draft.stage || '',
+        targetScore: draftResult.draft.targetScore || '',
+        note: draftResult.draft.note || ''
+      },
+      learningRecords: recordsResult.records
+    })
+  },
+
+  updateLearningDraft(event) {
+    const field = event.currentTarget.dataset.field
+    const learningDraft = { ...this.data.learningDraft, [field]: event.detail.value }
+    this.setData({ learningDraft, learningError: '' })
+    const existing = getTargetDraftResult().draft
+    saveTargetDraft({ ...existing, ...learningDraft })
+  },
+
+  saveLearningTarget() {
+    const stage = String(this.data.learningDraft.stage || '').trim()
+    const rawScore = String(this.data.learningDraft.targetScore || '').trim()
+    const targetScore = Number(rawScore)
+    if (!stage) {
+      this.setData({ learningError: '请填写阶段目标。' })
+      return
+    }
+    if (!/^\d+$/.test(rawScore) || !Number.isInteger(targetScore) ||
+        targetScore < 0 || targetScore > APP_CONFIG.targetScore.max) {
+      this.setData({ learningError: `目标分数必须是 0 至 ${APP_CONFIG.targetScore.max} 的整数。` })
+      return
+    }
+    const result = saveLearningTargetRecord({
+      id: `learning_${Date.now()}`,
+      stage,
+      targetScore,
+      note: this.data.learningDraft.note,
+      createdAt: new Date().toISOString()
+    })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    const existing = getTargetDraftResult().draft
+    saveTargetDraft({ ...existing, stage: '', targetScore: '', note: '' })
+    this.setData({
+      learningDraft: { stage: '', targetScore: '', note: '' },
+      learningRecords: result.records,
+      learningError: ''
+    })
+    wx.showToast({ title: '阶段目标已保存', icon: 'success' })
+  },
+
+  deleteLearningTarget(event) {
+    const result = deleteLearningTargetRecord(event.currentTarget.dataset.id)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.setData({ learningRecords: result.records })
+  },
+
+  clearLearningTargets() {
+    if (!this.data.learningRecords.length) return
+    wx.showModal({
+      title: '清空阶段目标',
+      content: '将删除全部阶段学习目标，草稿不受影响。',
+      confirmText: '确认清空',
+      confirmColor: '#b42318',
+      success: (modalResult) => {
+        if (!modalResult.confirm) return
+        const result = clearLearningTargetRecords()
+        if (!result.ok) {
+          wx.showToast({ title: result.message, icon: 'none' })
+          return
+        }
+        this.setData({ learningRecords: [] })
+      }
+    })
   },
 
   loadRecords() {
@@ -157,5 +258,16 @@ Page({
       },
       fail: () => wx.showToast({ title: '确认窗口打开失败，请重试。', icon: 'none' })
     })
+  },
+
+  syncOnboarding() {
+    this.setData({
+      onboarding: onboardingForPage('/pages/targets/targets')
+    })
+  },
+
+  onOnboardingAction(event) {
+    handleOnboardingAction(event)
+    this.syncOnboarding()
   }
 })

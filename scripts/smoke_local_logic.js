@@ -191,9 +191,9 @@ assert.strictEqual(countdownResult.daysRemaining, 327)
 assert.ok(countdown.examYearOptions(2027, new Date(2026, 6, 25)).includes(2029))
 
 assert.strictEqual(scoreAnalysis.classifyDifference(-31), null)
-assert.strictEqual(scoreAnalysis.classifyDifference(-30), 'challenge')
-assert.strictEqual(scoreAnalysis.classifyDifference(0), 'match')
-assert.strictEqual(scoreAnalysis.classifyDifference(15), 'match')
+assert.strictEqual(scoreAnalysis.classifyDifference(-30), 'sprint')
+assert.strictEqual(scoreAnalysis.classifyDifference(0), 'target')
+assert.strictEqual(scoreAnalysis.classifyDifference(15), 'target')
 assert.strictEqual(scoreAnalysis.classifyDifference(16), 'safe')
 const analysisResults = scoreAnalysis.analyzeScore({
   userScore: 650,
@@ -211,7 +211,7 @@ const analysisResults = scoreAnalysis.analyzeScore({
     { id: 'safe', schoolId: 'safe', year: 2026, minScore: 620 }
   ]
 })
-assert.deepStrictEqual(analysisResults.map((item) => item.level), ['challenge', 'match', 'safe'])
+assert.deepStrictEqual(analysisResults.map((item) => item.level), ['sprint', 'target', 'safe'])
 assert.strictEqual(analysisResults[0].schoolScore, 680)
 
 removeFailure = true

@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "成绩分析"
+  "navigationBarTitleText": "成绩分析",
+  "usingComponents": {
+    "onboarding-overlay": "/components/onboarding-overlay/onboarding-overlay"
+  }
 }

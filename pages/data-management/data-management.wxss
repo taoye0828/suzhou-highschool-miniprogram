@@ -1,0 +1,2 @@
+.management-card { margin-top: 24rpx; }
+.management-note { margin: 14rpx 0 22rpx; line-height: 1.6; }

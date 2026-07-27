@@ -1,9 +1,4 @@
 <view class="page">
-  <view class="hero compact-hero">
-    <view class="hero-title">收藏学校</view>
-    <view class="hero-subtitle">在本机收藏范围内智能搜索并打开学校详情</view>
-  </view>
-
   <view wx:if="{{invalidCount > 0}}" class="card warning-card">
     <view class="card-title">部分收藏学校数据已更新或移除</view>
     <view class="muted small">{{invalidCount}} 条无效收藏自动清理失败，不影响正常收藏。</view>

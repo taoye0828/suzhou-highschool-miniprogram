@@ -26,6 +26,10 @@
 }
 .planning-notice { margin-top: 30rpx; border-left: 8rpx solid #f59e0b; }
 .planning-notice-text { margin-top: 10rpx; }
+.overview-card { margin-bottom: 24rpx; border-left: 8rpx solid #0f766e; }
+.overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; margin: 20rpx 0; }
+.overview-value { margin-top: 6rpx; color: #0f766e; font-size: 36rpx; font-weight: 700; }
+.school-library-button { margin-top: 20rpx; }
 .check-item,
 .limit-item {
   display: flex;
