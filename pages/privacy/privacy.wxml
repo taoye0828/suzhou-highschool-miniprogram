@@ -1,7 +1,7 @@
 <view class="page">
   <view class="hero compact-hero">
     <view class="hero-title">隐私说明</view>
-    <view class="hero-subtitle">了解你的数据如何保存</view>
+    <view class="hero-subtitle">了解{{appName}}如何在本机保存你的数据</view>
   </view>
 
   <view class="card privacy-card" wx:for="{{sections}}" wx:key="title">

@@ -5,7 +5,7 @@ const ONBOARDING_STEPS = [
   {
     page: '/pages/home/home',
     selector: '.onboarding-home-overview',
-    title: '欢迎使用',
+    title: `欢迎使用${APP_CONFIG.name}`,
     description: '这里可以查看中考倒计时和你的规划概览。'
   },
   {

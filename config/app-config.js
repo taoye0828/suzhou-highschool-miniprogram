@@ -8,7 +8,7 @@ const TARGET_LEVELS = [
 ]
 
 const APP_CONFIG = {
-  name: '苏州高中目标查询助手',
+  name: '苏简记录',
   version: '1.8.0',
   releaseStatus: 'RC8 产品体验升级版',
   targetScore: {

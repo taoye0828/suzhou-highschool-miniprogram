@@ -115,8 +115,8 @@ if (appJson) {
     if (item.iconPath && !exists(item.iconPath)) fail(`tabBar iconPath 不存在：${item.iconPath}`)
     if (item.selectedIconPath && !exists(item.selectedIconPath)) fail(`tabBar selectedIconPath 不存在：${item.selectedIconPath}`)
   }
-  if (appJson.window && appJson.window.navigationBarTitleText !== '苏州高中目标查询助手') {
-    fail('app.json window 标题应为：苏州高中目标查询助手')
+  if (appJson.window && appJson.window.navigationBarTitleText !== '苏简记录') {
+    fail('app.json window 标题应为：苏简记录')
   }
 }
 

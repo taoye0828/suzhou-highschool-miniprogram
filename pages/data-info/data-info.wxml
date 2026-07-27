@@ -1,7 +1,7 @@
 <view class="page">
   <view class="hero compact-hero">
     <view class="hero-title">数据说明</view>
-    <view class="hero-subtitle">了解学校信息的来源和使用方式</view>
+    <view class="hero-subtitle">{{appName}}是一款面向苏州初中学生和家长的本地高中目标记录与历史数据查询工具。</view>
   </view>
 
   <view class="card version-card">
