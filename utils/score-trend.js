@@ -6,6 +6,13 @@ function roundAverage(value) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
 }
 
+function compareCreatedAt(leftValue, rightValue) {
+  const leftNumber = typeof leftValue === 'number' ? leftValue : Date.parse(leftValue)
+  const rightNumber = typeof rightValue === 'number' ? rightValue : Date.parse(rightValue)
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber - rightNumber
+  return String(leftValue || '').localeCompare(String(rightValue || ''))
+}
+
 function sortScoreRecords(records) {
   return (Array.isArray(records) ? records : [])
     .filter((record) => record && Number.isFinite(record.score) && typeof record.id === 'string')
@@ -15,7 +22,7 @@ function sortScoreRecords(records) {
         String(right.examDate || right.date || '')
       )
       if (dateCompare !== 0) return dateCompare
-      const createdCompare = String(left.createdAt || '').localeCompare(String(right.createdAt || ''))
+      const createdCompare = compareCreatedAt(left.createdAt, right.createdAt)
       return createdCompare !== 0 ? createdCompare : left.id.localeCompare(right.id)
     })
 }
@@ -24,7 +31,7 @@ function getVisibleTrendRecords(records, limit = DEFAULT_LIMIT) {
   const ordered = sortScoreRecords(records)
   return ordered.slice(Math.max(0, ordered.length - limit)).map((record, displayIndex) => ({
     ...record,
-    displayIndex
+    displayIndex: displayIndex + 1
   }))
 }
 
@@ -80,28 +87,42 @@ function calculateChartPoints(records, width, height, padding = 30) {
 
   const usableWidth = Math.max(1, safeWidth - padding * 2)
   const usableHeight = Math.max(1, safeHeight - padding * 2)
+  const spacing = items.length > 1 ? usableWidth / (items.length - 1) : usableWidth
+  const labelWidth = Math.max(20, Math.min(76, padding * 2, spacing * 0.92))
 
-  return items.map((record, index) => ({
-    id: record.id,
-    examName: record.examName,
-    examDate: record.examDate || record.date,
-    createdAt: record.createdAt,
-    score: record.score,
-    sourceIndex: record.sourceIndex,
-    displayIndex: index,
-    x: items.length === 1
+  return items.map((record, index) => {
+    const displayIndex = Number.isInteger(record.displayIndex) ? record.displayIndex : index + 1
+    const examDate = String(record.examDate || record.date || '')
+    const examName = typeof record.examName === 'string' && record.examName.trim()
+      ? record.examName.trim()
+      : `第 ${displayIndex} 次考试`
+    const x = items.length === 1
       ? safeWidth / 2
-      : padding + usableWidth * index / (items.length - 1),
-    y: padding + usableHeight * (EXAM_TOTAL_SCORE - record.score) / EXAM_TOTAL_SCORE
-  }))
+      : padding + usableWidth * index / (items.length - 1)
+    return {
+      id: record.id,
+      examName,
+      examDate,
+      displayDate: examDate.length >= 10 ? examDate.slice(5, 10) : examDate,
+      createdAt: record.createdAt,
+      score: record.score,
+      sourceIndex: record.sourceIndex,
+      displayIndex,
+      x,
+      y: padding + usableHeight * (EXAM_TOTAL_SCORE - record.score) / EXAM_TOTAL_SCORE,
+      leftPercent: x / safeWidth * 100,
+      labelWidth
+    }
+  })
 }
 
 function prepareScoreTrendData(records, { limit = DEFAULT_LIMIT, width = 640, height = 280, padding = 38 } = {}) {
-  const recentRecords = getVisibleTrendRecords(records, limit)
+  const visibleRecords = getVisibleTrendRecords(records, limit)
+  const visibleTrendPoints = calculateChartPoints(visibleRecords, width, height, padding)
   return {
-    recentRecords,
-    statistics: calculateScoreStatistics(recentRecords),
-    points: calculateChartPoints(recentRecords, width, height, padding)
+    visibleRecords,
+    statistics: calculateScoreStatistics(visibleRecords),
+    visibleTrendPoints
   }
 }
 

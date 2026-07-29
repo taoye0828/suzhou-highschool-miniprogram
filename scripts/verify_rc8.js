@@ -81,13 +81,17 @@ for (const count of [0, 1, 2, 3, 10, 11]) {
     )
   )
   const prepared = trend.prepareScoreTrendData(records, { width: 320, height: 280, padding: 38 })
-  assert.strictEqual(prepared.recentRecords.length, Math.min(count, 10))
-  assert.strictEqual(prepared.points.length, Math.min(count, 10))
+  assert.strictEqual(prepared.visibleRecords.length, Math.min(count, 10))
+  assert.strictEqual(prepared.visibleTrendPoints.length, Math.min(count, 10))
   assert.deepStrictEqual(
-    prepared.points.map((item) => item.id),
-    prepared.recentRecords.map((item) => item.id)
+    prepared.visibleTrendPoints.map((item) => item.id),
+    prepared.visibleRecords.map((item) => item.id)
   )
-  assert.ok(prepared.points.every((item) => item.x >= 38 && item.x <= 282 && item.y >= 38 && item.y <= 242))
+  assert.ok(
+    prepared.visibleTrendPoints.every(
+      (item) => item.x >= 38 && item.x <= 282 && item.y >= 38 && item.y <= 242
+    )
+  )
 }
 
 const duplicateScores = [
@@ -97,12 +101,12 @@ const duplicateScores = [
 ]
 const duplicatePrepared = trend.prepareScoreTrendData(duplicateScores, { width: 320, height: 280, padding: 38 })
 assert.deepStrictEqual(
-  duplicatePrepared.recentRecords.map((item) => item.id),
+  duplicatePrepared.visibleRecords.map((item) => item.id),
   ['first_740', 'second_740', 'third_650']
 )
-assert.strictEqual(duplicatePrepared.points.length, 3)
-assert.strictEqual(duplicatePrepared.points[0].y, duplicatePrepared.points[1].y)
-assert.ok(duplicatePrepared.points[2].y > duplicatePrepared.points[1].y)
+assert.strictEqual(duplicatePrepared.visibleTrendPoints.length, 3)
+assert.strictEqual(duplicatePrepared.visibleTrendPoints[0].y, duplicatePrepared.visibleTrendPoints[1].y)
+assert.ok(duplicatePrepared.visibleTrendPoints[2].y > duplicatePrepared.visibleTrendPoints[1].y)
 assert.strictEqual(duplicatePrepared.statistics.highest, 740)
 assert.strictEqual(duplicatePrepared.statistics.lowest, 650)
 assert.strictEqual(duplicatePrepared.statistics.average, 710)

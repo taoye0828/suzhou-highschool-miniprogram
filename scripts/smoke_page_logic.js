@@ -385,7 +385,7 @@ function testScoreTrendPage() {
   page.onScoreInput({ detail: { value: '650' } })
   page.saveRecord()
   assert.strictEqual(page.data.records.length, 1)
-  assert.strictEqual(page.data.chartRecords.length, 1)
+  assert.strictEqual(page.data.visibleRecords.length, 1)
   assert.strictEqual(page.data.highestText, '650 分')
   assert.strictEqual(page.data.changeValueText, '暂无变化')
   assert.ok(toastTitles.includes('成绩记录已保存在本机'))
@@ -407,7 +407,7 @@ function testScoreTrendPage() {
     page.saveRecord()
   }
   assert.strictEqual(page.data.records.length, 12)
-  assert.strictEqual(page.data.chartRecords.length, 10)
+  assert.strictEqual(page.data.visibleRecords.length, 10)
   assert.strictEqual(page.data.highestText, '655 分')
   assert.strictEqual(page.data.lowestText, '610 分')
   assert.strictEqual(page.data.averageText, '632.5 分')

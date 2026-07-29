@@ -35,22 +35,25 @@
     <view class="muted small">填写考试日期、名称和成绩后即可保存在本机。</view>
   </view>
 
-  <view wx:if="{{chartRecords.length > 0}}" class="card chart-card">
-    <view class="card-title">最近 {{chartRecords.length}} 次成绩折线</view>
+  <view wx:if="{{visibleRecords.length > 0}}" class="card chart-card">
+    <view class="card-title">最近 {{visibleRecords.length}} 次成绩折线</view>
     <view class="stats-grid">
       <view class="stat-item"><view class="muted small">最高分</view><view class="stat-value">{{highestText}}</view></view>
       <view class="stat-item"><view class="muted small">最低分</view><view class="stat-value">{{lowestText}}</view></view>
       <view class="stat-item"><view class="muted small">平均分</view><view class="stat-value">{{averageText}}</view></view>
     </view>
     <canvas id="scoreTrendChart" canvas-id="scoreTrendChart" class="trend-canvas" width="{{canvasWidth}}" height="280"></canvas>
-    <scroll-view class="chart-label-scroll" scroll-x="true" enhanced="true">
-      <view class="chart-label-row">
-        <view wx:for="{{chartRecords}}" wx:key="id" class="chart-label-item">
-          <view>{{item.shortName}}</view>
-          <view class="chart-date">{{item.shortDate}}</view>
-        </view>
+    <view class="chart-label-layer">
+      <view
+        wx:for="{{visibleTrendPoints}}"
+        wx:key="id"
+        class="chart-label-item"
+        style="left: {{item.leftPercent}}%; width: {{item.labelWidth}}px;"
+      >
+        <view class="chart-exam-name">{{item.examName}}</view>
+        <view class="chart-date">{{item.displayDate}}</view>
       </view>
-    </scroll-view>
+    </view>
     <view class="change-card">
       <view class="change-route">{{changeText}}</view>
       <view class="change-value {{changeClass}}">{{changeValueText}}</view>

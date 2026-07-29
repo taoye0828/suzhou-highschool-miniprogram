@@ -8,6 +8,11 @@ const {
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { summarizeScoreRecords, calculateChartPoints } = require('../../utils/score-trend')
 
+const CHART_HEIGHT = 280
+const CHART_PADDING = 38
+const MAX_LAYOUT_RETRIES = 3
+const LAYOUT_RETRY_DELAY_MS = 80
+
 let recordSequence = 0
 
 function twoDigits(value) {
@@ -25,14 +30,10 @@ function createRecordId() {
 
 function presentRecords(records) {
   const summary = summarizeScoreRecords(records)
-  const chartRecords = summary.recentRecords.map((record) => ({
-    ...record,
-    shortName: record.examName.length > 6 ? `${record.examName.slice(0, 6)}…` : record.examName,
-    shortDate: record.date.slice(5)
-  }))
   return {
     records: [...records].reverse(),
-    chartRecords,
+    visibleRecords: summary.recentRecords,
+    visibleTrendPoints: [],
     highestText: summary.highestText,
     lowestText: summary.lowestText,
     averageText: summary.averageText,
@@ -49,7 +50,8 @@ Page({
     scoreInput: '',
     inputError: '',
     records: [],
-    chartRecords: [],
+    visibleRecords: [],
+    visibleTrendPoints: [],
     highestText: '—',
     lowestText: '—',
     averageText: '—',
@@ -58,43 +60,107 @@ Page({
     changeClass: 'flat',
     maxRecords: APP_CONFIG.scoreRecord.maxRecords,
     scoreMax: EXAM_TOTAL_SCORE,
-    canvasWidth: 640
+    canvasWidth: null
   },
 
   onLoad() {
+    this._chartDisposed = false
+    this._chartDrawToken = 0
+    this._chartRetryTimer = null
     this.loadRecords()
+  },
+
+  onReady() {
+    this.scheduleTrendChartDraw()
   },
 
   onShow() {
     this.loadRecords()
   },
 
+  onResize() {
+    this.scheduleTrendChartDraw()
+  },
+
+  onUnload() {
+    this._chartDisposed = true
+    this._chartDrawToken = (this._chartDrawToken || 0) + 1
+    if (this._chartRetryTimer) clearTimeout(this._chartRetryTimer)
+    this._chartRetryTimer = null
+  },
+
   loadRecords() {
     const result = getScoreRecordsResult()
     notifyStorageReadResult(this, result)
-    this.setData(presentRecords(result.records), () => this.drawTrendChart())
+    this.setData(presentRecords(result.records), () => this.scheduleTrendChartDraw())
   },
 
-  drawTrendChart() {
-    if (typeof wx.createCanvasContext !== 'function') return
+  scheduleTrendChartDraw() {
+    if (this._chartDisposed) return
+    const token = (this._chartDrawToken || 0) + 1
+    this._chartDrawToken = token
+    if (this._chartRetryTimer) clearTimeout(this._chartRetryTimer)
+    this._chartRetryTimer = null
+    if (!this.data.visibleRecords.length) {
+      if (this.data.visibleTrendPoints.length) this.setData({ visibleTrendPoints: [] })
+      return
+    }
+    this.measureTrendChart(token, 0)
+  },
+
+  measureTrendChart(token, retryCount) {
+    if (
+      this._chartDisposed ||
+      token !== this._chartDrawToken ||
+      typeof wx.createSelectorQuery !== 'function'
+    ) return
     const query = wx.createSelectorQuery()
     query.select('#scoreTrendChart').boundingClientRect()
     query.exec((results) => {
-      const width = Math.max(280, Math.round(results && results[0] && results[0].width || 320))
-      const height = 280
+      if (this._chartDisposed || token !== this._chartDrawToken) return
+      const measuredWidth = Number(results && results[0] && results[0].width)
+      if (!Number.isFinite(measuredWidth) || measuredWidth <= 0) {
+        if (retryCount >= MAX_LAYOUT_RETRIES) {
+          this._chartRetryTimer = null
+          const previousWidth = Number(this.data.canvasWidth)
+          if (Number.isFinite(previousWidth) && previousWidth > 0) {
+            this.renderTrendCanvas([], previousWidth)
+          }
+          return
+        }
+        this._chartRetryTimer = setTimeout(
+          () => this.measureTrendChart(token, retryCount + 1),
+          LAYOUT_RETRY_DELAY_MS
+        )
+        return
+      }
+      const width = Math.round(measuredWidth)
       if (this.data.canvasWidth !== width) {
-        this.setData({ canvasWidth: width }, () => this.drawTrendChart())
+        this.setData({ canvasWidth: width }, () => this.measureTrendChart(token, retryCount))
         return
       }
-      const points = calculateChartPoints(this.data.chartRecords, width, height, 38)
-      const context = wx.createCanvasContext('scoreTrendChart', this)
-      context.clearRect(0, 0, width, height)
-      context.setFillStyle('#f8fbfa')
-      context.fillRect(0, 0, width, height)
-      if (!points.length) {
-        context.draw()
-        return
-      }
+      const points = calculateChartPoints(
+        this.data.visibleRecords,
+        width,
+        CHART_HEIGHT,
+        CHART_PADDING
+      )
+      this.setData({ visibleTrendPoints: points }, () => {
+        if (token === this._chartDrawToken) this.renderTrendCanvas(points, width)
+      })
+    })
+  },
+
+  renderTrendCanvas(points, width) {
+    if (this._chartDisposed || typeof wx.createCanvasContext !== 'function') return
+    const context = wx.createCanvasContext('scoreTrendChart', this)
+    context.clearRect(0, 0, width, CHART_HEIGHT)
+    context.setFillStyle('#f8fbfa')
+    context.fillRect(0, 0, width, CHART_HEIGHT)
+    if (!points.length) {
+      context.draw()
+      return
+    }
     context.setStrokeStyle('#dbe5e2')
     context.setLineWidth(1)
     for (const y of [38, 106, 174, 242]) {
@@ -128,7 +194,6 @@ Page({
       context.fillText(String(point.score), point.x, Math.max(22, point.y - 14))
     })
     context.draw()
-    })
   },
 
   onDateChange(event) {
@@ -172,7 +237,7 @@ Page({
       scoreInput: '',
       inputError: '',
       ...presentRecords(result.records)
-    }, () => this.drawTrendChart())
+    }, () => this.scheduleTrendChartDraw())
     wx.showToast({ title: '成绩记录已保存在本机', icon: 'success' })
   },
 
@@ -190,7 +255,7 @@ Page({
           wx.showToast({ title: result.message, icon: 'none' })
           return
         }
-        this.setData(presentRecords(result.records), () => this.drawTrendChart())
+        this.setData(presentRecords(result.records), () => this.scheduleTrendChartDraw())
         wx.showToast({ title: '成绩记录已删除', icon: 'success' })
       }
     })
@@ -210,7 +275,7 @@ Page({
           wx.showToast({ title: result.message, icon: 'none' })
           return
         }
-        this.setData(presentRecords([]), () => this.drawTrendChart())
+        this.setData(presentRecords([]), () => this.scheduleTrendChartDraw())
         wx.showToast({ title: '成绩记录已清空', icon: 'success' })
       }
     })

@@ -15,18 +15,32 @@
 .stat-item { padding: 18rpx 10rpx; background: #f1f8f6; border-radius: 14rpx; text-align: center; }
 .stat-value { margin-top: 6rpx; color: #0f766e; font-size: 28rpx; font-weight: 700; }
 .trend-canvas { width: 100%; height: 280rpx; margin-top: 22rpx; background: #f8fbfa; border-radius: 14rpx; }
-.chart-label-scroll { width: 100%; margin-top: 8rpx; }
-.chart-label-row { display: flex; min-width: 100%; }
+.chart-label-layer { position: relative; width: 100%; height: 92rpx; margin-top: 8rpx; }
 .chart-label-item {
-  flex: 0 0 128rpx;
-  overflow: hidden;
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
   color: #334155;
   font-size: 20rpx;
   text-align: center;
+}
+.chart-exam-name {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 26rpx;
   text-overflow: ellipsis;
+  word-break: break-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.chart-date {
+  overflow: hidden;
+  margin-top: 4rpx;
+  color: #94a3b8;
+  font-size: 19rpx;
+  text-overflow: clip;
   white-space: nowrap;
 }
-.chart-date { margin-top: 4rpx; color: #94a3b8; font-size: 19rpx; }
 .change-card { display: flex; justify-content: space-between; gap: 20rpx; margin-top: 22rpx; padding: 18rpx; background: #f8fafc; border-radius: 14rpx; }
 .change-route { color: #334155; font-weight: 650; }
 .change-value { flex-shrink: 0; font-weight: 700; }
