@@ -357,7 +357,7 @@
             wx:for="{{visibleTrendPoints}}"
             wx:key="id"
             class="chart-label-item"
-            style="left: {{item.leftPercent}}%; width: {{item.labelWidth}}px;"
+            style="{{item.labelStyle}}"
           >
             <view class="chart-exam-name">{{item.examName}}</view>
             <view class="chart-date">{{item.displayDate}}</view>

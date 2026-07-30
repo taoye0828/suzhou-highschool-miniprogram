@@ -759,7 +759,10 @@ Page({
         width,
         CHART_HEIGHT,
         CHART_PADDING
-      )
+      ).map((point) => ({
+        ...point,
+        labelStyle: `left: ${point.leftPercent}%; width: ${point.labelWidth}px;`
+      }))
       this.setData({ visibleTrendPoints: points }, () => {
         if (token === this._chartDrawToken) this.renderTrendCanvas(points, width)
       })
