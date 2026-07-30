@@ -1,12 +1,49 @@
 <view class="page">
-  <view class="section-title">我的工具</view>
-  <view class="card menu-card" bindtap="openFavorites"><view class="grow"><view class="card-title">我的收藏</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openSchoolCompare"><view class="grow"><view class="card-title">高中对比</view><view class="muted small menu-note">最多选择 3 所学校</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openScoreTrend"><view class="grow"><view class="card-title">成绩趋势</view></view><view class="list-arrow">›</view></view>
+  <view class="card profile-card onboarding-profile" bindtap="openProfiles">
+    <view class="row between">
+      <view class="grow">
+        <view class="muted small">当前档案</view>
+        <view class="card-title profile-name">{{activeProfile ? activeProfile.nickname : '默认档案'}}</view>
+        <view class="muted small">{{scoreRecordCount}} 次考试 · {{targetCount}} 所目标 · {{learningTargetCount}} 个阶段目标</view>
+      </view>
+      <view class="list-arrow">›</view>
+    </view>
+  </view>
+
+  <view class="section-title">我的内容</view>
+  <view class="card menu-card" bindtap="openFavorites">
+    <view class="grow"><view class="card-title">收藏汇总</view><view class="muted small menu-note">{{favoriteCount}} 所学校</view></view>
+    <view class="list-arrow">›</view>
+  </view>
+  <view class="card recent-card">
+    <view class="card-title">最近浏览</view>
+    <view wx:if="{{recentSchools.length === 0}}" class="muted small menu-note">还没有浏览记录</view>
+    <view
+      wx:for="{{recentSchools}}"
+      wx:key="id"
+      class="recent-item row between"
+      data-id="{{item.id}}"
+      bindtap="openRecentSchool"
+    >
+      <view class="grow">{{item.name}}</view>
+      <view class="list-arrow">›</view>
+    </view>
+  </view>
+
+  <view class="section-title">数据</view>
+  <view class="card menu-card" bindtap="openBackupRestore"><view class="grow"><view class="card-title">备份与恢复</view><view class="muted small menu-note">本地 JSON、校验、合并或覆盖</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu-card" bindtap="openDataManagement"><view class="grow"><view class="card-title">数据管理</view><view class="muted small menu-note">清除当前档案或全部本地数据</view></view><view class="list-arrow">›</view></view>
+
+  <view class="section-title">帮助</view>
+  <view class="card menu-card" bindtap="openHelp"><view class="grow"><view class="card-title">教程与常见问题</view><view class="muted small menu-note">完整教程和按功能重播</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openDataInfo"><view class="grow"><view class="card-title">数据说明</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openPrivacy"><view class="grow"><view class="card-title">隐私说明</view></view><view class="list-arrow">›</view></view>
 
   <view class="section-title">设置</view>
-  <view class="card menu-card" bindtap="openDataManagement"><view class="grow"><view class="card-title">数据管理</view><view class="muted small menu-note">管理本机保存的数据</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="replayOnboarding"><view class="grow"><view class="card-title">新手教程</view><view class="muted small menu-note">重新查看主要功能介绍</view></view><view class="list-arrow">›</view></view>
+  <picker range="{{examYears}}" value="{{examYearIndex}}" bindchange="onExamYearChange">
+    <view class="card setting-card row between">
+      <view><view class="card-title">默认目标年份</view><view class="muted small menu-note">用于倒计时、推荐和目标差距</view></view>
+      <view class="setting-value">{{examYear}} 年⌄</view>
+    </view>
+  </picker>
 </view>

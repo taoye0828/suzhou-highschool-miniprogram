@@ -1,4 +1,5 @@
 const { APP_CONFIG } = require('../config/app-config')
+const RC9_STORAGE = require('./rc9-storage')
 
 const KEYS = {
   favorites: 'mp1.favorite_school_ids',
@@ -427,3 +428,5 @@ module.exports = {
   clearLocalData,
   clearLocalDemoData
 }
+
+module.exports = RC9_STORAGE

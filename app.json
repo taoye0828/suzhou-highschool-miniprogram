@@ -12,6 +12,9 @@
     "pages/data-info/data-info",
     "pages/privacy/privacy",
     "pages/data-management/data-management",
+    "pages/profile-management/profile-management",
+    "pages/backup-restore/backup-restore",
+    "pages/help/help",
     "pages/profile/profile"
   ],
   "window": {
@@ -29,7 +32,7 @@
     "list": [
       { "pagePath": "pages/home/home", "text": "首页" },
       { "pagePath": "pages/schools/schools", "text": "学校库" },
-      { "pagePath": "pages/target-analysis/target-analysis", "text": "成绩分析" },
+      { "pagePath": "pages/score-trend/score-trend", "text": "成绩" },
       { "pagePath": "pages/targets/targets", "text": "目标规划" },
       { "pagePath": "pages/profile/profile", "text": "我的" }
     ]

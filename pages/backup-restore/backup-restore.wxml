@@ -1,0 +1,34 @@
+<view class="page">
+  <view class="card export-card onboarding-backup">
+    <view class="card-title">导出本地用户数据</view>
+    <view class="muted small">包含学生档案、成绩与复盘、收藏、目标学校、阶段目标、推荐设置、教程状态和存储版本；不包含正式学校或分数线数据。</view>
+    <view class="button-row">
+      <button class="button secondary grow" bindtap="previewExport">预览范围</button>
+      <button class="button grow" bindtap="exportBackup">生成 JSON 备份</button>
+    </view>
+    <view wx:if="{{exportPreview}}" class="preview-box">
+      <view>档案 {{exportPreview.profileCount}} 个 · 成绩 {{exportPreview.scoreCount}} 条</view>
+      <view>目标学校 {{exportPreview.targetCount}} 所 · 阶段目标 {{exportPreview.stageGoalCount}} 条</view>
+      <view class="muted small">校验摘要：{{exportPreview.checksum}}</view>
+    </view>
+    <view wx:if="{{exportPath}}" class="muted small path-text">本地路径：{{exportPath}}</view>
+  </view>
+
+  <view class="card import-card">
+    <view class="card-title">导入与恢复</view>
+    <view class="muted small">选择 JSON 后先校验格式、版本、分数、schoolId、重复 ID 和摘要，再决定合并或覆盖。校验失败不会修改现有数据。</view>
+    <button class="button secondary choose-button" bindtap="chooseImportFile">选择 JSON 备份</button>
+    <view wx:if="{{importErrors.length}}" class="error-box">
+      <view wx:for="{{importErrors}}" wx:key="*this">{{item}}</view>
+    </view>
+    <view wx:if="{{hasPendingImport}}" class="preview-box">
+      <view class="card-title">{{importFileName}}</view>
+      <view>档案 {{importPreview.profileCount}} 个 · 成绩 {{importPreview.scoreCount}} 条</view>
+      <view>目标学校 {{importPreview.targetCount}} 所 · 阶段目标 {{importPreview.stageGoalCount}} 条</view>
+      <view class="button-row">
+        <button class="button secondary grow" data-mode="merge" bindtap="confirmImport">合并</button>
+        <button class="button danger grow" data-mode="overwrite" bindtap="confirmImport">覆盖</button>
+      </view>
+    </view>
+  </view>
+</view>

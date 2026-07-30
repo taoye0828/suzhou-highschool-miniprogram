@@ -1,0 +1,6 @@
+.export-card, .import-card { margin-top: 24rpx; }
+.button-row { display: flex; gap: 14rpx; margin-top: 24rpx; }
+.preview-box { margin-top: 22rpx; padding: 20rpx; line-height: 1.7; background: #f1f8f6; border-radius: 14rpx; }
+.choose-button { margin-top: 24rpx; }
+.error-box { margin-top: 20rpx; padding: 20rpx; color: #b42318; background: #fff1f1; border-radius: 14rpx; line-height: 1.6; }
+.path-text { margin-top: 14rpx; word-break: break-all; }

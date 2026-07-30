@@ -1,0 +1,9 @@
+.tutorial-card { margin-top: 24rpx; }
+.full-button { margin-top: 24rpx; }
+.tutorial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14rpx; margin-top: 18rpx; }
+.tutorial-button { width: 100%; margin: 0; }
+.faq-card { margin-top: 16rpx; }
+.faq-answer { margin-top: 12rpx; line-height: 1.7; }
+@media (min-width: 700px) {
+  .tutorial-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

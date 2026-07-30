@@ -1,0 +1,22 @@
+<view class="page">
+  <view class="card tutorial-card">
+    <view class="card-title">教程</view>
+    <view class="muted small">教程只介绍操作，不会创建成绩、收藏或目标，也不会更改已有数据。</view>
+    <button class="button full-button" bindtap="replayFullTutorial">重播完整 7 步教程</button>
+    <view class="tutorial-grid">
+      <button
+        class="button secondary tutorial-button"
+        wx:for="{{tutorials}}"
+        wx:key="flow"
+        data-flow="{{item.flow}}"
+        bindtap="replayFeatureTutorial"
+      >{{item.label}}</button>
+    </view>
+  </view>
+
+  <view class="section-title">常见问题</view>
+  <view class="card faq-card" wx:for="{{faqs}}" wx:key="question">
+    <view class="card-title">{{item.question}}</view>
+    <view class="muted faq-answer">{{item.answer}}</view>
+  </view>
+</view>

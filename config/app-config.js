@@ -9,8 +9,8 @@ const TARGET_LEVELS = [
 
 const APP_CONFIG = {
   name: '苏程记录',
-  version: '1.8.0',
-  releaseStatus: 'RC8 产品体验升级版',
+  version: '1.9.0',
+  releaseStatus: 'RC9 双端功能融合升级版',
   targetScore: {
     min: 0,
     max: EXAM_TOTAL_SCORE,
@@ -21,7 +21,9 @@ const APP_CONFIG = {
   },
   scoreRecord: {
     maxRecords: 100,
-    examNameMaxLength: 40
+    examNameMaxLength: 40,
+    reviewMaxLength: 1000,
+    subjectNameMaxLength: 40
   },
   learningTarget: {
     maxRecords: 100,
@@ -29,7 +31,7 @@ const APP_CONFIG = {
     noteMaxLength: 200
   },
   onboarding: {
-    version: 1
+    version: 2
   },
   countdown: {
     defaultYear: DEFAULT_EXAM_YEAR,
@@ -39,7 +41,7 @@ const APP_CONFIG = {
     maxYear: 2100
   },
   scoreAnalysis: {
-    targetYears: [2026, 2027],
+    targetYears: [2025, 2026, 2027],
     levels: [
       {
         value: 'sprint',
@@ -97,7 +99,7 @@ const APP_CONFIG = {
     targetStorageHint: '目标学校和等级只保存在本机，可在我的页面清除。',
     schoolDetailNotice: '学校信息以公开来源为准，未核实字段不进入正式页面。',
     scoreSafetyNotice: '历史录取分数线仅供了解，不代表未来录取结果。本小程序不做录取预测，不提供志愿填报结论。',
-    planningDisclaimer: '以上分析基于已收录的历史公开数据和固定分差区间，仅作为高中目标参考，实际录取情况以当年招生政策和考试成绩为准。',
+    planningDisclaimer: '历史公开数据整理，仅供目标规划参考。',
     scoreAnalysisNotice: '每所学校使用不晚于目标年份的最新已收录分数线；同校同年多条记录取最高参考分。',
     dataInfoSections: [
       {
