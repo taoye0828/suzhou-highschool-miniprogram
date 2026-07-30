@@ -1,4 +1,4 @@
-const { replayOnboarding, tutorialSteps } = require('../../utils/onboarding')
+const { replayOnboarding, tutorialSteps, resetDynamicHelp } = require('../../utils/onboarding')
 
 const TUTORIALS = [
   { flow: 'home', label: '首页' },
@@ -45,6 +45,22 @@ Page({
       {
         question: '如何重新播放教程？',
         answer: '在本页选择完整教程或某个功能教程；教程不会创建或修改业务数据。'
+      },
+      {
+        question: '如何恢复本地数据？',
+        answer: '在“我的 → 备份与恢复”选择 JSON，校验通过后选择合并或覆盖；导入前会创建安全快照。'
+      },
+      {
+        question: '如何修复本地数据？',
+        answer: '进入“我的 → 数据管理 → 数据检查”先只读扫描，再确认是否修复可安全判断的项目。'
+      },
+      {
+        question: '为什么趋势需要至少两条记录？',
+        answer: '一条记录可以显示点位和摘要，但至少两条记录才能计算最近变化。'
+      },
+      {
+        question: '为什么不显示住宿未核实等状态？',
+        answer: '用户页面只展示已有可靠值，不显示内部核验状态；缺失字段会直接隐藏。'
       }
     ]
   },
@@ -68,5 +84,10 @@ Page({
     ]
     if (tabPages.includes(first.page)) wx.switchTab({ url: first.page })
     else wx.navigateTo({ url: first.page })
+  },
+
+  replayDynamicHelp() {
+    resetDynamicHelp()
+    wx.showToast({ title: '状态提示已重置', icon: 'success' })
   }
 })

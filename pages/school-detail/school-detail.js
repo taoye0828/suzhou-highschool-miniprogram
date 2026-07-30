@@ -6,6 +6,7 @@ const {
   getTargetDraftResult,
   getScoreRecordsResult,
   getExamYearResult,
+  getScenarioSettings,
   saveTargetRecord,
   addRecentViewedSchool,
   getComparisonSchoolIds,
@@ -26,13 +27,20 @@ const {
   selectGap,
   formatDifference
 } = require('../../utils/planning')
-const { admissionScores } = require('../../data/admission-scores')
+const {
+  ALL_ADMISSION_SCORES,
+  schoolScoreTrend
+} = require('../../utils/rc10-features')
 
-function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYear) {
+function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYear, scenarios) {
   if (!school) return null
   const current = selectCurrentScore(scoreRecords, draft)
-  const reference = selectReferenceForSchool(school.id, targetYear, admissionScores)
+  const reference = selectReferenceForSchool(school.id, targetYear, ALL_ADMISSION_SCORES)
   const gap = selectGap(current.score, reference)
+  const referenceScore = reference ? reference.minScore : null
+  const scenarioGap = (score) => Number.isInteger(score) && Number.isInteger(referenceScore)
+    ? formatDifference(score - referenceScore)
+    : '尚未设置'
   const level = APP_CONFIG.targetScore.levels.find(
     (item) => targetRecord && item.value === targetRecord.level
   )
@@ -41,6 +49,8 @@ function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYe
     referenceScoreText: reference ? `${reference.minScore} 分` : '暂未收录',
     referenceYearText: reference ? `${reference.year} 年` : '—',
     gapText: formatDifference(gap.difference),
+    stageGapText: scenarioGap(scenarios.stageTargetScore),
+    finalGapText: scenarioGap(scenarios.finalTargetScore),
     targetLevelText: level ? level.label : '未设置'
   }
 }
@@ -55,6 +65,7 @@ Page({
     targetLevels: APP_CONFIG.targetScore.levels,
     targetLevelIndex: APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target'),
     targetAnalysis: null,
+    scoreTrend: [],
     isCompared: false,
     mapKeyword: '',
     emptyScoreText: EMPTY_SCORE_TEXT,
@@ -79,6 +90,7 @@ Page({
     const scoreResult = getScoreRecordsResult()
     const draftResult = getTargetDraftResult()
     const yearResult = getExamYearResult()
+    const scenarioSettings = getScenarioSettings()
     const targetRecord = school
       ? targetResult.records.find((record) => record.schoolId === school.id)
       : null
@@ -104,9 +116,11 @@ Page({
         targetRecord,
         scoreResult.records,
         draftResult.draft,
-        yearResult.year
+        yearResult.year,
+        scenarioSettings
       ),
       scoreGroups: school ? groupScoresByYear(school.id) : [],
+      scoreTrend: school ? schoolScoreTrend(school.id) : [],
       mapKeyword: school ? mapSearchKeyword(school.name) : ''
     })
   },

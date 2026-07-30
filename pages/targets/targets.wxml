@@ -27,16 +27,80 @@
         placeholder="请输入 0 至 {{scoreMax}} 的整数"
         bindinput="onRecommendationScoreInput"
       />
+      <view class="two-column-fields">
+        <view>
+          <text class="field-label">下一阶段目标（可留空）</text>
+          <input
+            class="input"
+            type="number"
+            maxlength="3"
+            value="{{stageScenarioInput}}"
+            placeholder="0 至 {{scoreMax}}"
+            data-field="stageScenarioInput"
+            bindinput="onScenarioScoreInput"
+          />
+        </view>
+        <view>
+          <text class="field-label">中考目标（可留空）</text>
+          <input
+            class="input"
+            type="number"
+            maxlength="3"
+            value="{{finalScenarioInput}}"
+            placeholder="0 至 {{scoreMax}}"
+            data-field="finalScenarioInput"
+            bindinput="onScenarioScoreInput"
+          />
+        </view>
+      </view>
       <text class="field-label">目标考试年份</text>
       <picker range="{{targetYears}}" value="{{targetYearIndex}}" bindchange="onTargetYearChange">
         <view class="input picker-input">{{targetYears[targetYearIndex]}} 年⌄</view>
       </picker>
       <view wx:if="{{recommendationError}}" class="input-error">{{recommendationError}}</view>
+      <view wx:if="{{scenarioError}}" class="input-error">{{scenarioError}}</view>
       <view class="row action-row">
         <button class="button grow onboarding-analyze-button" bindtap="analyzeRecommendations">查看推荐</button>
+        <button class="button secondary grow" bindtap="analyzeScenarios">对比三个情景</button>
         <button class="button secondary grow" bindtap="toggleRecommendationSettings">
           {{recommendationSettingsOpen ? '收起设置' : '推荐设置'}}
         </button>
+      </view>
+    </view>
+
+    <view wx:if="{{scenarioCards.length}}" class="section-title">个人成绩情景规划</view>
+    <view
+      wx:for="{{scenarioCards}}"
+      wx:key="key"
+      wx:for-item="scenario"
+      class="card"
+    >
+      <view class="row between">
+        <view class="card-title">{{scenario.label}} · {{scenario.score}} 分</view>
+        <view class="muted small">
+          {{scenario.improvementFromCurrent > 0 ? '较当前 +' + scenario.improvementFromCurrent : scenario.improvementFromCurrent < 0 ? '较当前 ' + scenario.improvementFromCurrent : '当前基准'}}
+        </view>
+      </view>
+      <view class="muted small">冲刺 {{scenario.counts.sprint}} · 目标 {{scenario.counts.target}} · 保底 {{scenario.counts.safe}}</view>
+      <view
+        wx:for="{{scenario.results}}"
+        wx:key="schoolId"
+        wx:for-item="school"
+        class="preview-box"
+      >
+        <view class="row between">
+          <view>
+            <view class="card-title">{{school.schoolName}}</view>
+            <view class="muted small">{{school.level === 'sprint' ? '冲刺' : school.level === 'target' ? '目标' : '保底'}} · {{school.year}} 年参考 {{school.schoolScore}} 分</view>
+          </view>
+          <view>{{school.difference > 0 ? '+' : ''}}{{school.difference}} 分</view>
+        </view>
+        <view class="muted small">{{school.isTargetSchool ? '已选目标在本情景中为：' + (school.level === 'sprint' ? '冲刺' : school.level === 'target' ? '目标' : '保底') : '尚未加入目标'}}</view>
+        <view class="button-row">
+          <button class="button secondary grow" data-school-id="{{school.schoolId}}" bindtap="openSchool">详情</button>
+          <button class="button secondary grow" data-school-id="{{school.schoolId}}" bindtap="toggleScenarioFavorite">{{school.isFavorite ? '取消收藏' : '收藏'}}</button>
+          <button class="button grow" data-school-id="{{school.schoolId}}" data-scenario-key="{{scenario.key}}" bindtap="addScenarioTarget">{{school.isTargetSchool ? '更新目标等级' : '加入目标'}}</button>
+        </view>
       </view>
     </view>
 
@@ -298,6 +362,42 @@
   </block>
 
   <block wx:if="{{activeSegment === 'learning'}}">
+    <view wx:if="{{goalProgressSummary}}" class="card">
+      <view class="card-title">学习目标进度</view>
+      <view class="info-row"><text>本周任务</text><text>{{goalProgressSummary.thisWeek.length}} 条</text></view>
+      <view class="info-row"><text>已完成 / 未完成</text><text>{{goalProgressSummary.completedCount}} / {{goalProgressSummary.incompleteCount}}</text></view>
+      <view class="info-row"><text>即将到期 / 已暂停</text><text>{{goalProgressSummary.dueSoonCount}} / {{goalProgressSummary.pausedCount}}</text></view>
+      <view class="muted small">完成学习任务不会自动把阶段目标标记为完成；新成绩也不会改写目标分。</view>
+    </view>
+
+    <view class="row between section-row">
+      <view class="section-title">学习任务（{{learningTasks.length}}）</view>
+    </view>
+    <view wx:if="{{learningTasks.length === 0}}" class="card empty">
+      <view class="card-title">暂无学习任务</view>
+      <view class="muted small">可在成绩复盘中，从一条失分原因创建任务。</view>
+    </view>
+    <view class="card" wx:for="{{learningTasks}}" wx:key="id" wx:for-item="task">
+      <view class="row between">
+        <view>
+          <view class="card-title">{{task.title}}</view>
+          <view class="muted small">{{task.subjectName || '未指定学科'}} · 截止 {{task.dueDate || '未设置'}}</view>
+        </view>
+        <text class="status-badge status-{{task.status}}">{{task.status === 'not_started' ? '未开始' : task.status === 'in_progress' ? '进行中' : task.status === 'completed' ? '已完成' : '已暂停'}}</text>
+      </view>
+      <view class="muted small">每周 {{task.weeklyTarget || '—'}} 次{{task.sourceReasonType ? ' · 来源：' + task.sourceReasonType : ''}}</view>
+      <picker
+        range="{{statusOptions}}"
+        range-key="label"
+        value="{{task.status === 'not_started' ? 0 : task.status === 'in_progress' ? 1 : task.status === 'completed' ? 2 : 3}}"
+        data-id="{{task.id}}"
+        bindchange="onLearningTaskStatusChange"
+      >
+        <view class="input level-picker">更新任务状态⌄</view>
+      </picker>
+      <button class="button danger" data-id="{{task.id}}" bindtap="deleteLearningTask">删除任务</button>
+    </view>
+
     <view class="card learning-form-card">
       <view class="row between">
         <view class="card-title">{{learningDraft.id ? '编辑学习目标' : '新建学习目标'}}</view>

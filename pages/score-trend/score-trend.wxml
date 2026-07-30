@@ -544,6 +544,92 @@
       ></textarea>
       <view wx:if="{{reviewError}}" class="input-error">{{reviewError}}</view>
       <button class="button review-save-button" bindtap="saveReview">保存考试复盘</button>
+
+      <view class="subsection-title review-subject-title">按学科记录失分原因</view>
+      <view class="muted small">只记录你确认过的事实，不推断心理、能力或其他原因。</view>
+      <view class="two-column-fields">
+        <picker
+          range="{{lossSubjectOptions}}"
+          range-key="subjectName"
+          value="{{lossSubjectIndex}}"
+          bindchange="onLossSubjectChange"
+        >
+          <view class="input picker-input">{{lossSubjectOptions[lossSubjectIndex].subjectName}}⌄</view>
+        </picker>
+        <picker
+          range="{{lossReasonTypes}}"
+          value="{{lossReasonTypeIndex}}"
+          bindchange="onLossReasonTypeChange"
+        >
+          <view class="input picker-input">{{lossReasonTypes[lossReasonTypeIndex]}}⌄</view>
+        </picker>
+      </view>
+      <textarea
+        class="input textarea review-textarea"
+        maxlength="1000"
+        value="{{lossDetail}}"
+        placeholder="自定义说明（可选）"
+        data-field="lossDetail"
+        bindinput="onLossInput"
+      ></textarea>
+      <textarea
+        class="input textarea review-textarea"
+        maxlength="1000"
+        value="{{lossImprovementAction}}"
+        placeholder="你准备采取的改进措施（可选）"
+        data-field="lossImprovementAction"
+        bindinput="onLossInput"
+      ></textarea>
+      <button class="button secondary" bindtap="addLossReason">添加失分原因</button>
+
+      <view wx:if="{{savedLossReasons.length}}" class="subsection-title">本场失分原因</view>
+      <view wx:for="{{savedLossReasons}}" wx:key="id" class="preview-box">
+        <view><text class="tag">{{item.subjectName}}</text><text class="tag">{{item.reasonType}}</text></view>
+        <view wx:if="{{item.detail}}" class="small">{{item.detail}}</view>
+        <view wx:if="{{item.improvementAction}}" class="muted small">改进：{{item.improvementAction}}</view>
+        <view class="button-row">
+          <button class="button secondary grow" data-id="{{item.id}}" bindtap="createTaskFromLoss">创建学习任务</button>
+          <button class="button danger grow" data-id="{{item.id}}" bindtap="deleteLossReason">删除</button>
+        </view>
+      </view>
+
+      <view wx:if="{{savedLossReasons.length}}" class="subsection-title">创建任务设置</view>
+      <view wx:if="{{savedLossReasons.length}}" class="two-column-fields">
+        <view>
+          <text class="field-label">截止日期</text>
+          <picker mode="date" value="{{taskDueDate}}" bindchange="onTaskDueDateChange">
+            <view class="input picker-input">{{taskDueDate}}⌄</view>
+          </picker>
+        </view>
+        <view>
+          <text class="field-label">每周次数</text>
+          <input
+            class="input"
+            type="number"
+            value="{{taskWeeklyTarget}}"
+            data-field="taskWeeklyTarget"
+            bindinput="onLossInput"
+          />
+        </view>
+      </view>
+      <picker
+        wx:if="{{savedLossReasons.length}}"
+        range="{{taskStageGoals}}"
+        range-key="title"
+        value="{{taskStageGoalIndex}}"
+        bindchange="onTaskStageGoalChange"
+      >
+        <view class="input picker-input">{{taskStageGoals[taskStageGoalIndex].title}}⌄</view>
+      </picker>
+
+      <view wx:if="{{lossStatistics.total}}" class="subsection-title">失分原因统计</view>
+      <view wx:if="{{lossStatistics.total}}" class="muted small">
+        共 {{lossStatistics.total}} 条；当前最多：{{lossStatistics.mostFrequent.reasonType}}（{{lossStatistics.mostFrequent.count}} 次）
+      </view>
+      <view wx:for="{{lossStatistics.types}}" wx:key="reasonType" class="info-row">
+        <text>{{item.reasonType}}</text>
+        <text>{{item.count}} 次{{item.repeatedInRecentThree ? ' · 最近三次重复' : ''}}</text>
+      </view>
     </view>
   </block>
 

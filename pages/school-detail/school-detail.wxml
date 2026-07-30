@@ -30,6 +30,8 @@
       <view class="info-row"><text class="info-label">历史参考分</text><text class="info-value">{{targetAnalysis.referenceScoreText}}</text></view>
       <view class="info-row"><text class="info-label">参考年份</text><text class="info-value">{{targetAnalysis.referenceYearText}}</text></view>
       <view class="info-row"><text class="info-label">当前差距</text><text class="info-value">{{targetAnalysis.gapText}}</text></view>
+      <view class="info-row"><text class="info-label">阶段目标下分差</text><text class="info-value">{{targetAnalysis.stageGapText}}</text></view>
+      <view class="info-row"><text class="info-label">中考目标下分差</text><text class="info-value">{{targetAnalysis.finalGapText}}</text></view>
       <view class="info-row"><text class="info-label">目标等级</text><text class="info-value">{{targetAnalysis.targetLevelText}}</text></view>
     </view>
 
@@ -59,6 +61,13 @@
 
     <view class="card score-card">
       <view class="section-heading">历史录取分数线</view>
+      <view wx:if="{{scoreTrend.length}}" class="preview-box">
+        <view class="field-label">历年趋势（仅真实年份，不平均不同项目）</view>
+        <view wx:for="{{scoreTrend}}" wx:key="id" class="info-row">
+          <text>{{item.year}} · {{item.itemName}}</text>
+          <text>{{item.score}} 分</text>
+        </view>
+      </view>
       <view wx:if="{{scoreGroups.length === 0}}" class="notice">{{emptyScoreText}}</view>
       <view wx:for="{{scoreGroups}}" wx:key="year" class="score-year">
         <view class="score-year-title">{{item.year}} 年</view>

@@ -8,6 +8,7 @@ const {
   getTargetDraftResult,
   getScoreRecordsResult,
   getExamYearResult,
+  getScenarioSettings,
   ensureStorageMigrated,
   getComparisonSchoolIds,
   saveComparisonSchoolIds,
@@ -30,7 +31,7 @@ function targetLevelIndex(level) {
   return index < 0 ? LEVEL_OPTIONS.findIndex((item) => item.value === 'target') : index
 }
 
-function presentSchool(school) {
+function presentSchool(school, scenarios = {}) {
   const historyText = scoreSummaryForSchool(school.id)
   const referenceScore = Number.isInteger(school.referenceScore)
     ? school.referenceScore
@@ -50,11 +51,20 @@ function presentSchool(school) {
     referenceYearText: referenceYear === null ? '' : `${referenceYear} 年`,
     hasDifference: Number.isFinite(school.difference),
     differenceText: formatDifference(school.difference),
+    stageDifferenceText: Number.isInteger(scenarios.stageTargetScore) && referenceScore !== null
+      ? formatDifference(scenarios.stageTargetScore - referenceScore)
+      : '',
+    finalDifferenceText: Number.isInteger(scenarios.finalTargetScore) && referenceScore !== null
+      ? formatDifference(scenarios.finalTargetScore - referenceScore)
+      : '',
     hasScoreHistory: historyText !== '暂未收录',
     scoreSummary: historyText,
     targetLevelText,
     targetStatusText: school.isTargetSchool ? `${targetLevelText}目标` : '未加入目标',
     targetLevelIndex: targetLevelIndex(school.targetLevel)
+    ,
+    officialSource: school.sourceUrl || '',
+    userNotes: school.targetRecord && school.targetRecord.notes || ''
   }
 }
 
@@ -119,7 +129,7 @@ Page({
     const selectedSchools = selectedIds
       .map((id) => catalogById.get(id))
       .filter(Boolean)
-      .map(presentSchool)
+      .map((school) => presentSchool(school, getScenarioSettings()))
     const schoolSearchActive = Boolean(normalizeSearchText(this.data.schoolKeyword))
     const availableSchools = searchSchools({
       schools: schools.filter((school) => !selectedIds.includes(school.id)),
@@ -132,7 +142,7 @@ Page({
       schoolSearchActive,
       pickerIndex: 0,
       canAdd: selectedSchools.length < 3 && availableSchools.length > 0,
-      canCompare: selectedSchools.length >= 1,
+      canCompare: selectedSchools.length >= 2,
       currentScoreText: current.score === null ? '尚未记录成绩' : `当前成绩 ${current.score} 分`
     })
   },
@@ -154,6 +164,19 @@ Page({
   removeSchool(event) {
     const id = event.currentTarget.dataset.id
     this.saveSelection(this.data.selectedIds.filter((item) => item !== id))
+  },
+
+  moveSchool(event) {
+    const id = event.currentTarget.dataset.id
+    const direction = Number(event.currentTarget.dataset.direction)
+    const index = this.data.selectedIds.indexOf(id)
+    const nextIndex = index + direction
+    if (index < 0 || nextIndex < 0 || nextIndex >= this.data.selectedIds.length) return
+    const ids = this.data.selectedIds.slice()
+    const temporary = ids[index]
+    ids[index] = ids[nextIndex]
+    ids[nextIndex] = temporary
+    this.saveSelection(ids)
   },
 
   clearSelection() {

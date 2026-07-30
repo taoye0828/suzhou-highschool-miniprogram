@@ -8,8 +8,18 @@ const {
   getSubjectConfigs,
   saveSubjectConfigs,
   getActiveProfile,
-  getDataRevision
+  getDataRevision,
+  getScoreReviews,
+  saveScoreReview,
+  getScoreLossReasons,
+  saveScoreLossReason,
+  deleteScoreLossReason,
+  getLearningTargetRecords,
+  saveLearningTask,
+  recordRecentHistory
 } = require('../../utils/rc9-storage')
+const { LOSS_REASON_TYPES } = require('../../utils/rc9-models')
+const { lossReasonStatistics } = require('../../utils/rc10-features')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 const {
@@ -32,6 +42,7 @@ const SCORE_SEGMENTS = ['records', 'trend', 'review']
 
 let recordSequence = 0
 let subjectSequence = 0
+let lossReasonSequence = 0
 
 function twoDigits(value) {
   return String(value).padStart(2, '0')
@@ -49,6 +60,15 @@ function createRecordId() {
 function createSubjectId() {
   subjectSequence = (subjectSequence + 1) % 1000000
   return `subject_${Date.now()}_${subjectSequence}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function createLossReasonId() {
+  lossReasonSequence = (lossReasonSequence + 1) % 1000000
+  return `loss_${Date.now()}_${lossReasonSequence}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function dateAfter(days) {
+  return localDateLabel(new Date(Date.now() + days * 86400000))
 }
 
 function validDateLabel(value) {
@@ -518,6 +538,18 @@ Page({
     reviewDraft: emptyReviewDraft(),
     reviewSubjectScores: [],
     reviewError: '',
+    lossReasonTypes: LOSS_REASON_TYPES,
+    lossReasonTypeIndex: 0,
+    lossSubjectOptions: [{ subjectId: 'overall', subjectName: '总分' }],
+    lossSubjectIndex: 0,
+    lossDetail: '',
+    lossImprovementAction: '',
+    savedLossReasons: [],
+    lossStatistics: { total: 0, types: [], recent: [], mostFrequent: null, reducedTypes: [] },
+    taskDueDate: dateAfter(14),
+    taskWeeklyTarget: '1',
+    taskStageGoals: [{ id: '', title: '暂不关联阶段目标' }],
+    taskStageGoalIndex: 0,
     onboarding: { visible: false, step: null }
   },
 
@@ -582,6 +614,7 @@ Page({
     const segment = event.currentTarget.dataset.segment
     if (!SCORE_SEGMENTS.includes(segment) || segment === this.data.activeSegment) return
     this.rememberSegment(segment)
+    recordRecentHistory('scoreSegments', { id: segment, segment })
     this.setData({ activeSegment: segment }, () => {
       if (segment === 'trend') this.scheduleTrendChartDraw()
     })
@@ -615,6 +648,10 @@ Page({
     const subjectConfigs = getSubjectConfigs()
     const activeProfile = getActiveProfile()
     const activeProfileId = activeProfile && activeProfile.id || ''
+    const allLossReasons = getScoreLossReasons()
+    const selectedReviewRecordId = options.selectedReviewRecordId === undefined
+      ? this.data.selectedReviewRecordId
+      : options.selectedReviewRecordId
     const profileChanged = Boolean(
       this.data.activeProfileId &&
       activeProfileId &&
@@ -633,16 +670,33 @@ Page({
       expandedRecordId: this.data.expandedRecordId,
       subjectConfigs,
       selectedSubjectId: this.data.selectedSubjectId,
-      selectedReviewRecordId: options.selectedReviewRecordId === undefined
-        ? this.data.selectedReviewRecordId
-        : options.selectedReviewRecordId
+      selectedReviewRecordId
     })
+    const effectiveReviewRecordId = presentation.selectedReviewRecordId
+    const taskStageGoals = [
+      { id: '', title: '暂不关联阶段目标' },
+      ...getLearningTargetRecords().map((item) => ({ id: item.id, title: item.title }))
+    ]
+    const lossSubjectOptions = [
+      { subjectId: 'overall', subjectName: '总分' },
+      ...presentation.reviewSubjectScores.map((item) => ({
+        subjectId: item.subjectId,
+        subjectName: item.subjectName
+      }))
+    ]
     const nextData = {
       ...presentation,
       subjectConfigs,
       activeProfileId,
       activeProfileName: activeProfile && activeProfile.nickname || '默认档案',
       dataRevision: getDataRevision()
+      ,
+      savedLossReasons: allLossReasons.filter((item) => item.examRecordId === effectiveReviewRecordId),
+      lossStatistics: lossReasonStatistics(allLossReasons, result.records),
+      lossSubjectOptions,
+      lossSubjectIndex: 0,
+      taskStageGoals,
+      taskStageGoalIndex: Math.min(this.data.taskStageGoalIndex, taskStageGoals.length - 1)
     }
     if (shouldResetRecordForm) {
       Object.assign(nextData, emptyRecordForm(subjectConfigs))
@@ -1244,11 +1298,24 @@ Page({
     const selectedReviewIndex = Number(event.detail.value)
     const selected = this.data.reviewOptions[selectedReviewIndex]
     if (!selected) return
-    this.setData(reviewState(
+    const state = reviewState(
       this.data.records,
       this.data.subjectConfigs,
       selected.id
-    ))
+    )
+    const lossSubjectOptions = [
+      { subjectId: 'overall', subjectName: '总分' },
+      ...state.reviewSubjectScores.map((item) => ({
+        subjectId: item.subjectId,
+        subjectName: item.subjectName
+      }))
+    ]
+    this.setData({
+      ...state,
+      lossSubjectOptions,
+      lossSubjectIndex: 0,
+      savedLossReasons: getScoreLossReasons().filter((item) => item.examRecordId === selected.id)
+    })
   },
 
   onReviewInput(event) {
@@ -1312,7 +1379,120 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
+    const reviewResult = saveScoreReview({
+      id: `review_${record.id}`,
+      examRecordId: record.id,
+      summary: values.lossNotes,
+      improvementNotes: values.improvementNotes,
+      nextActions: values.nextActions,
+      createdAt: record.createdAt,
+      updatedAt: new Date().toISOString()
+    })
+    if (!reviewResult.ok) {
+      wx.showToast({ title: reviewResult.message, icon: 'none' })
+      return
+    }
     this.loadRecords({ selectedReviewRecordId: record.id })
     wx.showToast({ title: '考试复盘已保存', icon: 'success' })
+  },
+
+  onLossReasonTypeChange(event) {
+    this.setData({ lossReasonTypeIndex: Number(event.detail.value) })
+  },
+
+  onLossSubjectChange(event) {
+    this.setData({ lossSubjectIndex: Number(event.detail.value) })
+  },
+
+  onLossInput(event) {
+    const field = event.currentTarget.dataset.field
+    if (!['lossDetail', 'lossImprovementAction', 'taskWeeklyTarget'].includes(field)) return
+    this.setData({ [field]: event.detail.value })
+  },
+
+  onTaskDueDateChange(event) {
+    this.setData({ taskDueDate: event.detail.value })
+  },
+
+  onTaskStageGoalChange(event) {
+    this.setData({ taskStageGoalIndex: Number(event.detail.value) })
+  },
+
+  addLossReason() {
+    const record = this.data.records.find((item) => item.id === this.data.selectedReviewRecordId)
+    const subject = this.data.lossSubjectOptions[this.data.lossSubjectIndex]
+    const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
+    if (!record || !subject || !reasonType) return
+    const result = saveScoreLossReason({
+      id: createLossReasonId(),
+      examRecordId: record.id,
+      subjectId: subject.subjectId,
+      subjectName: subject.subjectName,
+      reasonType,
+      detail: this.data.lossDetail,
+      improvementAction: this.data.lossImprovementAction,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.setData({ lossDetail: '', lossImprovementAction: '' })
+    this.loadRecords({ selectedReviewRecordId: record.id })
+  },
+
+  deleteLossReason(event) {
+    const result = deleteScoreLossReason(event.currentTarget.dataset.id)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.loadRecords({ selectedReviewRecordId: this.data.selectedReviewRecordId })
+  },
+
+  createTaskFromLoss(event) {
+    const reason = this.data.savedLossReasons.find((item) => item.id === event.currentTarget.dataset.id)
+    const weeklyTarget = Number(this.data.taskWeeklyTarget)
+    if (!reason || !Number.isInteger(weeklyTarget) || weeklyTarget < 1 || weeklyTarget > 1000) {
+      wx.showToast({ title: '请填写 1—1000 的每周次数', icon: 'none' })
+      return
+    }
+    const stageGoal = this.data.taskStageGoals[this.data.taskStageGoalIndex] || this.data.taskStageGoals[0]
+    const defaultTitle = reason.reasonType === '单词或语法'
+      ? `每周完成${reason.subjectName || '英语'}语法专项练习并订正`
+      : `每周完成${reason.subjectName || '该学科'}${reason.reasonType}专项练习并订正`
+    wx.showModal({
+      title: '创建学习任务',
+      content: defaultTitle,
+      editable: true,
+      confirmText: '保存任务',
+      success: (modal) => {
+        if (!modal.confirm) return
+        const result = saveLearningTask({
+          id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          title: String(modal.content || defaultTitle).trim(),
+          subjectId: reason.subjectId,
+          subjectName: reason.subjectName,
+          sourceExamId: reason.examRecordId,
+          sourceReviewId: `review_${reason.examRecordId}`,
+          sourceLossReasonId: reason.id,
+          sourceReasonType: reason.reasonType,
+          stageGoalId: stageGoal.id,
+          startDate: localDateLabel(),
+          dueDate: this.data.taskDueDate,
+          weeklyTarget,
+          status: 'not_started',
+          notes: reason.improvementAction,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        if (!result.ok) {
+          wx.showToast({ title: result.message, icon: 'none' })
+          return
+        }
+        wx.showToast({ title: '学习任务已创建', icon: 'success' })
+      }
+    })
   }
 })

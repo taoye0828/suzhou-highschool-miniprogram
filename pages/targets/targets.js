@@ -6,8 +6,15 @@ const {
   getExamYearResult,
   getLearningTargetRecordsResult,
   getFavoriteIdsResult,
+  setFavorite,
   getPrimaryTargetSchoolId,
   getRecommendationSettings,
+  getScenarioSettings,
+  saveScenarioSettings,
+  getLearningTasks,
+  saveLearningTask,
+  deleteLearningTask: removeLearningTask,
+  recordRecentHistory,
   getSubjectConfigs,
   saveTargetRecord,
   deleteTargetRecord,
@@ -32,6 +39,7 @@ const {
   formatDifference
 } = require('../../utils/planning')
 const { analyzeScore } = require('../../utils/score-analysis')
+const { scenarioResults, goalProgress } = require('../../utils/rc10-features')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { schools } = require('../../data/schools')
 const { admissionScores } = require('../../data/admission-scores')
@@ -316,6 +324,10 @@ Page({
     targetYearIndex: 0,
     scoreMax: EXAM_TOTAL_SCORE,
     recommendationScoreInput: '',
+    stageScenarioInput: '',
+    finalScenarioInput: '',
+    scenarioCards: [],
+    scenarioError: '',
     recommendationScoreSource: '',
     recommendationError: '',
     recommendationHasRun: false,
@@ -335,6 +347,8 @@ Page({
     currentScoreText: '尚未记录',
     learningDraft: emptyLearningDraft(),
     learningRecords: [],
+    learningTasks: [],
+    goalProgressSummary: null,
     learningError: '',
     statusOptions: STATUS_OPTIONS,
     onboarding: { visible: false, step: null }
@@ -365,6 +379,7 @@ Page({
     const yearResult = getExamYearResult()
     const learningResult = getLearningTargetRecordsResult()
     const favoriteResult = getFavoriteIdsResult()
+    const learningTasks = getLearningTasks()
     const failedResult = [
       targetResult,
       scoreResult,
@@ -378,6 +393,7 @@ Page({
     const current = selectCurrentScore(scoreResult.records, draftResult.draft)
     const primarySchoolId = getPrimaryTargetSchoolId()
     const settings = getRecommendationSettings()
+    const scenarioSettings = getScenarioSettings()
     const learningDraft = normalizeLearningDraft(
       draftResult.draft.learningGoalDraft ||
       (draftResult.draft.stage || draftResult.draft.targetScore ? draftResult.draft : {})
@@ -396,13 +412,25 @@ Page({
     this._scoreRecords = scoreResult.records
     this._learningRecords = learningResult.records
     this._favoriteIds = favoriteResult.ids
+    this._learningTasks = learningTasks
     this._subjectConfigs = getSubjectConfigs()
     this._targetYear = yearResult.year
 
     this.setData({
       targetYearIndex,
-      recommendationScoreInput: current.score === null ? '' : String(current.score),
-      recommendationScoreSource: current.source === 'record'
+      recommendationScoreInput: scenarioSettings.currentScore === null
+        ? (current.score === null ? '' : String(current.score))
+        : String(scenarioSettings.currentScore),
+      stageScenarioInput: scenarioSettings.stageTargetScore === null
+        ? ''
+        : String(scenarioSettings.stageTargetScore),
+      finalScenarioInput: scenarioSettings.finalTargetScore === null
+        ? ''
+        : String(scenarioSettings.finalTargetScore),
+      recommendationScoreSource: scenarioSettings.currentScore !== null &&
+        scenarioSettings.currentScore !== current.score
+        ? '本次分析使用手动覆盖值，不修改真实成绩'
+        : current.source === 'record'
         ? `来自最近一次考试：${current.record.examName}`
         : current.source === 'draft'
           ? '来自上次输入草稿'
@@ -433,14 +461,24 @@ Page({
       learningRecords: learningResult.records.map((record) =>
         presentLearningTarget(record, current.score, scoreResult.records)
       ),
+      learningTasks,
+      goalProgressSummary: goalProgress(
+        learningResult.records,
+        learningTasks,
+        scoreResult.records
+      ),
       learningError: ''
-    }, () => this.analyzeRecommendations({ silent: true }))
+    }, () => {
+      this.analyzeRecommendations({ silent: true })
+      this.analyzeScenarios({ silent: true })
+    })
   },
 
   selectSegment(event) {
     const segment = event.currentTarget.dataset.segment
     if (!['recommendation', 'schools', 'learning'].includes(segment)) return
     this.setData({ activeSegment: segment })
+    recordRecentHistory('targetSegments', { id: segment, segment })
   },
 
   onRecommendationScoreInput(event) {
@@ -449,6 +487,48 @@ Page({
     const existing = getTargetDraftResult().draft
     const result = saveTargetDraft({ ...existing, currentScore: recommendationScoreInput })
     if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
+  },
+
+  onScenarioScoreInput(event) {
+    const field = event.currentTarget.dataset.field
+    if (!['stageScenarioInput', 'finalScenarioInput'].includes(field)) return
+    this.setData({ [field]: event.detail.value, scenarioError: '' })
+  },
+
+  analyzeScenarios(options = {}) {
+    const current = validScoreInput(this.data.recommendationScoreInput)
+    const stage = validScoreInput(this.data.stageScenarioInput, { optional: true })
+    const finalTarget = validScoreInput(this.data.finalScenarioInput, { optional: true })
+    if (!current.ok || !stage.ok || !finalTarget.ok) {
+      if (!options.silent) this.setData({ scenarioError: `情景成绩必须是 0 至 ${EXAM_TOTAL_SCORE} 的整数，可留空。` })
+      return
+    }
+    const settings = {
+      currentScore: current.value,
+      stageTargetScore: stage.value,
+      finalTargetScore: finalTarget.value,
+      targetYear: this._targetYear,
+      districts: this.data.recommendationSettings.districts,
+      schoolTypes: this.data.recommendationSettings.schoolTypes,
+      referenceYears: this.data.recommendationSettings.referenceYears
+    }
+    const saved = saveScenarioSettings(settings)
+    if (!saved.ok) {
+      if (!options.silent) this.setData({ scenarioError: saved.message })
+      return
+    }
+    try {
+      this.setData({
+        scenarioCards: scenarioResults(settings, {
+          targetRecords: this._targetRecords,
+          favoriteIds: this._favoriteIds,
+          limitPerLevel: this.data.recommendationSettings.limitPerLevel
+        }),
+        scenarioError: ''
+      })
+    } catch (error) {
+      if (!options.silent) this.setData({ scenarioError: error.message })
+    }
   },
 
   onTargetYearChange(event) {
@@ -658,6 +738,42 @@ Page({
       title: item.isTargetSchool ? '目标等级已更新' : '已加入目标',
       icon: 'success'
     })
+    this.loadAll()
+  },
+
+  addScenarioTarget(event) {
+    const schoolId = event.currentTarget.dataset.schoolId
+    const scenarioKey = event.currentTarget.dataset.scenarioKey
+    const item = this.data.scenarioCards
+      .filter((scenario) => scenario.key === scenarioKey)
+      .flatMap((scenario) => scenario.results)
+      .find((candidate) => candidate.schoolId === schoolId)
+    if (!item) return
+    const result = saveTargetRecord({
+      id: `target_${item.schoolId}`,
+      schoolId: item.schoolId,
+      schoolName: item.schoolName,
+      level: item.level,
+      referenceScore: item.schoolScore,
+      referenceYear: item.year,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.loadAll()
+  },
+
+  toggleScenarioFavorite(event) {
+    const schoolId = event.currentTarget.dataset.schoolId
+    const nextValue = !this._favoriteIds.includes(schoolId)
+    const result = setFavorite(schoolId, nextValue)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
     this.loadAll()
   },
 
@@ -990,6 +1106,29 @@ Page({
         this.loadAll()
       }
     })
+  },
+
+  onLearningTaskStatusChange(event) {
+    const task = (this._learningTasks || []).find((item) => item.id === event.currentTarget.dataset.id)
+    const option = STATUS_OPTIONS[Number(event.detail.value)]
+    if (!task || !option) return
+    const result = saveLearningTask({ ...task, status: option.value, updatedAt: new Date().toISOString() }, {
+      allowDuplicateSource: true
+    })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.loadAll()
+  },
+
+  deleteLearningTask(event) {
+    const result = removeLearningTask(event.currentTarget.dataset.id)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.loadAll()
   },
 
   syncOnboarding() {

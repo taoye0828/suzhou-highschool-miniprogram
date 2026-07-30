@@ -10,6 +10,14 @@
     </view>
   </view>
 
+  <view wx:if="{{dynamicHelp}}" class="card">
+    <view class="row between">
+      <view class="card-title">当前步骤提示</view>
+      <button class="text-button" bindtap="dismissDynamicHelp">关闭</button>
+    </view>
+    <view class="muted small">{{dynamicHelp.message}}</view>
+  </view>
+
   <view class="section-title">我的内容</view>
   <view class="card menu-card" bindtap="openFavorites">
     <view class="grow"><view class="card-title">收藏汇总</view><view class="muted small menu-note">{{favoriteCount}} 所学校</view></view>

@@ -7,6 +7,27 @@
     <view class="info-row"><text class="info-label">目标学校</text><text class="info-value">{{targetCount}} 所</text></view>
     <view class="info-row"><text class="info-label">阶段目标</text><text class="info-value">{{learningTargetCount}} 条</text></view>
     <view class="info-row"><text class="info-label">成绩记录</text><text class="info-value">{{scoreCount}} 条</text></view>
+    <view class="info-row"><text class="info-label">考试复盘 / 失分原因</text><text class="info-value">{{reviewCount}} / {{lossReasonCount}} 条</text></view>
+    <view class="info-row"><text class="info-label">学习任务</text><text class="info-value">{{learningTaskCount}} 条</text></view>
+    <view class="info-row"><text class="info-label">最近操作</text><text class="info-value">{{recentCount}} 条</text></view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">数据检查</view>
+    <view class="muted small">只检查用户本地数据，不读取或修改正式学校与分数线文件。</view>
+    <button class="button secondary" bindtap="runDataCheck">只读扫描</button>
+    <view wx:if="{{healthReport}}" class="preview-box">
+      <view>共 {{healthReport.total}} 项 · 可安全修复 {{healthReport.autoFixableCount}} 项 · 需人工处理 {{healthReport.manualCount}} 项</view>
+      <view wx:for="{{healthReport.issues}}" wx:key="index" class="muted small">{{item.label}}：{{item.detail}}</view>
+      <button wx:if="{{healthReport.autoFixableCount}}" class="button" bindtap="repairSafeData">创建快照并修复安全项</button>
+      <button wx:if="{{repairResult}}" class="button secondary" bindtap="restoreBeforeRepair">恢复修复前快照</button>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">最近浏览与操作</view>
+    <view class="muted small">仅用于快速返回，不记录复盘正文或备注全文，也不会上传。</view>
+    <button class="button secondary" bindtap="clearRecentOperations">单独清除最近操作</button>
   </view>
   <view class="card management-card">
     <view class="card-title">清除当前档案</view>

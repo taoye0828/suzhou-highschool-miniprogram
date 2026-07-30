@@ -6,8 +6,12 @@ const {
   getExamYearResult,
   getActiveProfile,
   getRecentViewedSchoolIds,
+  getLearningTasks,
+  getProfiles,
   saveExamYear
 } = require('../../utils/storage')
+const { scanLocalData } = require('../../utils/data-health')
+const { dynamicHelpForContext, dismissDynamicHelp } = require('../../utils/onboarding')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { APP_CONFIG } = require('../../config/app-config')
 const { examYearOptions } = require('../../utils/countdown')
@@ -23,7 +27,8 @@ Page({
     examYear: APP_CONFIG.countdown.defaultYear,
     examYears: [],
     examYearIndex: 0,
-    recentSchools: []
+    recentSchools: [],
+    dynamicHelp: null
   },
 
   onShow() { this.refreshSummary() },
@@ -44,6 +49,8 @@ Page({
     notifyStorageReadResult(this, firstFailure || { ok: true })
     const examYears = examYearOptions(examYearResult.year)
     const recentIds = getRecentViewedSchoolIds()
+    const learningTaskCount = getLearningTasks().length
+    const health = scanLocalData()
     this.setData({
       activeProfile: getActiveProfile(),
       favoriteCount: favoriteResult.ids.length,
@@ -56,7 +63,18 @@ Page({
       recentSchools: recentIds
         .map((id) => schools.find((school) => school.id === id))
         .filter(Boolean)
-        .slice(0, 5)
+        .slice(0, 5),
+      dynamicHelp: dynamicHelpForContext({
+        scoreCount: scoreResult.records.length,
+        targetCount: targetResult.records.length,
+        stageGoalCount: stageResult.records.length,
+        learningTaskCount,
+        profileCount: getProfiles().length,
+        hasUsedMultipleProfiles: getProfiles().length <= 1,
+        hasBackup: false,
+        healthIssueCount: health.ok ? health.total : 0,
+        inCompareMode: false
+      })
     })
   },
 
@@ -72,6 +90,12 @@ Page({
     wx.navigateTo({
       url: `/pages/school-detail/school-detail?id=${event.currentTarget.dataset.id}`
     })
+  },
+
+  dismissDynamicHelp() {
+    if (!this.data.dynamicHelp) return
+    dismissDynamicHelp(this.data.dynamicHelp.id)
+    this.setData({ dynamicHelp: null })
   },
 
   onExamYearChange(event) {

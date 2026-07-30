@@ -21,14 +21,15 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
-    const profiles = result.backup.payload.profiles
-    const profileData = result.backup.payload.profileData
+    const profiles = result.backup.profiles
+    const profileData = result.backup.profileData
     this.setData({
       exportPreview: {
         profileCount: profiles.length,
         scoreCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].scoreRecords.length, 0),
         targetCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].targetRecords.length, 0),
         stageGoalCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].stageGoals.length, 0),
+        taskCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].learningTasks.length, 0),
         checksum: result.backup.checksum.value
       }
     })

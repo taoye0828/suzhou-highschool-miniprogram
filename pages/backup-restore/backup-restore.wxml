@@ -9,6 +9,7 @@
     <view wx:if="{{exportPreview}}" class="preview-box">
       <view>档案 {{exportPreview.profileCount}} 个 · 成绩 {{exportPreview.scoreCount}} 条</view>
       <view>目标学校 {{exportPreview.targetCount}} 所 · 阶段目标 {{exportPreview.stageGoalCount}} 条</view>
+      <view>学习任务 {{exportPreview.taskCount}} 条</view>
       <view class="muted small">校验摘要：{{exportPreview.checksum}}</view>
     </view>
     <view wx:if="{{exportPath}}" class="muted small path-text">本地路径：{{exportPath}}</view>
@@ -25,6 +26,7 @@
       <view class="card-title">{{importFileName}}</view>
       <view>档案 {{importPreview.profileCount}} 个 · 成绩 {{importPreview.scoreCount}} 条</view>
       <view>目标学校 {{importPreview.targetCount}} 所 · 阶段目标 {{importPreview.stageGoalCount}} 条</view>
+      <view>学习任务 {{importPreview.taskCount}} 条</view>
       <view class="button-row">
         <button class="button secondary grow" data-mode="merge" bindtap="confirmImport">合并</button>
         <button class="button danger grow" data-mode="overwrite" bindtap="confirmImport">覆盖</button>

@@ -2,12 +2,22 @@ const {
   getFavoriteIdsResult,
   getTargetRecordsResult,
   getLearningTargetRecordsResult,
+  getLearningTasks,
+  getScoreReviews,
+  getScoreLossReasons,
   getScoreRecordsResult,
+  getRecentHistory,
+  clearRecentHistory,
   getActiveProfile,
   getProfiles,
   clearCurrentProfileData,
   clearLocalData
 } = require('../../utils/storage')
+const {
+  scanLocalData,
+  repairSafeIssues,
+  restoreRepairSnapshot
+} = require('../../utils/data-health')
 
 Page({
   data: {
@@ -15,8 +25,14 @@ Page({
     targetCount: 0,
     learningTargetCount: 0,
     scoreCount: 0,
+    reviewCount: 0,
+    lossReasonCount: 0,
+    learningTaskCount: 0,
     profileCount: 0,
-    activeProfileName: '默认档案'
+    activeProfileName: '默认档案',
+    recentCount: 0,
+    healthReport: null,
+    repairResult: null
   },
 
   onShow() {
@@ -24,14 +40,67 @@ Page({
   },
 
   refresh() {
+    const recentHistory = getRecentHistory()
     this.setData({
       favoriteCount: getFavoriteIdsResult().ids.length,
       targetCount: getTargetRecordsResult().records.length,
       learningTargetCount: getLearningTargetRecordsResult().records.length,
       scoreCount: getScoreRecordsResult().records.length,
+      reviewCount: getScoreReviews().length,
+      lossReasonCount: getScoreLossReasons().length,
+      learningTaskCount: getLearningTasks().length,
       profileCount: getProfiles().length,
-      activeProfileName: (getActiveProfile() || {}).nickname || '默认档案'
+      activeProfileName: (getActiveProfile() || {}).nickname || '默认档案',
+      recentCount: Object.values(recentHistory).reduce((sum, items) => sum + items.length, 0)
     })
+  },
+
+  runDataCheck() {
+    const report = scanLocalData()
+    if (!report.ok) {
+      wx.showToast({ title: report.message || '数据检查失败，原数据未修改。', icon: 'none' })
+      return
+    }
+    this.setData({ healthReport: report, repairResult: null })
+  },
+
+  repairSafeData() {
+    wx.showModal({
+      title: '安全修复本地数据',
+      content: '只处理可明确判断的重复收藏、旧 Schema 标记、无效最近引用和事务临时标记。修复前会创建快照；无法判断的成绩、学校和档案归属不会自动修改。',
+      confirmText: '创建快照并修复',
+      success: (modal) => {
+        if (!modal.confirm) return
+        const result = repairSafeIssues()
+        if (!result.ok) {
+          wx.showToast({ title: result.message || '修复失败，原数据已保留。', icon: 'none' })
+          return
+        }
+        this.setData({ healthReport: result.after, repairResult: result })
+        this.refresh()
+      }
+    })
+  },
+
+  restoreBeforeRepair() {
+    const result = restoreRepairSnapshot()
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.runDataCheck()
+    this.refresh()
+    wx.showToast({ title: '已恢复修复前快照', icon: 'success' })
+  },
+
+  clearRecentOperations() {
+    const result = clearRecentHistory()
+    if (!result.ok) {
+      wx.showToast({ title: result.message || '清除失败，原记录已保留。', icon: 'none' })
+      return
+    }
+    this.refresh()
+    wx.showToast({ title: '最近操作已清除', icon: 'success' })
   },
 
   confirmTwice({ title, content, finalContent, onConfirm }) {
