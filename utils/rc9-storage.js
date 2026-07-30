@@ -10,9 +10,14 @@ const {
   normalizeTargetLevel,
   normalizeTargetRecord,
   normalizeStageGoal,
+  normalizeScoreReview,
+  normalizeScoreLossReason,
+  normalizeLearningTask,
   normalizeProfile,
   createDefaultProfile,
   normalizeRecommendationSettings,
+  normalizeScenarioSettings,
+  normalizeRecentHistory,
   normalizeSchoolFilters,
   createEmptyProfileData,
   normalizeProfileData,
@@ -43,7 +48,9 @@ const KEYS = {
   lastMigration: 'rc9.last_migration.v4',
   dataRevision: 'rc9.data_revision.v4',
   clearMarker: 'rc9.clear_marker.v4',
-  importSnapshot: 'rc9.import_snapshot.v4'
+  importSnapshot: 'rc9.import_snapshot.v4',
+  transactionJournal: 'rc10.transaction_journal.v1',
+  repairSnapshot: 'rc10.repair_snapshot.v1'
 }
 
 const STORAGE_ERROR_MESSAGE = '本地存储失败，请清理空间后重试。'
@@ -115,24 +122,66 @@ function atomicWrite(values) {
   const keys = Object.keys(values)
   const before = storageSnapshot(keys)
   if (!before.ok) return { ok: false, message: before.message }
+  const transactionId = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const journal = writeStorage(KEYS.transactionJournal, {
+    transactionId,
+    createdAt: new Date().toISOString(),
+    keys,
+    before: before.values,
+    status: 'writing'
+  })
+  if (!journal.ok) {
+    return { ok: false, message: '本地安全写入未开始，原数据已保留。' }
+  }
   for (const key of keys) {
     const result = writeStorage(key, values[key])
     if (!result.ok) {
-      restoreSnapshot(before.values, keys)
-      return { ok: false, message: result.message }
+      const restored = restoreSnapshot(before.values, keys)
+      removeStorage(KEYS.transactionJournal)
+      return {
+        ok: false,
+        message: restored
+          ? '本地写入失败，原数据已保留，请清理空间后重试。'
+          : '本地写入失败，自动恢复未完成，请通过数据检查恢复安全快照。'
+      }
     }
+    const verify = readStorage(key, undefined)
+    if (!verify.ok || JSON.stringify(verify.value) !== JSON.stringify(clone(values[key]))) {
+      const restored = restoreSnapshot(before.values, keys)
+      removeStorage(KEYS.transactionJournal)
+      return {
+        ok: false,
+        message: restored
+          ? '本地写入回读校验失败，原数据已保留，请重试。'
+          : '本地写入回读校验失败，请通过数据检查恢复安全快照。'
+      }
+    }
+  }
+  const cleaned = removeStorage(KEYS.transactionJournal)
+  if (!cleaned.ok) {
+    return { ok: false, message: '数据已保存，但临时事务标记清理失败，请运行数据检查。' }
   }
   return { ok: true }
 }
 
 function atomicRemove(keys, finalWrites = {}) {
-  const touched = [...new Set([...keys, ...Object.keys(finalWrites)])]
+  const removeKeys = keys.filter((key) => key !== KEYS.transactionJournal)
+  const touched = [...new Set([...removeKeys, ...Object.keys(finalWrites)])]
   const before = storageSnapshot(touched)
   if (!before.ok) return { ok: false, message: before.message }
-  for (const key of keys) {
+  const journal = writeStorage(KEYS.transactionJournal, {
+    transactionId: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+    keys: touched,
+    before: before.values,
+    status: 'removing'
+  })
+  if (!journal.ok) return { ok: false, message: '本地安全清除未开始，原数据已保留。' }
+  for (const key of removeKeys) {
     const result = removeStorage(key)
     if (!result.ok) {
       restoreSnapshot(before.values, touched)
+      removeStorage(KEYS.transactionJournal)
       return { ok: false, message: '本地数据清除失败，原数据已保留。' }
     }
   }
@@ -140,9 +189,11 @@ function atomicRemove(keys, finalWrites = {}) {
     const result = writeStorage(key, value)
     if (!result.ok) {
       restoreSnapshot(before.values, touched)
+      removeStorage(KEYS.transactionJournal)
       return { ok: false, message: '本地数据清除失败，原数据已保留。' }
     }
   }
+  removeStorage(KEYS.transactionJournal)
   return { ok: true }
 }
 
@@ -150,7 +201,26 @@ function isVersionedStorageActive() {
   return readStorage(KEYS.storageSchemaVersion, 0).value === STORAGE_SCHEMA_VERSION
 }
 
+function recoverInterruptedTransaction() {
+  const journalResult = readStorage(KEYS.transactionJournal, null)
+  if (!journalResult.ok) return journalResult
+  if (!journalResult.exists || !journalResult.value) return { ok: true, recovered: false }
+  const journal = journalResult.value
+  const keys = Array.isArray(journal.keys) ? journal.keys : []
+  const before = journal.before && typeof journal.before === 'object' ? journal.before : {}
+  const restored = restoreSnapshot(before, keys)
+  if (!restored) {
+    return { ok: false, message: '检测到未完成写入，但自动恢复失败，请先运行数据检查。' }
+  }
+  const removed = removeStorage(KEYS.transactionJournal)
+  return removed.ok
+    ? { ok: true, recovered: true, transactionId: journal.transactionId || '' }
+    : { ok: false, message: '原数据已恢复，但事务临时标记清理失败。' }
+}
+
 function ensureStorageMigrated() {
+  const recovery = recoverInterruptedTransaction()
+  if (!recovery.ok) return recovery
   if (isVersionedStorageActive()) {
     const state = getVersionedState()
     return state.ok
@@ -257,10 +327,10 @@ function updateVersionedState(nextState, { bump = true } = {}) {
     [KEYS.userSettings]: nextState.userSettings && typeof nextState.userSettings === 'object'
       ? nextState.userSettings
       : {},
-    [KEYS.storageSchemaVersion]: STORAGE_SCHEMA_VERSION
+    [KEYS.storageSchemaVersion]: STORAGE_SCHEMA_VERSION,
+    [KEYS.dataRevision]: bump ? getDataRevision() + 1 : getDataRevision()
   }
   const result = atomicWrite(writes)
-  if (result.ok && bump) bumpRevision()
   return result.ok
     ? { ok: true, state: { ...nextState, profiles: normalizedProfiles, activeProfileId, profileData } }
     : result
@@ -401,9 +471,18 @@ function switchStudentProfile(id) {
   const profiles = stateResult.state.profiles.map((item) => item.id === id
     ? { ...item, lastUsedAt: now, updatedAt: now }
     : item)
+  const profileData = { ...stateResult.state.profileData }
+  profileData[id] = normalizeProfileData({
+    ...profileData[id],
+    recentHistory: addHistoryEntry(profileData[id] && profileData[id].recentHistory, 'usedProfiles', {
+      id,
+      profileId: id
+    }, 5)
+  }, id)
   const result = updateVersionedState({
     ...stateResult.state,
     profiles,
+    profileData,
     activeProfileId: id
   })
   return result.ok ? { ok: true, profile: profiles.find((item) => item.id === id) } : result
@@ -751,7 +830,16 @@ function saveScoreRecord(record) {
     const result = writeStorage(KEYS.scoreRecords, records)
     return result.ok ? { ok: true, records } : result
   }
-  const result = updateActiveProfileData((data) => ({ ...data, scoreRecords: records }))
+  const result = updateActiveProfileData((data) => ({
+    ...data,
+    scoreRecords: records,
+    recentHistory: addHistoryEntry(data.recentHistory, 'editedExams', {
+      id: saved.id,
+      examRecordId: saved.id,
+      examName: saved.examName,
+      examDate: saved.examDate
+    }, 10)
+  }))
   return result.ok ? { ok: true, records } : result
 }
 
@@ -763,13 +851,28 @@ function deleteScoreRecord(id) {
     const result = records.length ? writeStorage(KEYS.scoreRecords, records) : removeStorage(KEYS.scoreRecords)
     return result.ok ? { ok: true, records } : result
   }
-  const result = updateActiveProfileData((data) => ({ ...data, scoreRecords: records }))
+  const result = updateActiveProfileData((data) => ({
+    ...data,
+    scoreRecords: records,
+    scoreReviews: data.scoreReviews.filter((item) => item.examRecordId !== id),
+    scoreLossReasons: data.scoreLossReasons.filter((item) => item.examRecordId !== id),
+    recentHistory: {
+      ...data.recentHistory,
+      editedExams: data.recentHistory.editedExams.filter((item) => item.examRecordId !== id)
+    }
+  }))
   return result.ok ? { ok: true, records } : result
 }
 
 function clearScoreRecords() {
   if (!isVersionedStorageActive()) return removeStorage(KEYS.scoreRecords)
-  return updateActiveProfileData((data) => ({ ...data, scoreRecords: [] }))
+  return updateActiveProfileData((data) => ({
+    ...data,
+    scoreRecords: [],
+    scoreReviews: [],
+    scoreLossReasons: [],
+    recentHistory: { ...data.recentHistory, editedExams: [] }
+  }))
 }
 
 function getExamYearResult() {
@@ -853,6 +956,20 @@ function getRecommendationSettings() {
     : normalizeRecommendationSettings({})
 }
 
+function getScenarioSettings() {
+  const context = activeContext()
+  return context.ok
+    ? normalizeScenarioSettings(context.data.scenarioSettings)
+    : normalizeScenarioSettings({})
+}
+
+function saveScenarioSettings(settings) {
+  return updateActiveProfileData((data) => ({
+    ...data,
+    scenarioSettings: normalizeScenarioSettings(settings)
+  }))
+}
+
 function saveRecommendationSettings(settings) {
   return updateActiveProfileData((data) => ({
     ...data,
@@ -866,9 +983,14 @@ function getSchoolFilters() {
 }
 
 function saveSchoolFilters(filters) {
+  const normalized = normalizeSchoolFilters(filters)
   return updateActiveProfileData((data) => ({
     ...data,
-    schoolFilters: normalizeSchoolFilters(filters)
+    schoolFilters: normalized,
+    recentHistory: addHistoryEntry(data.recentHistory, 'schoolFilters', {
+      id: JSON.stringify(normalized),
+      filters: normalized
+    }, 10)
   }))
 }
 
@@ -879,7 +1001,16 @@ function getComparisonSchoolIds() {
 
 function saveComparisonSchoolIds(ids) {
   const clean = normalizeStringList(ids, 3, 120)
-  return updateActiveProfileData((data) => ({ ...data, comparisonSchoolIds: clean }))
+  return updateActiveProfileData((data) => ({
+    ...data,
+    comparisonSchoolIds: clean,
+    recentHistory: clean.length >= 2
+      ? addHistoryEntry(data.recentHistory, 'schoolComparisons', {
+          id: clean.join('|'),
+          schoolIds: clean
+        }, 5)
+      : data.recentHistory
+  }))
 }
 
 function addRecentViewedSchool(schoolId) {
@@ -887,13 +1018,158 @@ function addRecentViewedSchool(schoolId) {
   if (!id) return { ok: false, message: '学校标识无效。' }
   return updateActiveProfileData((data) => ({
     ...data,
-    recentViewedSchoolIds: [id, ...data.recentViewedSchoolIds.filter((item) => item !== id)].slice(0, 20)
+    recentViewedSchoolIds: [id, ...data.recentViewedSchoolIds.filter((item) => item !== id)].slice(0, 20),
+    recentHistory: addHistoryEntry(data.recentHistory, 'viewedSchools', { id, schoolId: id }, 20)
   }))
 }
 
 function getRecentViewedSchoolIds() {
   const context = activeContext()
   return context.ok ? context.data.recentViewedSchoolIds : []
+}
+
+function addHistoryEntry(history, type, entry, limit) {
+  const normalized = normalizeRecentHistory(history)
+  if (!Object.prototype.hasOwnProperty.call(normalized, type)) return normalized
+  const id = text(entry && entry.id, 240)
+  if (!id) return normalized
+  const item = {
+    ...(entry || {}),
+    id,
+    at: new Date().toISOString()
+  }
+  return {
+    ...normalized,
+    [type]: [
+      item,
+      ...normalized[type].filter((existing) => existing.id !== id)
+    ].slice(0, limit)
+  }
+}
+
+function recordRecentHistory(type, entry) {
+  const limits = {
+    viewedSchools: 20,
+    schoolFilters: 10,
+    schoolComparisons: 5,
+    editedExams: 10,
+    viewedTargets: 10,
+    usedProfiles: 5,
+    scoreSegments: 10,
+    targetSegments: 10
+  }
+  if (!limits[type]) return { ok: false, message: '最近操作类型无效。' }
+  return updateActiveProfileData((data) => ({
+    ...data,
+    recentHistory: addHistoryEntry(data.recentHistory, type, entry, limits[type])
+  }))
+}
+
+function getRecentHistory() {
+  const context = activeContext()
+  return context.ok ? normalizeRecentHistory(context.data.recentHistory) : normalizeRecentHistory({})
+}
+
+function clearRecentHistory(type) {
+  return updateActiveProfileData((data) => {
+    const history = normalizeRecentHistory(data.recentHistory)
+    if (type && Object.prototype.hasOwnProperty.call(history, type)) history[type] = []
+    if (!type) {
+      for (const key of Object.keys(history)) history[key] = []
+    }
+    return {
+      ...data,
+      recentViewedSchoolIds: !type || type === 'viewedSchools' ? [] : data.recentViewedSchoolIds,
+      recentHistory: history
+    }
+  })
+}
+
+function listFromActiveData(field) {
+  const context = activeContext()
+  return context.ok && Array.isArray(context.data[field]) ? context.data[field] : []
+}
+
+function saveProfileRecord(field, record, normalizer, label, maxRecords = 1000) {
+  const profile = getActiveProfile()
+  const normalized = normalizer(record, profile && profile.id || DEFAULT_PROFILE_ID)
+  if (!normalized) return { ok: false, message: `${label}格式无效，请检查后重试。` }
+  const existing = listFromActiveData(field)
+  const current = existing.find((item) => item.id === normalized.id)
+  const saved = current
+    ? { ...current, ...normalized, createdAt: current.createdAt, updatedAt: new Date().toISOString() }
+    : normalized
+  const records = [
+    saved,
+    ...existing.filter((item) => item.id !== saved.id)
+  ].slice(0, maxRecords)
+  const result = updateActiveProfileData((data) => ({ ...data, [field]: records }))
+  return result.ok ? { ok: true, record: saved, records } : result
+}
+
+function deleteProfileRecord(field, id) {
+  const key = text(id, 120)
+  if (!key) return { ok: false, message: '记录标识无效。' }
+  const records = listFromActiveData(field).filter((item) => item.id !== key)
+  const result = updateActiveProfileData((data) => ({ ...data, [field]: records }))
+  return result.ok ? { ok: true, records } : result
+}
+
+function getScoreReviews() {
+  return listFromActiveData('scoreReviews')
+}
+
+function saveScoreReview(record) {
+  return saveProfileRecord('scoreReviews', record, normalizeScoreReview, '考试复盘')
+}
+
+function deleteScoreReview(id) {
+  const review = getScoreReviews().find((item) => item.id === id)
+  return updateActiveProfileData((data) => ({
+    ...data,
+    scoreReviews: data.scoreReviews.filter((item) => item.id !== id),
+    scoreLossReasons: review
+      ? data.scoreLossReasons.filter((item) => item.examRecordId !== review.examRecordId)
+      : data.scoreLossReasons
+  }))
+}
+
+function getScoreLossReasons() {
+  return listFromActiveData('scoreLossReasons')
+}
+
+function saveScoreLossReason(record) {
+  return saveProfileRecord('scoreLossReasons', record, normalizeScoreLossReason, '失分原因', 2000)
+}
+
+function deleteScoreLossReason(id) {
+  return deleteProfileRecord('scoreLossReasons', id)
+}
+
+function getLearningTasks() {
+  return listFromActiveData('learningTasks')
+}
+
+function saveLearningTask(record, { allowDuplicateSource = false } = {}) {
+  const profile = getActiveProfile()
+  const normalized = normalizeLearningTask(record, profile && profile.id || DEFAULT_PROFILE_ID)
+  if (!normalized) return { ok: false, message: '学习任务格式无效，请检查后重试。' }
+  if (!allowDuplicateSource && normalized.sourceReviewId) {
+    const duplicate = getLearningTasks().find((item) =>
+      item.id !== normalized.id &&
+      item.sourceReviewId === normalized.sourceReviewId &&
+      item.sourceReasonType === normalized.sourceReasonType &&
+      item.subjectId === normalized.subjectId
+    )
+    if (duplicate) {
+      return { ok: false, code: 'DUPLICATE_SOURCE', message: '该复盘已创建过学习任务。' }
+    }
+  }
+  return saveProfileRecord('learningTasks', normalized, normalizeLearningTask, '学习任务', 1000)
+}
+
+function deleteLearningTask(id) {
+  return deleteProfileRecord('learningTasks', id)
 }
 
 function getSubjectConfigs() {
@@ -969,6 +1245,7 @@ module.exports = {
   storageSnapshot,
   atomicWrite,
   atomicRemove,
+  recoverInterruptedTransaction,
   isVersionedStorageActive,
   ensureStorageMigrated,
   getVersionedState,
@@ -1019,12 +1296,26 @@ module.exports = {
   saveOnboardingState,
   getRecommendationSettings,
   saveRecommendationSettings,
+  getScenarioSettings,
+  saveScenarioSettings,
   getSchoolFilters,
   saveSchoolFilters,
   getComparisonSchoolIds,
   saveComparisonSchoolIds,
   addRecentViewedSchool,
   getRecentViewedSchoolIds,
+  recordRecentHistory,
+  getRecentHistory,
+  clearRecentHistory,
+  getScoreReviews,
+  saveScoreReview,
+  deleteScoreReview,
+  getScoreLossReasons,
+  saveScoreLossReason,
+  deleteScoreLossReason,
+  getLearningTasks,
+  saveLearningTask,
+  deleteLearningTask,
   getSubjectConfigs,
   saveSubjectConfigs,
   clearCurrentProfileData,

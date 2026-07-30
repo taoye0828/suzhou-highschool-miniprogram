@@ -7,6 +7,9 @@ const {
   normalizeExamRecord,
   normalizeTargetRecord,
   normalizeStageGoal,
+  normalizeScoreReview,
+  normalizeScoreLossReason,
+  normalizeLearningTask,
   normalizeProfile,
   normalizeProfileData,
   normalizeStringList
@@ -17,7 +20,7 @@ const {
   replaceVersionedState
 } = require('./storage')
 
-const APP_DATA_VERSION = 'rc9'
+const APP_DATA_VERSION = 'rc10'
 const CHECKSUM_ALGORITHM = 'fnv1a32'
 
 function stableValue(value) {
@@ -52,14 +55,64 @@ function checksumForPayload(payload) {
 }
 
 function statePayload(state) {
+  const profileData = clone(state.profileData)
+  const flattened = (field) => state.profiles.flatMap((profile) =>
+    Array.isArray(profileData[profile.id] && profileData[profile.id][field])
+      ? clone(profileData[profile.id][field])
+      : []
+  )
   return {
     profiles: clone(state.profiles),
     activeProfileId: state.activeProfileId,
+    scoreRecords: flattened('scoreRecords'),
+    scoreReviews: flattened('scoreReviews'),
+    scoreLossReasons: flattened('scoreLossReasons'),
+    favorites: state.profiles.flatMap((profile) =>
+      (profileData[profile.id] && profileData[profile.id].favoriteSchoolIds || [])
+        .map((schoolId) => ({ profileId: profile.id, schoolId }))
+    ),
+    targetSchools: flattened('targetRecords'),
+    stageGoals: flattened('stageGoals'),
+    learningTasks: flattened('learningTasks'),
+    recommendationSettings: state.profiles.map((profile) => ({
+      profileId: profile.id,
+      ...(profileData[profile.id] && profileData[profile.id].recommendationSettings || {})
+    })),
+    onboardingState: clone(state.onboarding),
+    recentHistory: state.profiles.map((profile) => ({
+      profileId: profile.id,
+      ...(profileData[profile.id] && profileData[profile.id].recentHistory || {})
+    })),
     sharedFavoriteSchoolIds: clone(state.sharedFavoriteSchoolIds),
-    profileData: clone(state.profileData),
+    profileData,
     onboarding: clone(state.onboarding),
     userSettings: clone(state.userSettings)
   }
+}
+
+function backupPayload(backup) {
+  if (backup && backup.payload && typeof backup.payload === 'object' && !Array.isArray(backup.payload)) {
+    return clone(backup.payload)
+  }
+  const keys = [
+    'profiles',
+    'activeProfileId',
+    'scoreRecords',
+    'scoreReviews',
+    'scoreLossReasons',
+    'favorites',
+    'targetSchools',
+    'stageGoals',
+    'learningTasks',
+    'recommendationSettings',
+    'onboardingState',
+    'recentHistory',
+    'sharedFavoriteSchoolIds',
+    'profileData',
+    'onboarding',
+    'userSettings'
+  ]
+  return Object.fromEntries(keys.map((key) => [key, clone(backup && backup[key])]))
 }
 
 function createBackupEnvelope({ exportedAt = new Date().toISOString() } = {}) {
@@ -72,15 +125,16 @@ function createBackupEnvelope({ exportedAt = new Date().toISOString() } = {}) {
     ok: true,
     backup: {
       format: BACKUP_FORMAT,
-      backupVersion: BACKUP_FORMAT_VERSION,
+      backupFormatVersion: BACKUP_FORMAT_VERSION,
       storageSchemaVersion: STORAGE_SCHEMA_VERSION,
       appDataVersion: APP_DATA_VERSION,
       exportedAt,
+      sourcePlatform: 'wechat_miniprogram',
+      ...payload,
       checksum: {
         algorithm: CHECKSUM_ALGORITHM,
         value: checksumForPayload(payload)
-      },
-      payload
+      }
     }
   }
 }
@@ -105,15 +159,24 @@ function validateProfileData(raw, profileId, validSchoolIds, errors) {
   const scoreRecords = Array.isArray(raw.scoreRecords) ? raw.scoreRecords : []
   const stageGoals = Array.isArray(raw.stageGoals) ? raw.stageGoals : []
   const targetRecords = Array.isArray(raw.targetRecords) ? raw.targetRecords : []
+  const scoreReviews = Array.isArray(raw.scoreReviews) ? raw.scoreReviews : []
+  const scoreLossReasons = Array.isArray(raw.scoreLossReasons) ? raw.scoreLossReasons : []
+  const learningTasks = Array.isArray(raw.learningTasks) ? raw.learningTasks : []
   const duplicateScoreIds = duplicateValues(scoreRecords, (item) => item && item.id)
   const duplicateStageIds = duplicateValues(stageGoals, (item) => item && item.id)
   const duplicateTargetIds = duplicateValues(targetRecords, (item) => item && item.id)
   const duplicateTargetSchools = duplicateValues(targetRecords, (item) => item && item.schoolId)
+  const duplicateReviewIds = duplicateValues(scoreReviews, (item) => item && item.id)
+  const duplicateReasonIds = duplicateValues(scoreLossReasons, (item) => item && item.id)
+  const duplicateTaskIds = duplicateValues(learningTasks, (item) => item && item.id)
   if (duplicateScoreIds.length) errors.push(`档案 ${profileId} 存在重复考试 ID`)
   if (duplicateStageIds.length) errors.push(`档案 ${profileId} 存在重复阶段目标 ID`)
   if (duplicateTargetIds.length || duplicateTargetSchools.length) {
     errors.push(`档案 ${profileId} 存在重复目标学校`)
   }
+  if (duplicateReviewIds.length) errors.push(`档案 ${profileId} 存在重复复盘 ID`)
+  if (duplicateReasonIds.length) errors.push(`档案 ${profileId} 存在重复失分原因 ID`)
+  if (duplicateTaskIds.length) errors.push(`档案 ${profileId} 存在重复学习任务 ID`)
   for (const item of scoreRecords) {
     if (!normalizeExamRecord(item, profileId)) {
       errors.push(`档案 ${profileId} 含结构无效的考试记录`)
@@ -157,6 +220,32 @@ function validateProfileData(raw, profileId, validSchoolIds, errors) {
       break
     }
   }
+  for (const item of scoreReviews) {
+    if (!normalizeScoreReview(item, profileId)) {
+      errors.push(`档案 ${profileId} 含结构无效的考试复盘`)
+      break
+    }
+    if (!scoreRecords.some((record) => record && record.id === item.examRecordId)) {
+      errors.push(`档案 ${profileId} 含孤立考试复盘`)
+      break
+    }
+  }
+  for (const item of scoreLossReasons) {
+    if (!normalizeScoreLossReason(item, profileId)) {
+      errors.push(`档案 ${profileId} 含结构无效的失分原因`)
+      break
+    }
+    if (!scoreRecords.some((record) => record && record.id === item.examRecordId)) {
+      errors.push(`档案 ${profileId} 含孤立失分原因`)
+      break
+    }
+  }
+  for (const item of learningTasks) {
+    if (!normalizeLearningTask(item, profileId)) {
+      errors.push(`档案 ${profileId} 含结构无效的学习任务`)
+      break
+    }
+  }
   const schoolIds = [
     ...(Array.isArray(raw.favoriteSchoolIds) ? raw.favoriteSchoolIds : []),
     ...(Array.isArray(raw.comparisonSchoolIds) ? raw.comparisonSchoolIds : []),
@@ -190,6 +279,10 @@ function backupPreview(payload) {
       (Array.isArray(profileData[profile.id] && profileData[profile.id].stageGoals)
         ? profileData[profile.id].stageGoals.length
         : 0), 0),
+    taskCount: profiles.reduce((sum, profile) => sum +
+      (Array.isArray(profileData[profile.id] && profileData[profile.id].learningTasks)
+        ? profileData[profile.id].learningTasks.length
+        : 0), 0),
     favoriteCount: profiles.reduce((sum, profile) => sum +
       (Array.isArray(profileData[profile.id] && profileData[profile.id].favoriteSchoolIds)
         ? profileData[profile.id].favoriteSchoolIds.length
@@ -212,23 +305,23 @@ function validateBackupEnvelope(input) {
     return { ok: false, errors: ['备份根结构无效。'] }
   }
   if (backup.format !== BACKUP_FORMAT) errors.push('备份格式标识不匹配。')
-  if (backup.backupVersion !== BACKUP_FORMAT_VERSION) errors.push('备份格式版本不受支持。')
+  const formatVersion = backup.backupFormatVersion === undefined
+    ? backup.backupVersion
+    : backup.backupFormatVersion
+  if (![1, BACKUP_FORMAT_VERSION].includes(formatVersion)) errors.push('备份格式版本不受支持。')
   if (backup.storageSchemaVersion !== STORAGE_SCHEMA_VERSION) {
     errors.push('存储版本不受支持。')
   }
-  if (backup.appDataVersion !== APP_DATA_VERSION) errors.push('应用数据版本不受支持。')
+  if (!['rc9', APP_DATA_VERSION].includes(backup.appDataVersion)) errors.push('应用数据版本不受支持。')
   if (typeof backup.exportedAt !== 'string' || !Number.isFinite(Date.parse(backup.exportedAt))) {
     errors.push('导出时间无效。')
   }
-  if (!backup.payload || typeof backup.payload !== 'object' || Array.isArray(backup.payload)) {
-    errors.push('备份 payload 缺失。')
-  }
+  const payload = backupPayload(backup)
   if (!backup.checksum || backup.checksum.algorithm !== CHECKSUM_ALGORITHM) {
     errors.push('校验摘要算法不受支持。')
-  } else if (backup.payload && checksumForPayload(backup.payload) !== backup.checksum.value) {
+  } else if (checksumForPayload(payload) !== backup.checksum.value) {
     errors.push('校验摘要不匹配，文件可能已损坏。')
   }
-  const payload = backup.payload || {}
   const profiles = Array.isArray(payload.profiles) ? payload.profiles : []
   if (!profiles.length) errors.push('备份至少需要一个学生档案。')
   const duplicateProfileIds = duplicateValues(profiles, (item) => item && item.id)
@@ -252,7 +345,7 @@ function validateBackupEnvelope(input) {
   }
   return errors.length
     ? { ok: false, errors }
-    : { ok: true, backup: clone(backup), preview: backupPreview(payload) }
+    : { ok: true, backup: clone(backup), payload: clone(payload), preview: backupPreview(payload) }
 }
 
 function newerRecord(local, incoming) {
@@ -282,8 +375,11 @@ function mergeProfileData(local, incoming, profileId) {
     profileId,
     favoriteSchoolIds: [...new Set([...left.favoriteSchoolIds, ...right.favoriteSchoolIds])],
     scoreRecords: mergeBy(left.scoreRecords, right.scoreRecords, (item) => item.id),
+    scoreReviews: mergeBy(left.scoreReviews, right.scoreReviews, (item) => item.id),
+    scoreLossReasons: mergeBy(left.scoreLossReasons, right.scoreLossReasons, (item) => item.id),
     targetRecords: mergeBy(left.targetRecords, right.targetRecords, (item) => item.schoolId),
     stageGoals: mergeBy(left.stageGoals, right.stageGoals, (item) => item.id),
+    learningTasks: mergeBy(left.learningTasks, right.learningTasks, (item) => item.id),
     comparisonSchoolIds: right.comparisonSchoolIds.length
       ? right.comparisonSchoolIds
       : left.comparisonSchoolIds,
@@ -320,7 +416,7 @@ function importBackupEnvelope(input, { mode = 'merge' } = {}) {
   }
   const validation = validateBackupEnvelope(input)
   if (!validation.ok) return { ok: false, message: validation.errors.join('；'), errors: validation.errors }
-  const incoming = normalizedStateFromPayload(validation.backup.payload)
+  const incoming = normalizedStateFromPayload(validation.payload)
   let nextState = incoming
   if (mode === 'merge') {
     const migration = ensureStorageMigrated()
@@ -382,7 +478,7 @@ function exportBackupFile() {
       ok: true,
       filePath,
       backup: envelope.backup,
-      preview: backupPreview(envelope.backup.payload)
+      preview: backupPreview(envelope.backup)
     }
   } catch (error) {
     return { ok: false, message: '备份文件写入失败，现有数据未修改。', backup: envelope.backup }
@@ -405,6 +501,7 @@ module.exports = {
   stableStringify,
   fnv1a32,
   checksumForPayload,
+  backupPayload,
   createBackupEnvelope,
   validateBackupEnvelope,
   backupPreview,

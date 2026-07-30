@@ -9,8 +9,8 @@ const TARGET_LEVELS = [
 
 const APP_CONFIG = {
   name: '苏程记录',
-  version: '1.9.0',
-  releaseStatus: 'RC9 双端功能融合升级版',
+  version: '2.0.0',
+  releaseStatus: 'RC10 数据质量与学习目标深化版',
   targetScore: {
     min: 0,
     max: EXAM_TOTAL_SCORE,

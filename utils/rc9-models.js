@@ -2,10 +2,23 @@ const { APP_CONFIG } = require('../config/app-config')
 
 const STORAGE_SCHEMA_VERSION = 4
 const BACKUP_FORMAT = 'suzhou-highschool-local-backup'
-const BACKUP_FORMAT_VERSION = 1
+const BACKUP_FORMAT_VERSION = 2
 const DEFAULT_PROFILE_ID = 'profile_default'
 const FAVORITES_MODES = ['independent', 'shared']
 const STAGE_GOAL_STATUSES = ['not_started', 'in_progress', 'completed', 'paused']
+const LOSS_REASON_TYPES = [
+  '基础知识',
+  '审题错误',
+  '计算错误',
+  '时间不足',
+  '表达不完整',
+  '公式使用错误',
+  '单词或语法',
+  '实验或作图',
+  '记忆不牢',
+  '其他'
+]
+const LEARNING_TASK_STATUSES = ['not_started', 'in_progress', 'completed', 'paused']
 const STAGE_GOAL_STATUS_LABELS = {
   not_started: '未开始',
   in_progress: '进行中',
@@ -222,6 +235,128 @@ function normalizeStageGoal(value, profileId = DEFAULT_PROFILE_ID) {
   }
 }
 
+function normalizeScoreReview(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  const examRecordId = text(value.examRecordId, 120)
+  if (!id || !examRecordId) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    ...clone(value),
+    id,
+    examRecordId,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    summary: text(value.summary, 1000),
+    improvementNotes: text(value.improvementNotes, 1000),
+    nextActions: text(value.nextActions, 1000),
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeScoreLossReason(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  const examRecordId = text(value.examRecordId, 120)
+  const subjectId = text(value.subjectId, 80)
+  const reasonType = text(value.reasonType, 40)
+  if (!id || !examRecordId || !subjectId || !LOSS_REASON_TYPES.includes(reasonType)) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    ...clone(value),
+    id,
+    examRecordId,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    subjectId,
+    subjectName: text(value.subjectName, 40),
+    reasonType,
+    detail: text(value.detail, 1000),
+    improvementAction: text(value.improvementAction, 1000),
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeLearningTask(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  const title = text(value.title, 120)
+  if (!id || !title) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  const status = LEARNING_TASK_STATUSES.includes(value.status) ? value.status : 'not_started'
+  const weeklyTarget = optionalInteger(value.weeklyTarget, { min: 1, max: 1000 })
+  return {
+    ...clone(value),
+    id,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    title,
+    subjectId: text(value.subjectId, 80),
+    subjectName: text(value.subjectName, 40),
+    sourceExamId: text(value.sourceExamId, 120),
+    sourceReviewId: text(value.sourceReviewId, 120),
+    sourceReasonType: LOSS_REASON_TYPES.includes(value.sourceReasonType)
+      ? value.sourceReasonType
+      : '',
+    stageGoalId: text(value.stageGoalId, 120),
+    startDate: validDate(value.startDate) ? value.startDate : '',
+    dueDate: validDate(value.dueDate) ? value.dueDate : '',
+    weeklyTarget,
+    status,
+    notes: text(value.notes, 1000),
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeScenarioSettings(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const score = (name) => optionalInteger(source[name], {
+    min: 0,
+    max: APP_CONFIG.targetScore.max
+  })
+  return {
+    ...clone(source),
+    currentScore: score('currentScore'),
+    stageTargetScore: score('stageTargetScore'),
+    finalTargetScore: score('finalTargetScore'),
+    targetYear: optionalInteger(source.targetYear, {
+      min: APP_CONFIG.countdown.minYear,
+      max: APP_CONFIG.countdown.maxYear
+    }) ?? APP_CONFIG.countdown.defaultYear,
+    districts: normalizeStringList(source.districts, 100, 80),
+    schoolTypes: normalizeStringList(source.schoolTypes, 100, 80),
+    referenceYears: (Array.isArray(source.referenceYears) ? source.referenceYears : [])
+      .map(Number)
+      .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2200)
+  }
+}
+
+function normalizeRecentHistory(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const entries = (name, limit) => (Array.isArray(source[name]) ? source[name] : [])
+    .filter((item) => item && typeof item === 'object' && !Array.isArray(item))
+    .map((item) => ({
+      ...clone(item),
+      id: text(item.id, 240),
+      at: isoDate(item.at, new Date(0).toISOString())
+    }))
+    .filter((item) => item.id)
+    .slice(0, limit)
+  return {
+    viewedSchools: entries('viewedSchools', 20),
+    schoolFilters: entries('schoolFilters', 10),
+    schoolComparisons: entries('schoolComparisons', 5),
+    editedExams: entries('editedExams', 10),
+    viewedTargets: entries('viewedTargets', 10),
+    usedProfiles: entries('usedProfiles', 5),
+    scoreSegments: entries('scoreSegments', 10),
+    targetSegments: entries('targetSegments', 10)
+  }
+}
+
 function normalizeProfile(value, fallbackId = DEFAULT_PROFILE_ID) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const id = text(value.id, 120) || fallbackId
@@ -320,12 +455,17 @@ function createEmptyProfileData(profileId = DEFAULT_PROFILE_ID) {
     profileId,
     favoriteSchoolIds: [],
     scoreRecords: [],
+    scoreReviews: [],
+    scoreLossReasons: [],
     targetRecords: [],
     stageGoals: [],
+    learningTasks: [],
     recommendationSettings: normalizeRecommendationSettings({}),
+    scenarioSettings: normalizeScenarioSettings({}),
     schoolFilters: normalizeSchoolFilters({}),
     comparisonSchoolIds: [],
     recentViewedSchoolIds: [],
+    recentHistory: normalizeRecentHistory({}),
     subjectConfigs: [],
     primaryTargetSchoolId: null,
     examYear: APP_CONFIG.countdown.defaultYear,
@@ -353,14 +493,25 @@ function normalizeProfileData(value, profileId = DEFAULT_PROFILE_ID) {
     scoreRecords: (Array.isArray(source.scoreRecords) ? source.scoreRecords : [])
       .map((item) => normalizeExamRecord(item, profileId))
       .filter(Boolean),
+    scoreReviews: (Array.isArray(source.scoreReviews) ? source.scoreReviews : [])
+      .map((item) => normalizeScoreReview(item, profileId))
+      .filter(Boolean),
+    scoreLossReasons: (Array.isArray(source.scoreLossReasons) ? source.scoreLossReasons : [])
+      .map((item) => normalizeScoreLossReason(item, profileId))
+      .filter(Boolean),
     targetRecords: uniqueTargets,
     stageGoals: (Array.isArray(source.stageGoals) ? source.stageGoals : [])
       .map((item) => normalizeStageGoal(item, profileId))
       .filter(Boolean),
+    learningTasks: (Array.isArray(source.learningTasks) ? source.learningTasks : [])
+      .map((item) => normalizeLearningTask(item, profileId))
+      .filter(Boolean),
     recommendationSettings: normalizeRecommendationSettings(source.recommendationSettings),
+    scenarioSettings: normalizeScenarioSettings(source.scenarioSettings),
     schoolFilters: normalizeSchoolFilters(source.schoolFilters),
     comparisonSchoolIds: normalizeStringList(source.comparisonSchoolIds, 3, 120),
     recentViewedSchoolIds: normalizeStringList(source.recentViewedSchoolIds, 20, 120),
+    recentHistory: normalizeRecentHistory(source.recentHistory),
     subjectConfigs: (Array.isArray(source.subjectConfigs) ? source.subjectConfigs : [])
       .map(normalizeSubjectConfig)
       .filter(Boolean),
@@ -384,6 +535,8 @@ module.exports = {
   FAVORITES_MODES,
   STAGE_GOAL_STATUSES,
   STAGE_GOAL_STATUS_LABELS,
+  LOSS_REASON_TYPES,
+  LEARNING_TASK_STATUSES,
   DEFAULT_RECOMMENDATION_SETTINGS,
   DEFAULT_SCHOOL_FILTERS,
   clone,
@@ -398,6 +551,11 @@ module.exports = {
   normalizeTargetLevel,
   normalizeTargetRecord,
   normalizeStageGoal,
+  normalizeScoreReview,
+  normalizeScoreLossReason,
+  normalizeLearningTask,
+  normalizeScenarioSettings,
+  normalizeRecentHistory,
   normalizeProfile,
   createDefaultProfile,
   normalizeRecommendationSettings,

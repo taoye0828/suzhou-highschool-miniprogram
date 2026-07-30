@@ -1,5 +1,6 @@
 const { APP_CONFIG } = require('../config/app-config')
 const { getOnboardingState, saveOnboardingState } = require('./storage')
+const { dynamicHelpState } = require('./rc10-features')
 
 const ONBOARDING_STEPS = [
   {
@@ -182,6 +183,27 @@ function handleOnboardingAction(event) {
   return { ok: true }
 }
 
+function dynamicHelpForContext(context) {
+  const state = getOnboardingState()
+  return dynamicHelpState(context, state.dynamicHelpDismissed || {})
+}
+
+function dismissDynamicHelp(id) {
+  const state = getOnboardingState()
+  return saveOnboardingState({
+    ...state,
+    dynamicHelpDismissed: {
+      ...(state.dynamicHelpDismissed || {}),
+      [id]: { version: 1, dismissedAt: new Date().toISOString() }
+    }
+  })
+}
+
+function resetDynamicHelp() {
+  const state = getOnboardingState()
+  return saveOnboardingState({ ...state, dynamicHelpDismissed: {} })
+}
+
 module.exports = {
   ONBOARDING_STEPS,
   FEATURE_TUTORIALS,
@@ -190,6 +212,9 @@ module.exports = {
   replayOnboarding,
   onboardingForPage,
   handleOnboardingAction,
+  dynamicHelpForContext,
+  dismissDynamicHelp,
+  resetDynamicHelp,
   completeOnboarding,
   skipOnboarding
 }
