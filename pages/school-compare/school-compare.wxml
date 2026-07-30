@@ -2,7 +2,11 @@
   <view class="card selector-card">
     <view class="row between">
       <view class="card-title">已选择 {{selectedSchools.length}} / 3</view>
-      <view class="muted small">最多 3 所</view>
+      <button
+        wx:if="{{selectedSchools.length > 0}}"
+        class="clear-selection"
+        bindtap="clearSelection"
+      >清空选择</button>
     </view>
     <input
       wx:if="{{selectedSchools.length < 3}}"
@@ -24,7 +28,9 @@
       没有找到可添加的匹配学校。
     </view>
     <view wx:if="{{selectedSchools.length >= 3}}" class="limit-note">已达到 3 所上限</view>
-    <view wx:if="{{selectedSchools.length === 0}}" class="muted small empty-selection">请选择学校开始对比。</view>
+    <view wx:if="{{selectedSchools.length === 0}}" class="muted small empty-selection">
+      从正式学校库选择 1 至 3 所学校；这里只保存 schoolId，不复制学校数据。
+    </view>
     <view class="selected-list">
       <view wx:for="{{selectedSchools}}" wx:key="id" class="selected-chip">
         <text class="grow">{{item.name}}</text>
@@ -34,28 +40,88 @@
   </view>
 
   <view wx:if="{{!canCompare}}" class="card empty compact-empty">
-    请选择 1 至 3 所学校查看比较内容。
+    <view class="card-title">还没有对比学校</view>
+    <view class="muted small empty-copy">可在上方搜索添加，或返回学校库进入对比模式。</view>
+    <button class="button empty-button" bindtap="openSchoolLibrary">返回学校库</button>
   </view>
 
   <block wx:if="{{canCompare}}">
-    <view class="section-title">对比结果</view>
+    <view class="row between section-heading">
+      <view class="section-title">对比结果</view>
+      <view class="muted small">{{currentScoreText}}</view>
+    </view>
     <view
       wx:for="{{selectedSchools}}"
       wx:key="id"
       class="card compare-card"
-      data-id="{{item.id}}"
-      bindtap="openDetail"
     >
       <view class="row between compare-title">
         <view class="card-title grow">{{item.name}}</view>
-        <view class="list-arrow">›</view>
+        <button
+          class="favorite-action {{item.isFavorite ? 'active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="toggleFavorite"
+        >{{item.isFavorite ? '已收藏' : '收藏'}}</button>
       </view>
-      <view class="info-row"><text class="info-label">地区</text><text class="info-value">{{item.district}}</text></view>
-      <view class="info-row"><text class="info-label">目标等级</text><text class="info-value">{{item.targetLevelText}}</text></view>
-      <view class="info-row"><text class="info-label">历史参考分</text><text class="info-value">{{item.referenceScoreText}}</text></view>
-      <view class="info-row"><text class="info-label">参考年份</text><text class="info-value">{{item.referenceYearText}}</text></view>
-      <view class="info-row"><text class="info-label">当前成绩</text><text class="info-value">{{item.currentScoreText}}</text></view>
-      <view class="info-row"><text class="info-label">当前差距</text><text class="info-value">{{item.gapText}}</text></view>
+      <view class="tag-line">
+        <text wx:if="{{item.hasDistrict}}" class="badge">{{item.district}}</text>
+        <text wx:if="{{item.hasSchoolType}}" class="badge">{{item.schoolType}}</text>
+        <text wx:if="{{item.hasOwnership}}" class="badge">{{item.ownership}}</text>
+        <text wx:if="{{item.hasCampus}}" class="badge">{{item.campus}}</text>
+        <text wx:if="{{item.isTargetSchool}}" class="badge target-badge">{{item.targetLevelText}}目标</text>
+      </view>
+      <view class="compare-grid">
+        <view class="compare-cell">
+          <view class="info-label">最新参考分</view>
+          <view class="info-value">{{item.hasReference ? item.referenceScoreText : '暂无'}}</view>
+          <view wx:if="{{item.hasReference}}" class="muted small">{{item.referenceYearText}}</view>
+        </view>
+        <view class="compare-cell">
+          <view class="info-label">当前分差</view>
+          <view class="info-value difference-text">{{item.hasDifference ? item.differenceText : '待记录成绩'}}</view>
+        </view>
+        <view class="compare-cell">
+          <view class="info-label">目标状态</view>
+          <view class="info-value">{{item.targetStatusText}}</view>
+        </view>
+        <view class="compare-cell">
+          <view class="info-label">收藏状态</view>
+          <view class="info-value">{{item.isFavorite ? '已收藏' : '未收藏'}}</view>
+        </view>
+      </view>
+      <view wx:if="{{item.hasScoreHistory}}" class="history-box">
+        <view class="info-label">历史分数线</view>
+        <view class="history-text">{{item.scoreSummary}}</view>
+      </view>
+      <view class="compare-actions">
+        <button
+          wx:if="{{!item.isTargetSchool}}"
+          class="button secondary action-button"
+          data-id="{{item.id}}"
+          bindtap="addTarget"
+        >加入目标</button>
+        <picker
+          wx:else
+          range="{{targetLevelOptions}}"
+          range-key="label"
+          value="{{item.targetLevelIndex}}"
+          data-id="{{item.id}}"
+          catchtap="noop"
+          bindchange="onTargetLevelChange"
+        >
+          <view class="button secondary action-button">目标：{{item.targetLevelText}}⌄</view>
+        </picker>
+        <button
+          class="button ghost action-button"
+          data-id="{{item.id}}"
+          bindtap="openDetail"
+        >查看详情</button>
+        <button
+          class="button ghost action-button remove-action"
+          data-id="{{item.id}}"
+          bindtap="removeSchool"
+        >移出对比</button>
+      </view>
     </view>
   </block>
 </view>

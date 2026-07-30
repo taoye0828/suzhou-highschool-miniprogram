@@ -1,39 +1,167 @@
 <view class="page">
-  <input class="input search-input onboarding-school-search" value="{{keyword}}" placeholder="智能搜索学校名称或简称，如：南航、苏中、园区" bindinput="onKeywordInput" />
+  <input
+    class="input search-input onboarding-school-search"
+    value="{{keyword}}"
+    placeholder="搜索学校名称或简称，如：南航、苏中、园区"
+    bindinput="onKeywordInput"
+    bindblur="onKeywordCommit"
+    bindconfirm="onKeywordCommit"
+    confirm-type="search"
+  />
 
-  <view class="filter-grid">
-    <picker range="{{districts}}" value="{{districtIndex}}" bindchange="onDistrictChange">
-      <view class="filter-control">区域：{{districts[districtIndex]}}</view>
-    </picker>
-    <picker range="{{schoolTypes}}" value="{{schoolTypeIndex}}" bindchange="onSchoolTypeChange">
-      <view class="filter-control">类型：{{schoolTypes[schoolTypeIndex]}}</view>
-    </picker>
-    <picker range="{{ownerships}}" value="{{ownershipIndex}}" bindchange="onOwnershipChange">
-      <view class="filter-control">性质：{{ownerships[ownershipIndex]}}</view>
-    </picker>
-    <picker range="{{tags}}" value="{{tagIndex}}" bindchange="onTagChange">
-      <view class="filter-control">标签：{{tags[tagIndex]}}</view>
-    </picker>
-    <picker range="{{scoreStatuses}}" value="{{scoreStatusIndex}}" bindchange="onScoreStatusChange">
-      <view class="filter-control">分数线：{{scoreStatuses[scoreStatusIndex]}}</view>
-    </picker>
-    <picker range="{{scoreRanges}}" value="{{scoreRangeIndex}}" bindchange="onScoreRangeChange">
-      <view class="filter-control">分数范围：{{scoreRanges[scoreRangeIndex]}}</view>
-    </picker>
-    <picker range="{{targetFilters}}" range-key="label" value="{{targetFilterIndex}}" bindchange="onTargetFilterChange">
-      <view class="filter-control">目标类型：{{targetFilters[targetFilterIndex].label}}</view>
-    </picker>
+  <view class="card filter-card">
+    <view class="filter-section">
+      <view class="filter-heading">所在区域</view>
+      <checkbox-group class="choice-wrap" bindchange="onDistrictsChange">
+        <label
+          wx:for="{{districtOptions}}"
+          wx:key="value"
+          class="choice-chip {{item.checked ? 'selected' : ''}}"
+        >
+          <checkbox class="choice-checkbox" value="{{item.value}}" checked="{{item.checked}}" />
+          <text>{{item.label}}</text>
+        </label>
+      </checkbox-group>
+    </view>
+
+    <view class="filter-section">
+      <view class="row between">
+        <view class="filter-heading">成绩匹配</view>
+        <view class="muted small">{{currentScoreText}}</view>
+      </view>
+      <checkbox-group class="choice-wrap" bindchange="onMatchLevelsChange">
+        <label
+          wx:for="{{matchLevelOptions}}"
+          wx:key="value"
+          class="choice-chip {{item.checked ? 'selected' : ''}}"
+        >
+          <checkbox class="choice-checkbox" value="{{item.value}}" checked="{{item.checked}}" />
+          <text>{{item.label}}</text>
+        </label>
+      </checkbox-group>
+    </view>
+
+    <view class="filter-section">
+      <view class="filter-heading">参考分</view>
+      <view class="score-range-row">
+        <input
+          class="input score-range-input"
+          type="number"
+          maxlength="3"
+          value="{{minScoreInput}}"
+          placeholder="最低分"
+          bindinput="onMinScoreInput"
+          bindblur="onScoreRangeCommit"
+        />
+        <text class="range-separator">至</text>
+        <input
+          class="input score-range-input"
+          type="number"
+          maxlength="3"
+          value="{{maxScoreInput}}"
+          placeholder="最高分"
+          bindinput="onMaxScoreInput"
+          bindblur="onScoreRangeCommit"
+        />
+      </view>
+      <view wx:if="{{filterError}}" class="filter-error">{{filterError}}</view>
+    </view>
+
+    <button class="button ghost more-filter-button" bindtap="toggleMoreFilters">
+      {{moreFiltersVisible ? '收起更多筛选' : '更多筛选'}}
+    </button>
+
+    <view wx:if="{{moreFiltersVisible}}" class="more-filter-panel">
+      <view class="filter-section">
+        <view class="filter-heading">参考年份</view>
+        <view class="choice-wrap">
+          <button
+            wx:for="{{referenceYearOptions}}"
+            wx:key="value"
+            class="choice-chip chip-button {{item.checked ? 'selected' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onReferenceYearTap"
+          >{{item.label}}</button>
+        </view>
+      </view>
+
+      <view class="filter-section">
+        <view class="filter-heading">学校类型</view>
+        <checkbox-group class="choice-wrap" bindchange="onSchoolTypesChange">
+          <label
+            wx:for="{{schoolTypeOptions}}"
+            wx:key="value"
+            class="choice-chip {{item.checked ? 'selected' : ''}}"
+          >
+            <checkbox class="choice-checkbox" value="{{item.value}}" checked="{{item.checked}}" />
+            <text>{{item.label}}</text>
+          </label>
+        </checkbox-group>
+      </view>
+
+      <view class="toggle-row">
+        <view>
+          <view class="filter-heading">只看收藏</view>
+          <view class="muted small">与详情、对比和“我的”使用同一份收藏</view>
+        </view>
+        <switch checked="{{favoritesOnly}}" color="#0f766e" bindchange="onFavoritesOnlyChange" />
+      </view>
+
+      <view class="toggle-row">
+        <view>
+          <view class="filter-heading">只看目标学校</view>
+          <view class="muted small">读取当前学生档案的目标学校</view>
+        </view>
+        <switch checked="{{targetsOnly}}" color="#0f766e" bindchange="onTargetsOnlyChange" />
+      </view>
+
+      <view class="filter-section">
+        <view class="filter-heading">目标等级</view>
+        <checkbox-group class="choice-wrap" bindchange="onTargetLevelsChange">
+          <label
+            wx:for="{{targetLevelOptions}}"
+            wx:key="value"
+            class="choice-chip {{item.checked ? 'selected' : ''}}"
+          >
+            <checkbox class="choice-checkbox" value="{{item.value}}" checked="{{item.checked}}" />
+            <text>{{item.label}}</text>
+          </label>
+        </checkbox-group>
+      </view>
+
+      <view class="filter-section">
+        <view class="filter-heading">排序方式</view>
+        <picker range="{{sortOptions}}" range-key="label" value="{{sortIndex}}" bindchange="onSortChange">
+          <view class="input picker-input">{{sortOptions[sortIndex].label}}⌄</view>
+        </picker>
+      </view>
+    </view>
   </view>
 
-  <view class="row between result-line">
-    <view class="muted small">共 {{results.length}} 条结果</view>
-    <button class="button ghost small-button" bindtap="resetFilters">重置</button>
+  <view class="summary-card">
+    <view class="row between summary-line">
+      <view class="summary-text">{{filterSummary}}</view>
+      <button class="button ghost small-button" bindtap="resetFilters">重置全部</button>
+    </view>
+    <view wx:if="{{hasActiveFilters}}" class="active-filter-wrap">
+      <button
+        wx:for="{{activeFilters}}"
+        wx:key="id"
+        class="active-filter-chip"
+        data-kind="{{item.kind}}"
+        data-value="{{item.value}}"
+        bindtap="clearOneFilter"
+      >{{item.label}} ×</button>
+    </view>
   </view>
 
   <view wx:if="{{results.length === 0}}" class="card empty">
     <view class="card-title">没有找到匹配学校</view>
-    <view class="muted small">请调整名称、区域、类型、分数范围或目标类型筛选条件。</view>
-    <button class="button empty-button" bindtap="resetFilters">重置筛选</button>
+    <view class="muted small empty-summary">{{filterSummary}}</view>
+    <view class="muted small">
+      可逐项清除上方条件；如果选择了成绩匹配，请先确认当前学生档案已有成绩。
+    </view>
+    <button class="button empty-button" bindtap="resetFilters">重置全部</button>
   </view>
 
   <view
@@ -46,20 +174,70 @@
     <view class="row between card-head">
       <view class="card-title grow">{{item.name}}</view>
       <button
-        class="button secondary small-button favorite-button"
+        class="icon-action {{item.isFavorite ? 'active' : ''}}"
         data-id="{{item.id}}"
         catchtap="toggleFavorite"
-      >{{item.isFavorite ? '取消' : '收藏'}}</button>
+      >{{item.isFavorite ? '已收藏' : '收藏'}}</button>
     </view>
     <view class="tag-line">
-      <text class="badge">{{item.district}}</text>
-      <text class="badge">{{item.schoolType}}</text>
-      <text wx:if="{{item.ownership}}" class="badge">{{item.ownership}}</text>
-      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.admissionScoreBadge}}</text>
+      <text wx:if="{{item.hasDistrict}}" class="badge">{{item.district}}</text>
+      <text wx:if="{{item.hasSchoolType}}" class="badge">{{item.schoolType}}</text>
+      <text wx:if="{{item.hasOwnership}}" class="badge">{{item.ownership}}</text>
+      <text wx:if="{{item.hasCampus}}" class="badge">{{item.campus}}</text>
+      <text wx:if="{{item.isTargetSchool}}" class="badge target-badge">{{item.targetLevelText}}目标</text>
     </view>
-    <view wx:if="{{item.addressShort}}" class="muted small">{{item.addressShort}}</view>
-    <view class="muted small source-line">{{item.sourceTypeLabel}} · {{item.sourceCheckedAt}}</view>
+    <view class="school-metrics">
+      <view class="metric-item">
+        <view class="muted small">最新参考分</view>
+        <view class="metric-value">{{item.hasReference ? item.referenceText : '暂无'}}</view>
+        <view wx:if="{{item.hasReference}}" class="muted tiny">{{item.referenceYearText}}</view>
+      </view>
+      <view class="metric-item">
+        <view class="muted small">当前分差</view>
+        <view class="metric-value difference-value">{{item.hasDifference ? item.differenceText : '待记录成绩'}}</view>
+        <view wx:if="{{item.matchLevelText}}" class="muted tiny">{{item.matchLevelText}}范围</view>
+      </view>
+    </view>
+    <view class="card-actions">
+      <button
+        wx:if="{{!item.isTargetSchool}}"
+        class="button secondary action-button"
+        data-id="{{item.id}}"
+        catchtap="addTarget"
+      >加入目标</button>
+      <picker
+        wx:else
+        range="{{targetLevelOptions}}"
+        range-key="label"
+        value="{{item.targetLevelIndex}}"
+        data-id="{{item.id}}"
+        catchtap="noop"
+        bindchange="onTargetLevelChange"
+      >
+        <view class="button secondary action-button">目标：{{item.targetLevelText}}⌄</view>
+      </picker>
+      <button
+        class="button ghost action-button {{item.isCompared ? 'selected-action' : ''}}"
+        data-id="{{item.id}}"
+        catchtap="toggleCompare"
+      >{{item.isCompared ? '已选对比' : '加入对比'}}</button>
+      <button
+        class="button ghost action-button"
+        data-id="{{item.id}}"
+        catchtap="openDetail"
+      >查看详情</button>
+    </view>
   </view>
+
+  <view wx:if="{{hasComparisonSelection}}" class="compare-bottom-bar">
+    <view class="compare-bottom-summary">
+      <view class="compare-count">已选 {{comparisonCount}} / 3 所</view>
+      <view class="compare-names">{{comparisonNames || '所选学校可能不在当前筛选结果中'}}</view>
+    </view>
+    <button class="bottom-clear" bindtap="clearComparison">清空</button>
+    <button class="bottom-compare" bindtap="openComparison">开始对比</button>
+  </view>
+
   <onboarding-overlay
     visible="{{onboarding.visible}}"
     step="{{onboarding.step}}"

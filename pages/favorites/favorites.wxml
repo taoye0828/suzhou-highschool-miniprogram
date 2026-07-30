@@ -40,9 +40,5 @@
       </view>
       <button class="button danger small-button" data-id="{{item.id}}" catchtap="removeFavorite">取消收藏</button>
     </view>
-    <view class="tag-line">
-      <text class="badge">{{item.sourceTypeLabel}}</text>
-      <text class="badge {{item.hasAdmissionScores ? '' : 'muted-badge'}}">{{item.admissionScoreBadge}}</text>
-    </view>
   </view>
 </view>

@@ -8,23 +8,20 @@
     <view class="hero detail-hero">
       <view class="hero-title">{{school.name}}</view>
       <view class="hero-subtitle">{{school.district}} · {{school.schoolType}}</view>
-      <view class="detail-badges">
-        <text class="badge">{{school.sourceTypeLabel}}</text>
-        <text class="badge">{{school.admissionScoreBadge}}</text>
-      </view>
     </view>
 
     <view class="card detail-card">
       <view class="section-heading">基础信息</view>
       <view class="info-row"><text class="info-label">区域</text><text class="info-value">{{school.district}}</text></view>
       <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{school.schoolType}}</text></view>
+      <view wx:if="{{school.aliasesText}}" class="info-row"><text class="info-label">别名</text><text class="info-value">{{school.aliasesText}}</text></view>
       <view wx:if="{{school.ownership}}" class="info-row"><text class="info-label">办学性质</text><text class="info-value">{{school.ownership}}</text></view>
       <view wx:if="{{school.campus}}" class="info-row"><text class="info-label">校区</text><text class="info-value">{{school.campus}}</text></view>
       <view wx:if="{{school.address}}" class="info-row"><text class="info-label">地址</text><text class="info-value">{{school.address}}</text></view>
+      <view wx:if="{{school.phone}}" class="info-row"><text class="info-label">电话</text><text class="info-value">{{school.phone}}</text></view>
       <view class="tag-line">
         <text class="badge" wx:for="{{school.tags}}" wx:key="*this">{{item}}</text>
       </view>
-      <view class="muted small detail-notice">{{detailNotice}}</view>
     </view>
 
     <view wx:if="{{targetAnalysis}}" class="card my-target-card">
@@ -34,12 +31,11 @@
       <view class="info-row"><text class="info-label">参考年份</text><text class="info-value">{{targetAnalysis.referenceYearText}}</text></view>
       <view class="info-row"><text class="info-label">当前差距</text><text class="info-value">{{targetAnalysis.gapText}}</text></view>
       <view class="info-row"><text class="info-label">目标等级</text><text class="info-value">{{targetAnalysis.targetLevelText}}</text></view>
-      <view class="muted small target-analysis-note">本卡片展示历史参考目标，不判断未来录取结果。</view>
     </view>
 
     <view class="card target-plan-card">
       <view class="section-heading">目标规划</view>
-      <view class="muted small target-plan-note">为 {{school.name}} 选择一个目标等级，保存后可在“学习目标”页面查看。</view>
+      <view class="muted small target-plan-note">为 {{school.name}} 选择一个目标等级，保存后可在“目标规划”查看。</view>
       <picker range="{{targetLevels}}" range-key="label" value="{{targetLevelIndex}}" bindchange="onTargetLevelChange">
         <view class="input picker-input">{{targetLevels[targetLevelIndex].label}}⌄</view>
       </picker>
@@ -83,7 +79,6 @@
     <view class="card">
       <view class="section-heading">数据来源</view>
       <view class="info-row"><text class="info-label">来源标题</text><text class="info-value">{{school.sourceTitle}}</text></view>
-      <view class="info-row"><text class="info-label">来源类型</text><text class="info-value">{{school.sourceTypeLabel}}</text></view>
       <view class="info-row"><text class="info-label">核对日期</text><text class="info-value">{{school.sourceCheckedAt}}</text></view>
       <view class="notice source-note">{{school.sourceNote}}</view>
       <view class="button-row">
@@ -92,15 +87,11 @@
       </view>
     </view>
 
-    <view class="card safety-card">
-      <view class="section-heading">安全说明</view>
-      <view class="notice">{{scoreSafetyNotice}}</view>
-    </view>
-
     <view class="card">
       <view class="section-heading">操作</view>
       <view class="button-row">
         <button class="button" bindtap="toggleFavorite">{{isFavorite ? '取消收藏' : '收藏学校'}}</button>
+        <button class="button secondary" bindtap="toggleCompare">{{isCompared ? '取消对比' : '加入对比'}}</button>
         <button class="button secondary" bindtap="copySchoolName">复制学校名称</button>
         <button class="button secondary" bindtap="copyMapKeyword">复制地图搜索词</button>
         <button wx:if="{{school.address}}" class="button secondary" bindtap="copyAddress">复制地址</button>

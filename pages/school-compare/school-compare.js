@@ -1,49 +1,60 @@
-const { schools } = require('../../data/schools')
+const {
+  schools,
+  filterSchoolCatalog
+} = require('../../utils/school')
 const {
   getFavoriteIdsResult,
   getTargetRecordsResult,
   getTargetDraftResult,
   getScoreRecordsResult,
-  getExamYearResult
+  getExamYearResult,
+  ensureStorageMigrated,
+  getComparisonSchoolIds,
+  saveComparisonSchoolIds,
+  setFavorite,
+  saveTargetRecord,
+  addRecentViewedSchool
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
-const { scoreSummaryForSchool, referenceForSchool } = require('../../utils/score-analysis')
+const { scoreSummaryForSchool } = require('../../utils/score-analysis')
 const { APP_CONFIG } = require('../../config/app-config')
 const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
+const { selectCurrentScore, formatDifference } = require('../../utils/planning')
 
-function currentScoreFrom(scoreRecords, draft) {
-  const latest = Array.isArray(scoreRecords) && scoreRecords.length
-    ? scoreRecords[scoreRecords.length - 1].score
-    : Number(String(draft && draft.currentScore || '').trim())
-  return Number.isInteger(latest) && latest >= 0 && latest <= APP_CONFIG.targetScore.max
-    ? latest
-    : null
+const MAX_COMPARE_SCHOOLS = 3
+const LEVEL_OPTIONS = APP_CONFIG.targetScore.levels.map((item) => ({ ...item }))
+const LEVEL_LABELS = Object.fromEntries(LEVEL_OPTIONS.map((item) => [item.value, item.label]))
+
+function targetLevelIndex(level) {
+  const index = LEVEL_OPTIONS.findIndex((item) => item.value === level)
+  return index < 0 ? LEVEL_OPTIONS.findIndex((item) => item.value === 'target') : index
 }
 
-function presentSchool(school, favoriteIds, targetRecord, currentScore, targetYear) {
-  const reference = referenceForSchool(school.id, targetYear)
-  const gap = reference && currentScore !== null ? reference.minScore - currentScore : null
-  const targetLevel = APP_CONFIG.targetScore.levels.find(
-    (item) => targetRecord && item.value === targetRecord.level
-  )
+function presentSchool(school) {
+  const historyText = scoreSummaryForSchool(school.id)
+  const referenceScore = Number.isInteger(school.referenceScore)
+    ? school.referenceScore
+    : null
+  const referenceYear = Number.isInteger(school.referenceYear)
+    ? school.referenceYear
+    : null
+  const targetLevelText = school.targetLevel ? LEVEL_LABELS[school.targetLevel] || '目标' : ''
   return {
     ...school,
-    tagsText: Array.isArray(school.tags) && school.tags.length ? school.tags.join('、') : '暂未补充',
-    addressText: school.address || '暂未补充',
-    ownershipText: school.ownership || '暂未补充',
-    scoreSummary: scoreSummaryForSchool(school.id),
-    favoriteText: favoriteIds.includes(school.id) ? '已收藏' : '未收藏',
-    targetLevelText: targetLevel ? targetLevel.label : '未设置',
-    referenceScoreText: reference ? `${reference.minScore} 分` : '暂未收录',
-    referenceYearText: reference ? `${reference.year} 年` : '—',
-    currentScoreText: currentScore === null ? '尚未记录' : `${currentScore} 分`,
-    gapText: gap === null
-      ? '待记录成绩后计算'
-      : gap > 0
-        ? `还有 ${gap} 分`
-        : gap === 0
-          ? '与历史参考分持平'
-          : `高于历史参考分 ${Math.abs(gap)} 分`
+    hasDistrict: Boolean(school.district),
+    hasSchoolType: Boolean(school.schoolType),
+    hasOwnership: Boolean(school.ownership),
+    hasCampus: Boolean(school.campus),
+    hasReference: referenceScore !== null,
+    referenceScoreText: referenceScore === null ? '' : `${referenceScore} 分`,
+    referenceYearText: referenceYear === null ? '' : `${referenceYear} 年`,
+    hasDifference: Number.isFinite(school.difference),
+    differenceText: formatDifference(school.difference),
+    hasScoreHistory: historyText !== '暂未收录',
+    scoreSummary: historyText,
+    targetLevelText,
+    targetStatusText: school.isTargetSchool ? `${targetLevelText}目标` : '未加入目标',
+    targetLevelIndex: targetLevelIndex(school.targetLevel)
   }
 }
 
@@ -52,20 +63,38 @@ Page({
     selectedIds: [],
     selectedSchools: [],
     availableSchools: schools,
+    targetLevelOptions: LEVEL_OPTIONS,
     schoolKeyword: '',
     schoolSearchActive: false,
     pickerIndex: 0,
     canAdd: true,
     canCompare: false,
-    planningDisclaimer: APP_CONFIG.policy.planningDisclaimer
+    currentScoreText: '尚未记录成绩'
   },
 
   onLoad() {
-    this.refresh()
+    this.ensureStorageReady()
+    this.loadSelection()
   },
 
   onShow() {
-    this.refresh()
+    this.ensureStorageReady()
+    this.loadSelection()
+  },
+
+  ensureStorageReady() {
+    const result = ensureStorageMigrated()
+    if (!result.ok) {
+      wx.showToast({ title: result.message || '本地数据初始化失败，请重试。', icon: 'none' })
+    }
+  },
+
+  loadSelection() {
+    const validIds = new Set(schools.map((school) => school.id))
+    const selectedIds = getComparisonSchoolIds()
+      .filter((id) => validIds.has(id))
+      .slice(0, MAX_COMPARE_SCHOOLS)
+    this.setData({ selectedIds }, () => this.refresh())
   },
 
   refresh() {
@@ -77,21 +106,20 @@ Page({
     const failedResult = [favoriteResult, targetResult, scoreResult, draftResult, yearResult]
       .find((result) => !result.ok)
     notifyStorageReadResult(this, failedResult || favoriteResult)
-    const targetBySchoolId = new Map(
-      targetResult.records.map((record) => [record.schoolId, record])
-    )
-    const currentScore = currentScoreFrom(scoreResult.records, draftResult.draft)
+    const current = selectCurrentScore(scoreResult.records, draftResult.draft)
     const selectedIds = this.data.selectedIds.filter((id) => schools.some((school) => school.id === id))
+    const catalogById = new Map(filterSchoolCatalog({
+      favoriteIds: favoriteResult.ids,
+      targetRecords: targetResult.records,
+      currentScore: current.score,
+      targetYear: yearResult.year,
+      referenceYears: ['all'],
+      sortBy: 'default'
+    }).map((school) => [school.id, school]))
     const selectedSchools = selectedIds
-      .map((id) => schools.find((school) => school.id === id))
+      .map((id) => catalogById.get(id))
       .filter(Boolean)
-      .map((school) => presentSchool(
-        school,
-        favoriteResult.ids,
-        targetBySchoolId.get(school.id),
-        currentScore,
-        yearResult.year
-      ))
+      .map(presentSchool)
     const schoolSearchActive = Boolean(normalizeSearchText(this.data.schoolKeyword))
     const availableSchools = searchSchools({
       schools: schools.filter((school) => !selectedIds.includes(school.id)),
@@ -104,7 +132,8 @@ Page({
       schoolSearchActive,
       pickerIndex: 0,
       canAdd: selectedSchools.length < 3 && availableSchools.length > 0,
-      canCompare: selectedSchools.length >= 1
+      canCompare: selectedSchools.length >= 1,
+      currentScoreText: current.score === null ? '尚未记录成绩' : `当前成绩 ${current.score} 分`
     })
   },
 
@@ -119,22 +148,94 @@ Page({
     }
     const school = this.data.availableSchools[Number(event.detail.value)]
     if (!school || this.data.selectedIds.includes(school.id)) return
-    this.setData({
-      selectedIds: [...this.data.selectedIds, school.id],
-      schoolKeyword: ''
-    }, () => this.refresh())
+    this.saveSelection([...this.data.selectedIds, school.id], { clearKeyword: true })
   },
 
   removeSchool(event) {
     const id = event.currentTarget.dataset.id
+    this.saveSelection(this.data.selectedIds.filter((item) => item !== id))
+  },
+
+  clearSelection() {
+    this.saveSelection([])
+  },
+
+  saveSelection(ids, { clearKeyword = false } = {}) {
+    const result = saveComparisonSchoolIds(ids.slice(0, MAX_COMPARE_SCHOOLS))
+    if (!result.ok) {
+      wx.showToast({ title: result.message || '对比选择保存失败。', icon: 'none' })
+      return
+    }
     this.setData({
-      selectedIds: this.data.selectedIds.filter((item) => item !== id)
+      selectedIds: ids.slice(0, MAX_COMPARE_SCHOOLS),
+      ...(clearKeyword ? { schoolKeyword: '' } : {})
     }, () => this.refresh())
   },
 
-  openDetail(event) {
-    wx.navigateTo({
-      url: `/pages/school-detail/school-detail?id=${event.currentTarget.dataset.id}`
+  toggleFavorite(event) {
+    const id = event.currentTarget.dataset.id
+    const school = this.data.selectedSchools.find((item) => item.id === id)
+    if (!school) return
+    const result = setFavorite(id, !school.isFavorite)
+    if (!result.ok) {
+      wx.showToast({ title: result.message || '收藏状态保存失败。', icon: 'none' })
+      return
+    }
+    wx.showToast({ title: school.isFavorite ? '已取消收藏' : '已收藏', icon: 'success' })
+    this.refresh()
+  },
+
+  addTarget(event) {
+    this.saveTargetLevel(event.currentTarget.dataset.id, 'target')
+  },
+
+  onTargetLevelChange(event) {
+    const option = LEVEL_OPTIONS[Number(event.detail.value)]
+    if (!option) return
+    this.saveTargetLevel(event.currentTarget.dataset.id, option.value)
+  },
+
+  saveTargetLevel(id, level) {
+    const school = this.data.selectedSchools.find((item) => item.id === id)
+    if (!school) return
+    const now = new Date().toISOString()
+    const result = saveTargetRecord({
+      id: school.targetRecord && school.targetRecord.id || `target_${school.id}`,
+      schoolId: school.id,
+      schoolName: school.name,
+      level,
+      referenceScore: school.referenceScore,
+      referenceYear: school.referenceYear,
+      createdAt: school.targetRecord && school.targetRecord.createdAt || now,
+      updatedAt: now
     })
+    if (!result.ok) {
+      wx.showToast({ title: result.message || '目标学校保存失败。', icon: 'none' })
+      return
+    }
+    wx.showToast({
+      title: school.isTargetSchool ? '目标等级已更新' : '已加入目标学校',
+      icon: 'success'
+    })
+    this.refresh()
+  },
+
+  openDetail(event) {
+    const id = event.currentTarget.dataset.id
+    const recentResult = addRecentViewedSchool(id)
+    if (recentResult && !recentResult.ok) {
+      wx.showToast({ title: recentResult.message || '最近浏览保存失败。', icon: 'none' })
+    }
+    wx.navigateTo({
+      url: `/pages/school-detail/school-detail?id=${id}`
+    })
+  },
+
+  openSchoolLibrary() {
+    wx.switchTab({ url: '/pages/schools/schools' })
+  },
+
+  noop() {
+    // Used to keep card-level navigation from handling nested controls.
   }
 })

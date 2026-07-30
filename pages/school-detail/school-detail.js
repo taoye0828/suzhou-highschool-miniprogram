@@ -6,7 +6,10 @@ const {
   getTargetDraftResult,
   getScoreRecordsResult,
   getExamYearResult,
-  saveTargetRecord
+  saveTargetRecord,
+  addRecentViewedSchool,
+  getComparisonSchoolIds,
+  saveComparisonSchoolIds
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { mapSearchKeyword, copyText } = require('../../utils/map')
@@ -17,36 +20,27 @@ const {
   groupScoresByYear
 } = require('../../utils/admission-scores')
 const { APP_CONFIG } = require('../../config/app-config')
-const { referenceForSchool } = require('../../utils/score-analysis')
-
-function currentScoreFrom(scoreRecords, draft) {
-  const latest = Array.isArray(scoreRecords) && scoreRecords.length
-    ? scoreRecords[scoreRecords.length - 1].score
-    : Number(String(draft && draft.currentScore || '').trim())
-  return Number.isInteger(latest) && latest >= 0 && latest <= APP_CONFIG.targetScore.max
-    ? latest
-    : null
-}
+const {
+  selectCurrentScore,
+  selectReferenceForSchool,
+  selectGap,
+  formatDifference
+} = require('../../utils/planning')
+const { admissionScores } = require('../../data/admission-scores')
 
 function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYear) {
   if (!school) return null
-  const reference = referenceForSchool(school.id, targetYear)
-  const currentScore = currentScoreFrom(scoreRecords, draft)
-  const gap = reference && currentScore !== null ? reference.minScore - currentScore : null
+  const current = selectCurrentScore(scoreRecords, draft)
+  const reference = selectReferenceForSchool(school.id, targetYear, admissionScores)
+  const gap = selectGap(current.score, reference)
   const level = APP_CONFIG.targetScore.levels.find(
     (item) => targetRecord && item.value === targetRecord.level
   )
   return {
-    currentScoreText: currentScore === null ? '尚未记录' : `${currentScore} 分`,
+    currentScoreText: current.score === null ? '尚未记录' : `${current.score} 分`,
     referenceScoreText: reference ? `${reference.minScore} 分` : '暂未收录',
     referenceYearText: reference ? `${reference.year} 年` : '—',
-    gapText: gap === null
-      ? '待记录成绩后计算'
-      : gap > 0
-        ? `还有 ${gap} 分`
-        : gap === 0
-          ? '与历史参考分持平'
-          : `高于历史参考分 ${Math.abs(gap)} 分`,
+    gapText: formatDifference(gap.difference),
     targetLevelText: level ? level.label : '未设置'
   }
 }
@@ -61,6 +55,7 @@ Page({
     targetLevels: APP_CONFIG.targetScore.levels,
     targetLevelIndex: APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target'),
     targetAnalysis: null,
+    isCompared: false,
     mapKeyword: '',
     emptyScoreText: EMPTY_SCORE_TEXT,
     scoreSafetyNotice: SCORE_SAFETY_NOTICE,
@@ -69,6 +64,7 @@ Page({
 
   onLoad(options) {
     this.setData({ schoolId: options.id || '' })
+    if (getSchoolById(options.id || '')) addRecentViewedSchool(options.id)
     this.refresh()
   },
 
@@ -93,9 +89,15 @@ Page({
       .find((result) => !result.ok)
     notifyStorageReadResult(this, failedResult || favoriteResult)
     this.setData({
-      school: school ? presentSchool(school, favoriteResult.ids) : null,
+      school: school
+        ? {
+            ...presentSchool(school, favoriteResult.ids),
+            aliasesText: Array.isArray(school.aliases) ? school.aliases.join('、') : ''
+          }
+        : null,
       isFavorite: school ? favoriteResult.ids.includes(school.id) : false,
       isTargetSchool: Boolean(targetRecord),
+      isCompared: school ? getComparisonSchoolIds().includes(school.id) : false,
       targetLevelIndex: Math.max(0, targetLevelIndex),
       targetAnalysis: buildTargetAnalysis(
         school,
@@ -149,6 +151,24 @@ Page({
       title: wasTargetSchool ? '目标等级已更新' : '已加入目标',
       icon: 'success'
     })
+  },
+
+  toggleCompare() {
+    if (!this.data.school) return
+    const current = getComparisonSchoolIds()
+    const next = current.includes(this.data.school.id)
+      ? current.filter((id) => id !== this.data.school.id)
+      : [...current, this.data.school.id]
+    if (next.length > 3) {
+      wx.showToast({ title: '最多对比 3 所学校', icon: 'none' })
+      return
+    }
+    const result = saveComparisonSchoolIds(next)
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.setData({ isCompared: !this.data.isCompared })
   },
 
   copySchoolName() {
