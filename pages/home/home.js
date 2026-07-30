@@ -1,31 +1,60 @@
-const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../../config/app-config')
+const { APP_CONFIG } = require('../../config/app-config')
 const {
   getExamYearResult,
   saveExamYear,
   getScoreRecordsResult,
   getTargetRecordsResult,
-  getTargetDraftResult,
-  saveTargetDraft
+  getLearningTargetRecordsResult,
+  getPrimaryTargetSchoolId
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { calculateExamCountdown, examYearOptions } = require('../../utils/countdown')
-const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
+const {
+  sortScoreRecords,
+  selectLatestScoreRecord,
+  selectPrimaryTarget,
+  selectReferenceForSchool,
+  selectGap,
+  formatDifference
+} = require('../../utils/planning')
+const { admissionScores } = require('../../data/admission-scores')
+const { summarizeScoreRecords } = require('../../utils/score-trend')
+
+function importantStageGoal(records) {
+  const rank = { in_progress: 0, not_started: 1, paused: 2, completed: 3 }
+  return (Array.isArray(records) ? records : [])
+    .filter((item) => !item.isDraft && item.status !== 'completed')
+    .slice()
+    .sort((left, right) => {
+      const status = (rank[left.status] ?? 99) - (rank[right.status] ?? 99)
+      if (status !== 0) return status
+      const leftDate = left.endDate || '9999-12-31'
+      const rightDate = right.endDate || '9999-12-31'
+      return leftDate.localeCompare(rightDate) || left.id.localeCompare(right.id)
+    })[0] || null
+}
 
 Page({
   data: {
     examYears: [],
     examYearIndex: 0,
     countdown: null,
-    scoreInput: '',
-    scoreInputError: '',
-    scoreMax: EXAM_TOTAL_SCORE,
-    schoolKeyword: '',
-    schoolSearchActive: false,
-    schoolSearchResults: [],
-    latestScoreText: '尚未记录',
-    scoreChangeText: '暂无上次成绩可比较',
-    targetCount: 0,
+    hasScores: false,
+    hasTarget: false,
+    hasStageGoal: false,
+    latestExamName: '',
+    latestExamDate: '',
+    latestScoreText: '',
+    scoreChangeText: '',
+    trendSummary: '',
+    primaryTargetName: '',
+    targetLevelLabel: '',
+    targetReferenceText: '',
+    targetDifferenceText: '',
+    stageGoalTitle: '',
+    stageGoalDeadline: '',
+    stageGoalProgressText: '',
     onboarding: { visible: false, step: null }
   },
 
@@ -42,20 +71,57 @@ Page({
   refreshOverview() {
     const scoreResult = getScoreRecordsResult()
     const targetResult = getTargetRecordsResult()
-    const scores = scoreResult.records
-    const latest = scores.length ? scores[scores.length - 1].score : null
-    const previous = scores.length > 1 ? scores[scores.length - 2].score : null
-    const change = latest !== null && previous !== null ? latest - previous : null
+    const stageResult = getLearningTargetRecordsResult()
+    const yearResult = getExamYearResult()
+    const failed = [scoreResult, targetResult, stageResult, yearResult].find((item) => !item.ok)
+    notifyStorageReadResult(this, failed || scoreResult)
+    const scores = sortScoreRecords(scoreResult.records)
+    const latest = selectLatestScoreRecord(scores)
+    const previous = scores.length > 1 ? scores[scores.length - 2] : null
+    const change = latest && previous ? latest.score - previous.score : null
+    const primary = selectPrimaryTarget(targetResult.records, {
+      primaryTargetId: getPrimaryTargetSchoolId()
+    })
+    const reference = primary
+      ? selectReferenceForSchool(primary.schoolId, yearResult.year, admissionScores)
+      : null
+    const gap = selectGap(latest && latest.score, reference)
+    const stageGoal = importantStageGoal(stageResult.records)
+    const targetScore = stageGoal && stageGoal.targetTotalScore
+    const targetGap = latest && Number.isInteger(targetScore) ? targetScore - latest.score : null
+    const summary = summarizeScoreRecords(scores)
     this.setData({
-      latestScoreText: latest === null ? '尚未记录' : `${latest} 分`,
+      hasScores: Boolean(latest),
+      hasTarget: Boolean(primary),
+      hasStageGoal: Boolean(stageGoal),
+      latestExamName: latest ? latest.examName : '',
+      latestExamDate: latest ? latest.examDate || latest.date : '',
+      latestScoreText: latest ? `${latest.score} 分` : '',
       scoreChangeText: change === null
-        ? '暂无上次成绩可比较'
+        ? '首次记录，暂无上次成绩'
         : change > 0
           ? `比上次提高 ${change} 分`
           : change < 0
             ? `比上次下降 ${Math.abs(change)} 分`
             : '与上次持平',
-      targetCount: targetResult.records.length
+      trendSummary: latest
+        ? `${summary.recentRecords.length} 次记录 · 平均 ${summary.averageText} · ${summary.changeValueText}`
+        : '',
+      primaryTargetName: primary ? primary.schoolName : '',
+      targetLevelLabel: primary
+        ? (APP_CONFIG.targetScore.levels.find((item) => item.value === primary.level) || {}).label || '目标'
+        : '',
+      targetReferenceText: reference ? `${reference.minScore} 分（${reference.year} 年）` : '暂无有效参考分',
+      targetDifferenceText: formatDifference(gap.difference),
+      stageGoalTitle: stageGoal ? stageGoal.title : '',
+      stageGoalDeadline: stageGoal && stageGoal.endDate ? stageGoal.endDate : '未设置截止日期',
+      stageGoalProgressText: targetGap === null
+        ? '记录成绩后查看目标差距'
+        : targetGap > 0
+          ? `距离阶段总分目标还有 ${targetGap} 分`
+          : targetGap === 0
+            ? '当前成绩达到阶段总分目标'
+            : `当前成绩高于阶段目标 ${Math.abs(targetGap)} 分`
     })
   },
 
@@ -83,58 +149,23 @@ Page({
       examYearIndex: index,
       countdown: calculateExamCountdown(year)
     })
+    this.refreshOverview()
     wx.showToast({ title: '目标年份已保存在本机', icon: 'success' })
   },
 
-  onSchoolKeywordInput(event) {
-    const schoolKeyword = event.detail.value
-    const schoolSearchActive = Boolean(normalizeSearchText(schoolKeyword))
-    this.setData({
-      schoolKeyword,
-      schoolSearchActive,
-      schoolSearchResults: schoolSearchActive
-        ? searchSchools({ keyword: schoolKeyword, limit: 5 })
-        : []
-    })
+  openScoreCenter() {
+    getApp().globalData.scoreCenterSegment = 'records'
+    wx.switchTab({ url: '/pages/score-trend/score-trend' })
   },
 
-  onScoreInput(event) {
-    this.setData({
-      scoreInput: event.detail.value,
-      scoreInputError: ''
-    })
+  openRecommendations() {
+    getApp().globalData.targetCenterSegment = 'recommendation'
+    wx.switchTab({ url: '/pages/targets/targets' })
   },
 
-  startScoreAnalysis() {
-    const raw = String(this.data.scoreInput || '').trim()
-    const score = Number(raw)
-    if (!/^\d+$/.test(raw) || !Number.isInteger(score) || score < 0 || score > EXAM_TOTAL_SCORE) {
-      this.setData({ scoreInputError: `成绩必须是 0 至 ${EXAM_TOTAL_SCORE} 的整数。` })
-      return
-    }
-    const draftResult = getTargetDraftResult()
-    const saveResult = saveTargetDraft({ ...draftResult.draft, currentScore: raw })
-    if (!saveResult.ok) {
-      wx.showToast({ title: saveResult.message, icon: 'none' })
-      return
-    }
-    wx.switchTab({ url: '/pages/target-analysis/target-analysis' })
-  },
-
-  openSchoolResult(event) {
-    wx.navigateTo({
-      url: `/pages/school-detail/school-detail?id=${event.currentTarget.dataset.id}`
-    })
-  },
-
-  openEntry(event) {
-    const { route, tab } = event.currentTarget.dataset
-    if (tab) wx.switchTab({ url: route })
-    else wx.navigateTo({ url: route })
-  },
-
-  openSchools() {
-    wx.switchTab({ url: '/pages/schools/schools' })
+  openTargetPlanning() {
+    getApp().globalData.targetCenterSegment = 'schools'
+    wx.switchTab({ url: '/pages/targets/targets' })
   },
 
   syncOnboarding() {

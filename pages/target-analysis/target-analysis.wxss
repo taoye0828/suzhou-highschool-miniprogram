@@ -1,29 +1,20 @@
-.compact-hero { margin-bottom: 24rpx; }
-.input-card { margin-top: 24rpx; }
-.picker-input { display: flex; align-items: center; color: #334155; }
-.input-error { margin-top: 14rpx; color: #b42318; font-size: 24rpx; }
-.analyze-button { margin-top: 24rpx; }
-.method-card { border-left: 8rpx solid #0f766e; }
-.method-text { margin: 10rpx 0; }
-.analysis-section { margin-top: 30rpx; }
-.section-heading { margin-bottom: 6rpx; }
-.section-description { margin-bottom: 16rpx; }
-.compact-empty { padding: 34rpx 24rpx; }
-.result-card:active { background: #f0f8f6; }
-.disclaimer-card { margin-top: 34rpx; border-left: 8rpx solid #f59e0b; }
-.disclaimer-text { margin-top: 10rpx; }
-.target-link-badge {
-  display: inline-flex;
-  margin-top: 12rpx;
-  padding: 7rpx 14rpx;
-  color: #0f766e;
-  background: #e7f6f3;
-  border-radius: 999rpx;
-  font-size: 22rpx;
-  font-weight: 600;
+.redirect-page {
+  display: flex;
+  min-height: 60vh;
+  align-items: center;
 }
-.result-actions { margin-top: 24rpx; }
-.result-action-buttons,
-.result-buttons { gap: 12rpx; margin-top: 18rpx; }
-.result-action-buttons .button,
-.result-buttons .button { margin: 0; padding-left: 12rpx; padding-right: 12rpx; }
+
+.redirect-card {
+  width: 100%;
+  text-align: center;
+}
+
+.redirect-card .muted {
+  margin-top: 12rpx;
+}
+
+.redirect-button {
+  width: 320rpx;
+  max-width: 100%;
+  margin: 24rpx auto 0;
+}

@@ -15,8 +15,14 @@ function compareCreatedAt(leftValue, rightValue) {
 
 function sortScoreRecords(records) {
   return (Array.isArray(records) ? records : [])
-    .filter((record) => record && Number.isFinite(record.score) && typeof record.id === 'string')
-    .map((record, sourceIndex) => ({ ...record, sourceIndex }))
+    .filter((record) => record &&
+      Number.isFinite(Number.isFinite(record.totalScore) ? record.totalScore : record.score) &&
+      typeof record.id === 'string')
+    .map((record, sourceIndex) => ({
+      ...record,
+      score: Number.isFinite(record.totalScore) ? record.totalScore : record.score,
+      sourceIndex
+    }))
     .sort((left, right) => {
       const dateCompare = String(left.examDate || left.date || '').localeCompare(
         String(right.examDate || right.date || '')

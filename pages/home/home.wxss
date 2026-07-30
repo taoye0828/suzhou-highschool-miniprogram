@@ -1,19 +1,13 @@
-.hero-pill {
-  margin-top: 18rpx;
-  padding: 14rpx 18rpx;
-  color: #e7fffb;
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 14rpx;
-  font-size: 24rpx;
-  line-height: 1.55;
+.countdown-card {
+  margin-bottom: 0;
+  border-left: 8rpx solid #0f766e;
 }
-.hero-pill.secondary { color: #f3fbf9; }
-.entry { display: flex; align-items: center; }
-.entry:active { background: #f0f8f6; }
-.entry-subtitle { margin-top: 8rpx; }
-.countdown-card { border-left: 8rpx solid #0f766e; }
 .countdown-head { align-items: flex-start; }
-.countdown-date { margin-top: 8rpx; }
+.countdown-head .card-title {
+  margin-top: 8rpx;
+  font-size: 38rpx;
+}
+.countdown-date { margin-top: 10rpx; }
 .year-picker {
   flex-shrink: 0;
   margin-left: 16rpx;
@@ -24,82 +18,48 @@
   font-size: 24rpx;
   font-weight: 600;
 }
-.planning-notice { margin-top: 30rpx; border-left: 8rpx solid #f59e0b; }
-.planning-notice-text { margin-top: 10rpx; }
-.overview-card { margin-bottom: 24rpx; border-left: 8rpx solid #0f766e; }
-.overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; margin: 20rpx 0; }
-.overview-value { margin-top: 6rpx; color: #0f766e; font-size: 36rpx; font-weight: 700; }
-.school-library-button { margin-top: 20rpx; }
-.check-item,
-.limit-item {
-  display: flex;
-  gap: 14rpx;
-  margin-top: 18rpx;
-  color: #334155;
-  line-height: 1.65;
-}
-.check-dot,
-.limit-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.empty-state-card { text-align: center; }
+.empty-state-text { margin: 14rpx 0 22rpx; }
+.score-card { border-left: 8rpx solid #14b8a6; }
+.target-card { border-left: 8rpx solid #0f766e; }
+.stage-card { border-left: 8rpx solid #f59e0b; }
+.score-head,
+.target-head { align-items: flex-start; }
+.score-value {
   flex-shrink: 0;
-  width: 34rpx;
-  height: 34rpx;
-  margin-top: 4rpx;
-  border-radius: 999rpx;
-  font-size: 22rpx;
+  color: #0f766e;
+  font-size: 42rpx;
   font-weight: 700;
 }
-.check-dot { color: #ffffff; background: #0f766e; }
-.limit-card { border-left: 8rpx solid #f59e0b; }
-.limit-dot { color: #92400e; background: #fef3c7; }
-.step-card { counter-reset: step; }
-.step-item {
-  padding: 16rpx 0;
+.target-gap {
+  flex-shrink: 0;
+  max-width: 240rpx;
+  color: #0f766e;
+  font-size: 28rpx;
+  font-weight: 700;
+  text-align: right;
+}
+.status-line {
+  margin: 18rpx 0 8rpx;
   color: #334155;
-  border-bottom: 1rpx solid #eef2f1;
-  line-height: 1.65;
+  line-height: 1.6;
 }
-.step-item:last-child { border-bottom: none; }
-.home-search-result {
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #eef2f1;
-}
-.home-search-result:last-child { border-bottom: none; }
-.home-search-result:active { background: #f0f8f6; }
-.search-empty { padding: 24rpx 0 6rpx; text-align: center; }
-.score-start-card { border-left: 8rpx solid #0f766e; }
-.score-start-row {
-  display: flex;
-  align-items: stretch;
+.stage-title { margin: 8rpx 0; }
+.card-action { margin-top: 20rpx; }
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16rpx;
-  margin-top: 22rpx;
 }
-.score-start-input { flex: 1; min-width: 0; }
-.score-start-button {
-  display: flex;
-  flex: 0 0 210rpx;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
+.shortcut-button {
+  width: 100%;
+  min-width: 0;
 }
-.score-start-note { margin-top: 14rpx; }
-.input-error { margin-top: 14rpx; color: #b42318; font-size: 24rpx; }
-.journey-card { padding-top: 10rpx; padding-bottom: 10rpx; }
-.journey-item { display: flex; align-items: center; min-height: 76rpx; }
-.journey-index {
-  display: flex;
-  flex: 0 0 46rpx;
-  align-items: center;
-  justify-content: center;
-  width: 46rpx;
-  height: 46rpx;
-  color: #ffffff;
-  background: #0f766e;
-  border-radius: 999rpx;
-  font-size: 22rpx;
-  font-weight: 700;
+.shortcut-button.wide { grid-column: 1 / -1; }
+
+@media (max-width: 340px) {
+  .shortcut-grid { grid-template-columns: 1fr; }
+  .shortcut-button.wide { grid-column: auto; }
+  .countdown-head { align-items: stretch; flex-direction: column; }
+  .year-picker { margin: 12rpx 0 0; }
 }
-.journey-label { flex: 1; margin-left: 18rpx; color: #334155; font-weight: 600; }
-.journey-arrow { color: #94a3b8; font-size: 30rpx; }
