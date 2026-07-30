@@ -167,7 +167,7 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
 }
 
 const { APP_CONFIG } = require('../config/app-config')
-if (!['1.4.0', '1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.9.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为已支持的正式版本')
+if (!['1.4.0', '1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.9.0', '2.0.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为已支持的正式版本')
 const privacyText = JSON.stringify(APP_CONFIG.policy.privacySections)
 for (const phrase of ['不上传收藏、学习目标记录、成绩记录、目标年份或输入草稿', '不进行后台网络请求或用户行为追踪']) {
   if (!privacyText.includes(phrase)) fail(`隐私说明缺少：${phrase}`)
@@ -228,7 +228,11 @@ if (targetAnalysisSource.includes('admission-scores')) fail('target-analysis 兼
 for (const phrase of ['targetCenterSegment', '/pages/targets/targets', 'switchTab']) {
   if (!targetAnalysisSource.includes(phrase)) fail(`target-analysis 兼容页缺少统一目标规划跳转：${phrase}`)
 }
-const targetStorageSource = read('utils/storage.js')
+const targetStorageSource = [
+  read('utils/storage.js'),
+  read('utils/rc9-storage.js'),
+  read('utils/rc9-models.js')
+].join('\n')
 for (const field of ['schoolId', 'schoolName', 'level']) {
   if (!targetStorageSource.includes(field)) fail(`目标记录存储必须包含 ${field}`)
 }

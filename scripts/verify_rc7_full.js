@@ -34,7 +34,7 @@ function walk(directory) {
   })
 }
 
-assert.ok(['1.7.0', '1.8.0', '1.9.0'].includes(APP_CONFIG.version))
+assert.ok(['1.7.0', '1.8.0', '1.9.0', '2.0.0'].includes(APP_CONFIG.version))
 assert.deepStrictEqual(
   APP_CONFIG.targetScore.levels.map((item) => item.value),
   ['sprint', 'target', 'safe']
@@ -214,7 +214,7 @@ const compareText = [
 for (const phrase of ['最多对比 3 所学校', '目标状态', '历史分数线', '最新参考分', '当前分差']) {
   assert.ok(compareText.includes(phrase), `compare missing ${phrase}`)
 }
-assert.ok(compareText.includes('selectedSchools.length >= 1'))
+assert.ok(compareText.includes('selectedSchools.length >= 2'))
 
 const detailText = [
   read('pages/school-detail/school-detail.js'),

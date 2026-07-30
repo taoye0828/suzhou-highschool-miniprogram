@@ -12,7 +12,7 @@ const { admissionScores } = require('../data/admission-scores')
 const trend = require('../utils/score-trend')
 const analysis = require('../utils/score-analysis')
 
-assert.ok(['1.8.0', '1.9.0'].includes(APP_CONFIG.version))
+assert.ok(['1.8.0', '1.9.0', '2.0.0'].includes(APP_CONFIG.version))
 assert.deepStrictEqual(
   appJson.tabBar.list.map((item) => [item.pagePath, item.text]),
   [

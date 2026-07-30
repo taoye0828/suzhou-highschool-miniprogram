@@ -1,0 +1,11 @@
+const assert = require('assert')
+const { read, readJson } = require('./rc9_test_helpers')
+
+const app = readJson('app.json')
+assert.deepStrictEqual(app.tabBar.list.map((item) => item.text), ['首页', '学校库', '成绩', '目标规划', '我的'])
+assert.ok(read('pages/target-analysis/target-analysis.js').includes("url: '/pages/targets/targets'"))
+assert.ok(read('utils/storage.js').includes("module.exports = require('./rc9-storage')"))
+assert.strictEqual(read('utils/storage.js').includes('function saveScoreRecord'), false)
+assert.ok(read('pages/score-trend/score-trend.js').includes('saveScoreLossReason'))
+assert.ok(read('pages/targets/targets.js').includes('scenarioResults'))
+console.log('RC10 POST AUDIT VERIFY PASSED')

@@ -32,7 +32,7 @@ function walk(directory) {
   })
 }
 
-assert.ok(['1.6.0', '1.7.0', '1.8.0', '1.9.0'].includes(APP_CONFIG.version))
+assert.ok(['1.6.0', '1.7.0', '1.8.0', '1.9.0', '2.0.0'].includes(APP_CONFIG.version))
 assert.strictEqual(APP_CONFIG.countdown.defaultYear, 2027)
 assert.strictEqual(APP_CONFIG.targetScore.max, EXAM_TOTAL_SCORE)
 assert.deepStrictEqual(
@@ -95,7 +95,11 @@ assert.strictEqual(countdown.daysRemaining, 327)
 assert.ok(KEYS.scoreRecords)
 assert.ok(KEYS.examYear)
 
-const targetStorageSource = read('utils/storage.js')
+const targetStorageSource = [
+  read('utils/storage.js'),
+  read('utils/rc9-storage.js'),
+  read('utils/rc9-models.js')
+].join('\n')
 for (const field of ['schoolId', 'schoolName', 'level']) {
   assert.ok(targetStorageSource.includes(field), `target record must include ${field}`)
 }

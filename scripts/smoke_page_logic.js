@@ -237,7 +237,7 @@ function testSchoolDetailPage() {
   failedTargetPage.saveSchoolTarget()
   writeFailure = false
   assert.strictEqual(storage.getTargetRecords().length, 3)
-  assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
+  assert.ok(toastTitles.some((title) => title.includes('原数据已保留')))
 
   page.toggleFavorite()
   assert.ok(storage.getFavoriteIds().includes('suzhou_high_school'))
@@ -318,7 +318,7 @@ function testFavoritesPage() {
   page.refresh()
   writeFailure = false
   assert.strictEqual(page.data.invalidCount, 1)
-  assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
+  assert.ok(toastTitles.some((title) => title.includes('原数据已保留')))
   page.cleanInvalidFavorites()
   assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
   assert.strictEqual(page.data.invalidCount, 0)
@@ -406,7 +406,7 @@ function testSchoolComparePage() {
   page.onLoad()
   page.onSchoolChange({ detail: { value: '0' } })
   assert.strictEqual(page.data.selectedSchools.length, 1)
-  assert.strictEqual(page.data.canCompare, true)
+  assert.strictEqual(page.data.canCompare, false)
   page.onSchoolChange({ detail: { value: '0' } })
   assert.strictEqual(page.data.selectedSchools.length, 2)
   assert.strictEqual(page.data.canCompare, true)

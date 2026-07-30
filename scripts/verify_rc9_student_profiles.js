@@ -61,7 +61,7 @@ const exported = backup.createBackupEnvelope({
   exportedAt: '2026-07-29T12:00:00.000Z'
 })
 assert.strictEqual(exported.ok, true)
-assert.strictEqual(exported.backup.payload.profiles.length, 2)
+assert.strictEqual(exported.backup.profiles.length, 2)
 assert.strictEqual(storage.clearLocalData().ok, true)
 assert.strictEqual(backup.importBackupEnvelope(exported.backup, { mode: 'overwrite' }).ok, true)
 assert.strictEqual(storage.getProfiles().length, 2)

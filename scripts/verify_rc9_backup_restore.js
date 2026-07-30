@@ -28,17 +28,19 @@ assert.strictEqual(exported.backup.format, 'suzhou-highschool-local-backup')
 assert.strictEqual(exported.backup.storageSchemaVersion, 4)
 assert.strictEqual(exported.backup.checksum.algorithm, 'fnv1a32')
 assert.strictEqual(backup.validateBackupEnvelope(exported.backup).ok, true)
-assert.strictEqual(backup.backupPreview(exported.backup.payload).scoreCount, 1)
+assert.strictEqual(backup.backupPreview(exported.backup).scoreCount, 1)
 
 const checksumDamage = clone(exported.backup)
-checksumDamage.payload.profileData.profile_default.scoreRecords[0].totalScore = 741
+checksumDamage.profileData.profile_default.scoreRecords[0].totalScore = 741
+checksumDamage.scoreRecords[0].totalScore = 741
 assert.ok(
   backup.validateBackupEnvelope(checksumDamage).errors.includes('校验摘要不匹配，文件可能已损坏。')
 )
 
 const structurallyInvalid = clone(exported.backup)
-structurallyInvalid.payload.profileData.profile_default.scoreRecords[0].examDate = 'bad-date'
-structurallyInvalid.checksum.value = backup.checksumForPayload(structurallyInvalid.payload)
+structurallyInvalid.profileData.profile_default.scoreRecords[0].examDate = 'bad-date'
+structurallyInvalid.scoreRecords[0].examDate = 'bad-date'
+structurallyInvalid.checksum.value = backup.checksumForPayload(backup.backupPayload(structurallyInvalid))
 const invalidResult = backup.validateBackupEnvelope(structurallyInvalid)
 assert.strictEqual(invalidResult.ok, false)
 assert.ok(invalidResult.errors.some((item) => item.includes('结构无效的考试记录')))
@@ -47,7 +49,7 @@ assert.strictEqual(backup.importBackupEnvelope(structurallyInvalid, { mode: 'mer
 assert.deepStrictEqual(storage.getVersionedState().state, beforeInvalidImport)
 
 const incoming = clone(exported.backup)
-const defaultData = incoming.payload.profileData.profile_default
+const defaultData = incoming.profileData.profile_default
 defaultData.scoreRecords[0] = {
   ...defaultData.scoreRecords[0],
   totalScore: 630,
@@ -65,7 +67,9 @@ defaultData.targetRecords.push({
   profileId: 'profile_default',
   schemaVersion: 4
 })
-incoming.checksum.value = backup.checksumForPayload(incoming.payload)
+incoming.scoreRecords = incoming.profiles.flatMap((profile) => incoming.profileData[profile.id].scoreRecords)
+incoming.targetSchools = incoming.profiles.flatMap((profile) => incoming.profileData[profile.id].targetRecords)
+incoming.checksum.value = backup.checksumForPayload(backup.backupPayload(incoming))
 assert.strictEqual(backup.validateBackupEnvelope(incoming).ok, true)
 assert.strictEqual(backup.importBackupEnvelope(incoming, { mode: 'merge' }).ok, true)
 assert.deepStrictEqual(
@@ -80,10 +84,11 @@ assert.deepStrictEqual(storage.getScoreRecords().map((item) => item.id), ['local
 assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.schoolId), [schools[0].id])
 
 const duplicate = clone(exported.backup)
-duplicate.payload.profileData.profile_default.scoreRecords.push(
-  clone(duplicate.payload.profileData.profile_default.scoreRecords[0])
+duplicate.profileData.profile_default.scoreRecords.push(
+  clone(duplicate.profileData.profile_default.scoreRecords[0])
 )
-duplicate.checksum.value = backup.checksumForPayload(duplicate.payload)
+duplicate.scoreRecords = duplicate.profiles.flatMap((profile) => duplicate.profileData[profile.id].scoreRecords)
+duplicate.checksum.value = backup.checksumForPayload(backup.backupPayload(duplicate))
 assert.strictEqual(backup.validateBackupEnvelope(duplicate).ok, false)
 
 console.log('RC9 BACKUP RESTORE VERIFY PASSED')

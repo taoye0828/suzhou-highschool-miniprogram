@@ -1,0 +1,10 @@
+const assert = require('assert')
+const { schoolScoreTrend } = require('../utils/rc10-features')
+const { schools } = require('../data/schools')
+
+const trend = schoolScoreTrend(schools[0].id)
+assert.ok(trend.every((item) => [2025, 2026].includes(item.year)))
+assert.strictEqual(trend.some((item) => item.year === 2027), false)
+for (let index = 1; index < trend.length; index += 1) assert.ok(trend[index - 1].year <= trend[index].year)
+assert.ok(trend.every((item) => item.itemName && Number.isInteger(item.score)))
+console.log('RC10 SCHOOL DETAIL TREND VERIFY PASSED')

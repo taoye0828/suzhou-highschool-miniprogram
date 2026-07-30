@@ -1,0 +1,11 @@
+const assert = require('assert')
+const fs = require('fs')
+const { schools } = require('../data/schools')
+const { buildMatrix, outputPath } = require('./generate_rc10_school_quality_matrix')
+
+const matrix = buildMatrix()
+assert.strictEqual(schools.length, 55)
+assert.strictEqual((matrix.match(/^\| [a-z0-9_]+ \|/gm) || []).length, 55)
+assert.ok(matrix.includes('重复 schoolId 0'))
+assert.ok(fs.readFileSync(outputPath, 'utf8').includes('RC10 55 所学校数据质量矩阵'))
+console.log('RC10 SCHOOL QUALITY MATRIX VERIFY PASSED')
