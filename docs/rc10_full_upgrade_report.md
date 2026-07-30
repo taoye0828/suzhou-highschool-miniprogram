@@ -54,4 +54,16 @@
 - 只读切换检查：首页、学校库、成绩、目标规划、我的。成绩页可见记录/趋势/复盘，目标页可见三情景，个人页可见动态帮助、备份与数据管理入口。
 - 未执行：学校详情、对比、失分原因编辑、创建任务、导入/导出、大字体和键盘的完整交互验收；未执行手机预览、体验版上传或审核。
 
-最终 push 与双仓远端状态在双端总报告中记录。
+## 提交与 push
+
+RC10 push 尝试前的本地提交：
+
+- `9e23581` fix: add transactional local data protection
+- `96c990e` feat: deepen score review goals and school insights
+- `165198c` test: complete miniprogram RC10 validation
+- `8349190` docs: complete miniprogram RC10 reports
+- `ae808b4` fix: clear DevTools trend label problems
+- `1dab62d` test: strengthen RC10 interoperability and load gates
+- `05f6ab3` docs: finalize miniprogram RC10 verification
+
+普通 `git push origin main` 已执行一次。连接超过 2 分 34 秒仍无响应后终止等待；未重试、未重建提交、未改写历史。push 尝试时本地 HEAD 为 `05f6ab3`，本地 `origin/main` 仍为 `14edfd490ab3b2607d4a242dcf58ffc67a8be3c9`，ahead 7。网络恢复后只需再次执行普通 push。
