@@ -104,7 +104,7 @@ const pageTitles = appJson.pages.map((page) => {
 })
 assert.ok(new Set(pageTitles).size > 1, '页面标题不得全部改成同一标题')
 assert.ok(pageTitles.includes('学校库'))
-assert.ok(pageTitles.includes('成绩分析'))
+assert.ok(pageTitles.includes('成绩中心'))
 assert.ok(pageTitles.includes('目标规划'))
 assert.ok(pageTitles.includes('我的'))
 

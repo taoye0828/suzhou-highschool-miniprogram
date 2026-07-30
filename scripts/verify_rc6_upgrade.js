@@ -32,7 +32,7 @@ function walk(directory) {
   })
 }
 
-assert.ok(['1.6.0', '1.7.0', '1.8.0'].includes(APP_CONFIG.version))
+assert.ok(['1.6.0', '1.7.0', '1.8.0', '1.9.0'].includes(APP_CONFIG.version))
 assert.strictEqual(APP_CONFIG.countdown.defaultYear, 2027)
 assert.strictEqual(APP_CONFIG.targetScore.max, EXAM_TOTAL_SCORE)
 assert.deepStrictEqual(
@@ -48,6 +48,23 @@ for (const page of expectedPages) {
   }
 }
 assert.strictEqual(appJson.tabBar.list.length, 5)
+assert.deepStrictEqual(
+  appJson.tabBar.list.map((item) => [item.pagePath, item.text]),
+  [
+    ['pages/home/home', '首页'],
+    ['pages/schools/schools', '学校库'],
+    ['pages/score-trend/score-trend', '成绩'],
+    ['pages/targets/targets', '目标规划'],
+    ['pages/profile/profile', '我的']
+  ]
+)
+const compatibilitySource = [
+  read('pages/target-analysis/target-analysis.js'),
+  read('pages/target-analysis/target-analysis.wxml')
+].join('\n')
+for (const phrase of ['targetCenterSegment', '/pages/targets/targets', 'switchTab']) {
+  assert.ok(compatibilitySource.includes(phrase), `target-analysis compatibility redirect missing ${phrase}`)
+}
 
 assert.strictEqual(schools.length, 55)
 assert.strictEqual(admissionScores.length, 146)
@@ -110,13 +127,18 @@ for (const forbidden of [
 ]) {
   assert.strictEqual(runtimeText.includes(forbidden), false, `forbidden runtime API: ${forbidden}`)
 }
+assert.strictEqual(
+  APP_CONFIG.policy.planningDisclaimer,
+  '历史公开数据整理，仅供目标规划参考。'
+)
 for (const phrase of [
   '固定历史分差区间',
   '成绩记录和中考目标年份只保存在本机',
-  '实际录取情况以当年招生政策和考试成绩为准'
+  APP_CONFIG.policy.planningDisclaimer
 ]) {
   assert.ok(runtimeText.includes(phrase), `missing boundary copy: ${phrase}`)
 }
+assert.ok(read('pages/data-info/data-info.wxml').includes('sections'))
 
 const suspiciousBackups = walk(root)
   .map((file) => path.relative(root, file))

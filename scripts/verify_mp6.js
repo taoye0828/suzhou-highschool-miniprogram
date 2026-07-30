@@ -50,6 +50,11 @@ function fail(message) { failures.push(message) }
 function exists(relative) { return fs.existsSync(path.join(root, relative)) }
 function read(relative) { return fs.readFileSync(path.join(root, relative), 'utf8') }
 
+function containsForbiddenPublicPhrase(source, phrase) {
+  if (phrase === 'push') return /(^|[^.\w])push(?=$|[^\w])/i.test(source)
+  return source.includes(phrase)
+}
+
 function walk(target) {
   if (!fs.existsSync(target)) return []
   const stat = fs.statSync(target)
@@ -162,7 +167,7 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
 }
 
 const { APP_CONFIG } = require('../config/app-config')
-if (!['1.4.0', '1.5.0', '1.6.0', '1.7.0', '1.8.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为已支持的正式版本')
+if (!['1.4.0', '1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.9.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为已支持的正式版本')
 const privacyText = JSON.stringify(APP_CONFIG.policy.privacySections)
 for (const phrase of ['不上传收藏、学习目标记录、成绩记录、目标年份或输入草稿', '不进行后台网络请求或用户行为追踪']) {
   if (!privacyText.includes(phrase)) fail(`隐私说明缺少：${phrase}`)
@@ -186,7 +191,7 @@ for (const phrase of ['AppID', '编译', '真机预览', '上传', '体验版', 
 const runtimeSources = runtimeTextSources()
 for (const { relative, source } of runtimeSources) {
   for (const phrase of forbiddenPublicPhrases) {
-    if (source.includes(phrase)) fail(`${relative} 正式运行代码不得出现：${phrase}`)
+    if (containsForbiddenPublicPhrase(source, phrase)) fail(`${relative} 正式运行代码不得出现：${phrase}`)
   }
   for (const phrase of ['TODO', 'mock', '示例学校', '待核实', 'AI 推荐']) {
     if (source.includes(phrase)) fail(`${relative} 正式运行代码不得出现：${phrase}`)
@@ -209,9 +214,19 @@ const targetsSource = [
   read('pages/targets/targets.js'),
   read('pages/targets/targets.wxml')
 ].join('\n')
-if (targetsSource.includes('admission-scores')) fail('targets 页面不得 require admission-scores')
+for (const phrase of ['admission-scores', 'analyzeScore', 'getTargetRecords']) {
+  if (!targetsSource.includes(phrase)) fail(`目标规划中心必须复用正式数据与统一状态：${phrase}`)
+}
 for (const field of ['schoolId', 'schoolName', 'level']) {
   if (!targetsSource.includes(field)) fail(`目标记录页面必须展示或引用 ${field}`)
+}
+const targetAnalysisSource = [
+  read('pages/target-analysis/target-analysis.js'),
+  read('pages/target-analysis/target-analysis.wxml')
+].join('\n')
+if (targetAnalysisSource.includes('admission-scores')) fail('target-analysis 兼容页不得维护第二套分数线逻辑')
+for (const phrase of ['targetCenterSegment', '/pages/targets/targets', 'switchTab']) {
+  if (!targetAnalysisSource.includes(phrase)) fail(`target-analysis 兼容页缺少统一目标规划跳转：${phrase}`)
 }
 const targetStorageSource = read('utils/storage.js')
 for (const field of ['schoolId', 'schoolName', 'level']) {

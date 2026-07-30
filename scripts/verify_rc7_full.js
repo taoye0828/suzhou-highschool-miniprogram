@@ -8,7 +8,7 @@ const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
 const { schools } = require('../data/schools')
 const { admissionScores } = require('../data/admission-scores')
 const { searchSchools } = require('../utils/school-search')
-const { analyzeScore } = require('../utils/score-analysis')
+const { analyzeScore, latestReferenceScore } = require('../utils/score-analysis')
 const {
   SCORE_RANGES,
   filterSchools,
@@ -34,7 +34,7 @@ function walk(directory) {
   })
 }
 
-assert.ok(['1.7.0', '1.8.0'].includes(APP_CONFIG.version))
+assert.ok(['1.7.0', '1.8.0', '1.9.0'].includes(APP_CONFIG.version))
 assert.deepStrictEqual(
   APP_CONFIG.targetScore.levels.map((item) => item.value),
   ['sprint', 'target', 'safe']
@@ -146,11 +146,21 @@ assert.strictEqual(trendSummary.changeValueText, '提升 +5 分')
 assert.strictEqual(chartPoints(trendSummary.recentRecords, 640, 280).length, 10)
 
 assert.deepStrictEqual(SCORE_RANGES, ['全部', '500以下', '500-600', '600-650', '650以上'])
-assert.ok(highestReferenceScoreForSchool('nuaa_suzhou_affiliated_high_school', 2027) >= 650)
+assert.strictEqual(highestReferenceScoreForSchool('nuaa_suzhou_affiliated_high_school', 2027), 583)
+assert.deepStrictEqual(
+  latestReferenceScore([
+    { id: 'older_high', year: 2025, minScore: 690 },
+    { id: 'latest_low', year: 2026, minScore: 675 },
+    { id: 'latest_high', year: 2026, minScore: 680 },
+    { id: 'future', year: 2028, minScore: 700 }
+  ], 2027),
+  { id: 'latest_high', year: 2026, minScore: 680 }
+)
 const combinedResults = filterSchools({
   keyword: '南航',
   scoreRange: '650以上',
-  targetYear: 2027
+  targetYear: 2027,
+  referenceYears: [2025]
 })
 assert.ok(combinedResults.some((school) => school.id === 'nuaa_suzhou_affiliated_high_school'))
 const targetFiltered = filterSchools({
@@ -165,7 +175,21 @@ const targetFiltered = filterSchools({
 assert.deepStrictEqual(targetFiltered.map((school) => school.id), ['suzhou_high_school'])
 
 const homeText = [read('pages/home/home.js'), read('pages/home/home.wxml')].join('\n')
-for (const phrase of ['输入成绩，看目标学校', '中考倒计时', '学校库', '最近成绩', '目标学校']) {
+for (const phrase of [
+  '中考倒计时',
+  'latestExamName',
+  'latestExamDate',
+  'latestScoreText',
+  'scoreChangeText',
+  'primaryTargetName',
+  'targetReferenceText',
+  'targetDifferenceText',
+  'stageGoalTitle',
+  'stageGoalDeadline',
+  'openScoreCenter',
+  'openRecommendations',
+  'openTargetPlanning'
+]) {
   assert.ok(homeText.includes(phrase), `home missing ${phrase}`)
 }
 for (const phrase of ['RC6', 'RC7', '开发说明', '技术说明', '测试说明']) {
@@ -187,7 +211,7 @@ const compareText = [
   read('pages/school-compare/school-compare.js'),
   read('pages/school-compare/school-compare.wxml')
 ].join('\n')
-for (const phrase of ['最多对比 3 所学校', '目标等级', '历史参考分', '参考年份', '当前差距']) {
+for (const phrase of ['最多对比 3 所学校', '目标状态', '历史分数线', '最新参考分', '当前分差']) {
   assert.ok(compareText.includes(phrase), `compare missing ${phrase}`)
 }
 assert.ok(compareText.includes('selectedSchools.length >= 1'))

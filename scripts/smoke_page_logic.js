@@ -10,6 +10,7 @@ const modals = []
 const navigations = []
 let writeFailure = false
 let removeFailure = false
+const appState = { globalData: {} }
 
 global.wx = {
   getStorageSync: (key) => memory.get(key),
@@ -28,10 +29,15 @@ global.wx = {
   },
   navigateTo: ({ url }) => navigations.push(url),
   switchTab: ({ url }) => navigations.push(url),
+  reLaunch: ({ url }) => navigations.push(url),
   setClipboardData: ({ success }) => {
     if (success) success()
   }
 }
+global.getApp = () => appState
+
+const storage = require('../utils/storage')
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
 
 function loadPage(relative) {
   const modulePath = path.join(__dirname, '..', relative)
@@ -56,27 +62,76 @@ function createPageInstance(definition) {
 }
 
 function testHomePage() {
+  assert.strictEqual(storage.clearCurrentProfileData().ok, true)
+  appState.globalData = {}
   const definition = loadPage('pages/home/home')
   const page = createPageInstance(definition)
   page.onLoad()
   page.onShow()
-  assert.strictEqual(page.data.latestScoreText, '尚未记录')
-  assert.strictEqual(page.data.targetCount, 0)
+  assert.strictEqual(page.data.hasScores, false)
+  assert.strictEqual(page.data.hasTarget, false)
+  assert.strictEqual(page.data.hasStageGoal, false)
+  assert.strictEqual(page.data.latestScoreText, '')
   assert.strictEqual(page.data.countdown.targetYear, APP_CONFIG.countdown.defaultYear)
-  page.onScoreInput({ detail: { value: '650' } })
-  page.startScoreAnalysis()
-  assert.ok(navigations.includes('/pages/target-analysis/target-analysis'))
-  assert.strictEqual(memory.get('mp1.target_draft').currentScore, '650')
-  page.onScoreInput({ detail: { value: '741' } })
-  page.startScoreAnalysis()
-  assert.ok(page.data.scoreInputError.includes('0 至 740'))
 
-  page.openSchools()
-  assert.ok(navigations.includes('/pages/schools/schools'))
+  page.openScoreCenter()
+  assert.ok(navigations.includes('/pages/score-trend/score-trend'))
+  assert.strictEqual(appState.globalData.scoreCenterSegment, 'records')
+  page.openRecommendations()
+  assert.ok(navigations.includes('/pages/targets/targets'))
+  assert.strictEqual(appState.globalData.targetCenterSegment, 'recommendation')
+  page.openTargetPlanning()
+  assert.strictEqual(appState.globalData.targetCenterSegment, 'schools')
+
+  assert.strictEqual(storage.saveScoreRecord({
+    id: 'home_old',
+    examName: '九月月考',
+    examDate: '2026-09-15',
+    totalScore: 620,
+    createdAt: '2026-09-15T08:00:00.000Z'
+  }).ok, true)
+  assert.strictEqual(storage.saveScoreRecord({
+    id: 'home_latest',
+    examName: '期中考试',
+    examDate: '2026-10-20',
+    totalScore: 650,
+    createdAt: '2026-10-20T08:00:00.000Z'
+  }).ok, true)
+  assert.strictEqual(storage.saveTargetRecord({
+    id: 'target_suzhou_high_school',
+    schoolId: 'suzhou_high_school',
+    schoolName: '江苏省苏州中学校',
+    level: 'target',
+    createdAt: '2026-07-02T00:00:00.000Z'
+  }).ok, true)
+  assert.strictEqual(storage.setPrimaryTargetSchool('suzhou_high_school').ok, true)
+  assert.strictEqual(storage.saveLearningTargetRecord({
+    id: 'stage_home',
+    title: '期末阶段目标',
+    startDate: '2026-10-01',
+    endDate: '2026-12-31',
+    targetTotalScore: 680,
+    status: 'in_progress',
+    createdAt: '2026-10-01T00:00:00.000Z'
+  }).ok, true)
+  page.onShow()
+  assert.strictEqual(page.data.hasScores, true)
+  assert.strictEqual(page.data.latestExamName, '期中考试')
+  assert.strictEqual(page.data.latestExamDate, '2026-10-20')
+  assert.strictEqual(page.data.latestScoreText, '650 分')
+  assert.strictEqual(page.data.scoreChangeText, '比上次提高 30 分')
+  assert.strictEqual(page.data.hasTarget, true)
+  assert.strictEqual(page.data.primaryTargetName, '江苏省苏州中学校')
+  assert.ok(page.data.targetReferenceText.endsWith('年）'))
+  assert.ok(page.data.targetDifferenceText.includes('历史参考分'))
+  assert.strictEqual(page.data.hasStageGoal, true)
+  assert.strictEqual(page.data.stageGoalTitle, '期末阶段目标')
+  assert.strictEqual(page.data.stageGoalDeadline, '2026-12-31')
+  assert.strictEqual(page.data.stageGoalProgressText, '距离阶段总分目标还有 30 分')
 
   const nextYearIndex = page.data.examYears.indexOf(APP_CONFIG.countdown.defaultYear + 1)
   page.onExamYearChange({ detail: { value: String(nextYearIndex) } })
-  assert.strictEqual(memory.get('mp1.exam_year'), APP_CONFIG.countdown.defaultYear + 1)
+  assert.strictEqual(storage.getExamYear(), APP_CONFIG.countdown.defaultYear + 1)
 }
 
 function testTargetsPage() {
@@ -96,31 +151,33 @@ function testTargetsPage() {
   page.openSchool({ currentTarget: { dataset: { schoolId: 'suzhou_high_school' } } })
   assert.ok(navigations.includes('/pages/school-detail/school-detail?id=suzhou_high_school'))
 
-  memory.set('mp1.target_records', [{
+  assert.strictEqual(storage.clearTargetRecords().ok, true)
+  assert.strictEqual(storage.saveTargetRecord({
+    id: 'target_suzhou_high_school',
     schoolId: 'suzhou_high_school',
     schoolName: '江苏省苏州中学校',
     createdAt: '2026-07-02T00:00:00.000Z'
-  }])
+  }).ok, true)
   page.onShow()
   assert.strictEqual(page.data.records.length, 1)
   assert.strictEqual(page.data.records[0].levelLabel, '目标')
   assert.strictEqual(page.data.records[0].schoolId, 'suzhou_high_school')
 
-  page.deleteRecord({ currentTarget: { dataset: { id: page.data.records[0].id } } })
+  page.deleteTarget({ currentTarget: { dataset: { id: page.data.records[0].id } } })
   assert.ok(toastTitles.includes('目标学校已删除'))
-  assert.strictEqual(memory.has('mp1.target_records'), false)
+  assert.strictEqual(storage.getTargetRecords().length, 0)
 
-  memory.set('mp1.target_records', [{
+  assert.strictEqual(storage.saveTargetRecord({
     id: 'target_suzhou_high_school',
     schoolId: 'suzhou_high_school',
     schoolName: '江苏省苏州中学校',
     level: 'sprint',
     createdAt: '2026-07-02T00:00:00.000Z'
-  }])
+  }).ok, true)
   page.onShow()
-  page.clearAllRecords()
-  assert.strictEqual(memory.has('mp1.target_records'), false)
-  assert.ok(toastTitles.includes('已清空'))
+  page.clearAllTargets()
+  assert.strictEqual(storage.getTargetRecords().length, 0)
+  assert.ok(toastTitles.includes('目标学校已清空'))
   page.onShow()
   assert.strictEqual(page.data.records.length, 0)
 
@@ -128,7 +185,9 @@ function testTargetsPage() {
     fs.readFileSync(path.join(__dirname, '..', 'pages/targets/targets.js'), 'utf8'),
     fs.readFileSync(path.join(__dirname, '..', 'pages/targets/targets.wxml'), 'utf8')
   ].join('\n')
-  assert.strictEqual(targetSource.includes('admission-scores'), false)
+  assert.ok(targetSource.includes("require('../../utils/planning')"))
+  assert.ok(targetSource.includes('selectReferenceForSchool'))
+  assert.ok(targetSource.includes('analyzeScore'))
   for (const requiredField of ['schoolId', 'schoolName', 'level']) {
     assert.strictEqual(targetSource.includes(requiredField), true)
   }
@@ -163,11 +222,12 @@ function testSchoolDetailPage() {
     targetPage.onLoad({ id: targetCase.id })
     targetPage.onTargetLevelChange({ detail: { value: String(targetCase.levelIndex) } })
     targetPage.saveSchoolTarget()
-    const saved = memory.get('mp1.target_records').find((record) => record.schoolId === targetCase.id)
+    const saved = storage.getTargetRecords()
+      .find((record) => record.schoolId === targetCase.id)
     assert.strictEqual(saved.schoolName, targetCase.schoolName)
     assert.strictEqual(saved.level, targetCase.level)
   }
-  assert.strictEqual(memory.get('mp1.target_records').length, 3)
+  assert.strictEqual(storage.getTargetRecords().length, 3)
   assert.ok(page.data.targetAnalysis)
   assert.ok(page.data.targetAnalysis.referenceScoreText.endsWith('分'))
 
@@ -176,11 +236,11 @@ function testSchoolDetailPage() {
   writeFailure = true
   failedTargetPage.saveSchoolTarget()
   writeFailure = false
-  assert.strictEqual(memory.get('mp1.target_records').length, 3)
+  assert.strictEqual(storage.getTargetRecords().length, 3)
   assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
 
   page.toggleFavorite()
-  assert.ok(memory.get('mp1.favorite_school_ids').includes('suzhou_high_school'))
+  assert.ok(storage.getFavoriteIds().includes('suzhou_high_school'))
   page.copySchoolName()
   page.copyMapKeyword()
   page.copySourceLink()
@@ -206,32 +266,37 @@ function testSchoolsPage() {
   assert.ok(page.data.results.some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
   page.resetFilters()
   page.onKeywordInput({ detail: { value: '南航' } })
-  page.onScoreRangeChange({ detail: { value: String(page.data.scoreRanges.indexOf('650以上')) } })
-  assert.ok(page.data.results.some((item) => item.id === 'nuaa_suzhou_affiliated_high_school'))
+  page.onMinScoreInput({ detail: { value: '580' } })
+  page.onMaxScoreInput({ detail: { value: '590' } })
+  page.onScoreRangeCommit()
+  const nuaa = page.data.results.find((item) => item.id === 'nuaa_suzhou_affiliated_high_school')
+  assert.strictEqual(nuaa.referenceYear, 2026)
+  assert.strictEqual(nuaa.referenceScore, 583)
   page.resetFilters()
-  memory.set('mp1.target_records', [{
+  assert.strictEqual(storage.clearTargetRecords().ok, true)
+  assert.strictEqual(storage.saveTargetRecord({
     id: 'target_suzhou_high_school',
     schoolId: 'suzhou_high_school',
     schoolName: '江苏省苏州中学校',
     level: 'sprint',
     createdAt: '2026-07-27T00:00:00.000Z'
-  }])
-  page.onTargetFilterChange({ detail: { value: String(page.data.targetFilters.findIndex((item) => item.value === 'sprint')) } })
+  }).ok, true)
+  page.onTargetLevelsChange({ detail: { value: ['sprint'] } })
   assert.deepStrictEqual(page.data.results.map((item) => item.id), ['suzhou_high_school'])
   page.resetFilters()
   page.onKeywordInput({ detail: { value: '不存在的学校关键词' } })
   assert.strictEqual(page.data.results.length, 0)
   page.resetFilters()
-  page.onScoreStatusChange({ detail: { value: String(page.data.scoreStatuses.indexOf('已收录已核实历史分数线')) } })
+  page.onReferenceYearTap({ currentTarget: { dataset: { value: 'latest' } } })
   const scoredIds = page.data.results.map((item) => item.id)
   assert.strictEqual(new Set(scoredIds).size, scoredIds.length)
   if (page.data.results.length > 0) {
-    assert.ok(page.data.results.every((item) => item.hasAdmissionScores))
+    assert.ok(page.data.results.every((item) => item.hasReference))
   }
   page.resetFilters()
-  page.onTagChange({ detail: { value: String(page.data.tags.indexOf('工业园区')) } })
+  page.onDistrictsChange({ detail: { value: ['工业园区'] } })
   assert.ok(page.data.results.length > 0)
-  assert.ok(page.data.results.every((item) => item.tags.includes('工业园区')))
+  assert.ok(page.data.results.every((item) => item.district === '工业园区'))
   page.resetFilters()
   assert.ok(page.data.results.length >= 50)
   const favoriteCandidate = page.data.results.find((item) => !item.isFavorite)
@@ -240,48 +305,49 @@ function testSchoolsPage() {
 }
 
 function testFavoritesPage() {
-  memory.set('mp1.favorite_school_ids', ['suzhou_high_school', 'removed_school'])
+  assert.strictEqual(storage.replaceFavoriteIds(['suzhou_high_school', 'removed_school']).ok, true)
   const definition = loadPage('pages/favorites/favorites')
   const page = createPageInstance(definition)
   page.onShow()
   assert.strictEqual(page.data.favorites.length, 1)
-  assert.deepStrictEqual(memory.get('mp1.favorite_school_ids'), ['suzhou_high_school'])
+  assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
   assert.strictEqual(page.data.invalidCount, 0)
 
-  memory.set('mp1.favorite_school_ids', ['suzhou_high_school', 'removed_school'])
+  assert.strictEqual(storage.replaceFavoriteIds(['suzhou_high_school', 'removed_school']).ok, true)
   writeFailure = true
   page.refresh()
   writeFailure = false
   assert.strictEqual(page.data.invalidCount, 1)
   assert.ok(toastTitles.includes('本地存储失败，请清理空间后重试。'))
   page.cleanInvalidFavorites()
-  assert.deepStrictEqual(memory.get('mp1.favorite_school_ids'), ['suzhou_high_school'])
+  assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
   assert.strictEqual(page.data.invalidCount, 0)
 
-  memory.set('mp1.favorite_school_ids', { broken: true })
+  assert.strictEqual(storage.replaceFavoriteIds([]).ok, true)
   page.refresh()
   assert.strictEqual(page.data.favorites.length, 0)
   assert.strictEqual(page.data.invalidCount, 0)
 }
 
 function testProfilePage() {
-  memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
-  memory.set('mp1.target_records', [{
+  assert.strictEqual(storage.clearCurrentProfileData().ok, true)
+  assert.strictEqual(storage.replaceFavoriteIds(['suzhou_high_school']).ok, true)
+  assert.strictEqual(storage.saveTargetRecord({
     id: 'target_suzhou_high_school',
     schoolId: 'suzhou_high_school',
     schoolName: '江苏省苏州中学校',
     level: 'sprint',
     createdAt: '2026-07-02T00:00:00.000Z'
-  }])
-  memory.set('mp1.target_draft', { currentScore: '500' })
-  memory.set('mp1.score_records', [{
+  }).ok, true)
+  assert.strictEqual(storage.saveTargetDraft({ currentScore: '500' }).ok, true)
+  assert.strictEqual(storage.saveScoreRecord({
     id: 'score_profile',
-    date: '2026-09-15',
+    examDate: '2026-09-15',
     examName: '月考',
-    score: 650,
+    totalScore: 650,
     createdAt: '2026-09-15T08:00:00.000Z'
-  }])
-  memory.set('mp1.exam_year', 2028)
+  }).ok, true)
+  assert.strictEqual(storage.saveExamYear(2028).ok, true)
   const definition = loadPage('pages/profile/profile')
   const page = createPageInstance(definition)
   page.onShow()
@@ -290,67 +356,51 @@ function testProfilePage() {
   assert.strictEqual(page.data.scoreRecordCount, 1)
   assert.strictEqual(page.data.examYear, 2028)
   page.openFavorites()
-  page.openSchoolCompare()
-  page.openScoreTrend()
+  page.openProfiles()
+  page.openBackupRestore()
+  page.openHelp()
   page.openDataManagement()
   assert.ok(navigations.includes('/pages/favorites/favorites'))
-  assert.ok(navigations.includes('/pages/school-compare/school-compare'))
-  assert.ok(navigations.includes('/pages/score-trend/score-trend'))
+  assert.ok(navigations.includes('/pages/profile-management/profile-management'))
+  assert.ok(navigations.includes('/pages/backup-restore/backup-restore'))
+  assert.ok(navigations.includes('/pages/help/help'))
   assert.ok(navigations.includes('/pages/data-management/data-management'))
 
   const management = createPageInstance(loadPage('pages/data-management/data-management'))
   management.onShow()
   management.clearAllLocalData()
-  assert.strictEqual(memory.has('mp1.favorite_school_ids'), false)
-  assert.strictEqual(memory.has('mp1.target_records'), false)
-  assert.strictEqual(memory.has('mp1.target_draft'), false)
-  assert.strictEqual(memory.has('mp1.score_records'), false)
-  assert.strictEqual(memory.has('mp1.exam_year'), false)
+  assert.deepStrictEqual(storage.getFavoriteIds(), [])
+  assert.deepStrictEqual(storage.getTargetRecords(), [])
+  assert.deepStrictEqual(storage.getTargetDraft(), {})
+  assert.deepStrictEqual(storage.getScoreRecords(), [])
+  assert.strictEqual(memory.get(storage.KEYS.storageSchemaVersion), storage.STORAGE_SCHEMA_VERSION)
 
-  memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
-  memory.set('mp1.target_records', [{
+  assert.strictEqual(storage.replaceFavoriteIds(['suzhou_high_school']).ok, true)
+  assert.strictEqual(storage.saveTargetRecord({
     id: 'target_suzhou_high_school',
     schoolId: 'suzhou_high_school',
     schoolName: '江苏省苏州中学校',
     level: 'target',
     createdAt: '2026-07-02T00:00:00.000Z'
-  }])
+  }).ok, true)
   removeFailure = true
   management.clearAllLocalData()
   removeFailure = false
-  assert.strictEqual(memory.has('mp1.favorite_school_ids'), true)
-  assert.strictEqual(memory.has('mp1.target_records'), true)
-  assert.ok(toastTitles.includes('部分本地数据清除失败，请重试。'))
+  assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
+  assert.strictEqual(storage.getTargetRecords().length, 1)
+  assert.ok(toastTitles.includes('本地数据清除失败，原数据已保留。'))
 }
 
 function testTargetAnalysisPage() {
   const definition = loadPage('pages/target-analysis/target-analysis')
   const page = createPageInstance(definition)
-  page.onScoreInput({ detail: { value: '650' } })
-  page.analyze()
-  assert.strictEqual(page.data.hasAnalyzed, true)
-  assert.ok(page.data.resultCount > 0)
-  assert.strictEqual(page.data.sections.length, 3)
-  assert.ok(page.data.sections.some((section) => section.results.length > 0))
-  const firstResult = page.data.sections.flatMap((section) => section.results)[0]
-  page.openDetail({ currentTarget: { dataset: { id: firstResult.schoolId } } })
-  assert.ok(navigations.includes(`/pages/school-detail/school-detail?id=${firstResult.schoolId}`))
-
-  for (const score of ['0', '740']) {
-    page.onScoreInput({ detail: { value: score } })
-    page.analyze()
-    assert.strictEqual(page.data.inputError, '')
-    assert.strictEqual(page.data.hasAnalyzed, true)
-  }
-
-  page.onScoreInput({ detail: { value: '741' } })
-  page.analyze()
-  assert.strictEqual(page.data.hasAnalyzed, false)
-  assert.ok(page.data.inputError.includes('0 至 740'))
+  page.onLoad()
+  assert.strictEqual(appState.globalData.targetCenterSegment, 'recommendation')
+  assert.ok(navigations.includes('/pages/targets/targets'))
 }
 
 function testSchoolComparePage() {
-  memory.set('mp1.favorite_school_ids', ['suzhou_high_school'])
+  assert.strictEqual(storage.replaceFavoriteIds(['suzhou_high_school']).ok, true)
   const definition = loadPage('pages/school-compare/school-compare')
   const page = createPageInstance(definition)
   page.onLoad()
@@ -361,7 +411,7 @@ function testSchoolComparePage() {
   assert.strictEqual(page.data.selectedSchools.length, 2)
   assert.strictEqual(page.data.canCompare, true)
   assert.ok(page.data.selectedSchools.every((school) => school.scoreSummary))
-  assert.ok(page.data.selectedSchools.every((school) => school.targetLevelText))
+  assert.ok(page.data.selectedSchools.every((school) => school.targetStatusText))
   assert.ok(page.data.selectedSchools.every((school) => school.referenceScoreText))
   page.onSchoolChange({ detail: { value: '0' } })
   assert.strictEqual(page.data.selectedSchools.length, 3)
@@ -376,7 +426,7 @@ function testSchoolComparePage() {
 }
 
 function testScoreTrendPage() {
-  memory.delete('mp1.score_records')
+  assert.strictEqual(storage.clearScoreRecords().ok, true)
   const definition = loadPage('pages/score-trend/score-trend')
   const page = createPageInstance(definition)
   page.onLoad()
@@ -398,7 +448,7 @@ function testScoreTrendPage() {
 
   page.deleteRecord({ currentTarget: { dataset: { id: page.data.records[0].id } } })
   assert.strictEqual(page.data.records.length, 0)
-  assert.strictEqual(memory.has('mp1.score_records'), false)
+  assert.strictEqual(storage.getScoreRecords().length, 0)
 
   for (let index = 0; index < 12; index += 1) {
     page.onDateChange({ detail: { value: `2026-10-${String(index + 1).padStart(2, '0')}` } })
@@ -415,7 +465,7 @@ function testScoreTrendPage() {
   assert.strictEqual(page.data.changeValueText, '提升 +5 分')
   page.clearAllRecords()
   assert.strictEqual(page.data.records.length, 0)
-  assert.strictEqual(memory.has('mp1.score_records'), false)
+  assert.strictEqual(storage.getScoreRecords().length, 0)
 }
 
 function testInfoPages() {

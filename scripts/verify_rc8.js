@@ -12,13 +12,13 @@ const { admissionScores } = require('../data/admission-scores')
 const trend = require('../utils/score-trend')
 const analysis = require('../utils/score-analysis')
 
-assert.strictEqual(APP_CONFIG.version, '1.8.0')
+assert.ok(['1.8.0', '1.9.0'].includes(APP_CONFIG.version))
 assert.deepStrictEqual(
   appJson.tabBar.list.map((item) => [item.pagePath, item.text]),
   [
     ['pages/home/home', '首页'],
     ['pages/schools/schools', '学校库'],
-    ['pages/target-analysis/target-analysis', '成绩分析'],
+    ['pages/score-trend/score-trend', '成绩'],
     ['pages/targets/targets', '目标规划'],
     ['pages/profile/profile', '我的']
   ]
@@ -32,7 +32,7 @@ for (const phrase of ['目标学校', '阶段目标', 'learningRecords', 'saveLe
 }
 
 const profileText = `${read('pages/profile/profile.js')}\n${read('pages/profile/profile.wxml')}`
-for (const phrase of ['我的收藏', '高中对比', '数据管理', '新手教程']) {
+for (const phrase of ['收藏汇总', '备份与恢复', '数据管理', '教程与常见问题']) {
   assert.ok(profileText.includes(phrase), `profile missing ${phrase}`)
 }
 
@@ -219,7 +219,7 @@ for (let index = 0; index < 6; index += 1) {
 onboarding.handleOnboardingAction({ detail: { action: 'complete' } })
 assert.strictEqual(storage.getOnboardingState().completed, true)
 for (const key of businessKeys) assert.deepStrictEqual(memory.get(key), existingBusinessValues.get(key))
-assert.ok(routes.includes('/pages/target-analysis/target-analysis'))
+assert.ok(routes.includes('/pages/targets/targets'))
 
 assert.strictEqual(projectConfig.appid, 'wx17e903f81714736f')
 assert.strictEqual(schools.length, 55)

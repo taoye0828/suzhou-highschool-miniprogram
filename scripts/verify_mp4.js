@@ -18,12 +18,15 @@ const requiredPages = [
   'pages/data-info/data-info',
   'pages/privacy/privacy',
   'pages/data-management/data-management',
+  'pages/profile-management/profile-management',
+  'pages/backup-restore/backup-restore',
+  'pages/help/help',
   'pages/profile/profile'
 ]
 const requiredTabs = [
   'pages/home/home',
   'pages/schools/schools',
-  'pages/target-analysis/target-analysis',
+  'pages/score-trend/score-trend',
   'pages/targets/targets',
   'pages/profile/profile'
 ]

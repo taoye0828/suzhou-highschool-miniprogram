@@ -125,7 +125,7 @@ assert.deepStrictEqual(
   [
     ['pages/home/home', '首页'],
     ['pages/schools/schools', '学校库'],
-    ['pages/target-analysis/target-analysis', '成绩分析'],
+    ['pages/score-trend/score-trend', '成绩'],
     ['pages/targets/targets', '目标规划'],
     ['pages/profile/profile', '我的']
   ]
@@ -136,7 +136,7 @@ const pageTitles = appJson.pages.map((page) => {
 })
 assert.ok(new Set(pageTitles).size > 1, '页面标题不得全部改成正式名称')
 assert.strictEqual(pageTitles.filter((title) => title === expectedName).length, 1)
-for (const title of ['学校库', '成绩分析', '目标规划', '我的']) {
+for (const title of ['学校库', '成绩中心', '目标规划', '我的']) {
   assert.ok(pageTitles.includes(title), `缺少功能页标题：${title}`)
 }
 

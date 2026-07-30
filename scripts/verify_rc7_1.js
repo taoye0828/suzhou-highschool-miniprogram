@@ -145,16 +145,16 @@ assert.strictEqual(sha256('data/admission-scores.js'), '0d6257cd336dee5afe853d6c
 assert.strictEqual(sha256('data/admission-scores-2026.js'), '3091136605728315653049fb4802e83b87d9f86cb568746027ec9ef21417d75c')
 
 const searchCoverage = [
-  'pages/home/home.js',
   'utils/school.js',
   'pages/favorites/favorites.js',
-  'pages/targets/targets.js',
   'pages/school-compare/school-compare.js',
   'utils/score-analysis.js'
 ]
 for (const relative of searchCoverage) {
   assert.ok(read(relative).includes('school-search'), `${relative} must use the unified school search`)
 }
+assert.ok(read('pages/schools/schools.js').includes('filterSchoolCatalog'))
+assert.ok(read('pages/targets/targets.js').includes('analyzeScore'))
 
 const targetPageText = [
   read('pages/targets/targets.js'),
@@ -167,20 +167,18 @@ for (const field of [
   'referenceScoreText',
   'referenceYearText',
   'currentScoreText',
-  'gapText',
+  'differenceText',
   'onLevelChange',
-  'clearAllRecords'
+  'clearAllTargets'
 ]) {
   assert.ok(targetPageText.includes(field), `target management missing ${field}`)
 }
 
 const detailRoutes = [
-  'pages/home/home.js',
   'pages/schools/schools.js',
   'pages/favorites/favorites.js',
   'pages/targets/targets.js',
-  'pages/school-compare/school-compare.js',
-  'pages/target-analysis/target-analysis.js'
+  'pages/school-compare/school-compare.js'
 ]
 for (const relative of detailRoutes) {
   assert.ok(
@@ -188,6 +186,10 @@ for (const relative of detailRoutes) {
     `${relative} must open school detail`
   )
 }
+const compatibilitySource = read('pages/target-analysis/target-analysis.js')
+assert.ok(compatibilitySource.includes('targetCenterSegment'))
+assert.ok(compatibilitySource.includes('/pages/targets/targets'))
+assert.ok(compatibilitySource.includes('switchTab'))
 
 const runtimeText = ['pages', 'utils', 'config']
   .flatMap((relative) => walk(path.join(root, relative)))
