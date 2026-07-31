@@ -17,7 +17,8 @@ const {
 const {
   ensureStorageMigrated,
   getVersionedState,
-  replaceVersionedState
+  replaceVersionedState,
+  createRestorePoint
 } = require('./storage')
 
 const APP_DATA_VERSION = 'rc10'
@@ -416,6 +417,12 @@ function importBackupEnvelope(input, { mode = 'merge' } = {}) {
   }
   const validation = validateBackupEnvelope(input)
   if (!validation.ok) return { ok: false, message: validation.errors.join('；'), errors: validation.errors }
+  const safety = createRestorePoint({
+    reason: 'before_import',
+    profileScope: { type: 'full_user_state' },
+    operationId: `import_${validation.backup.checksum.value}_${mode}_safety`
+  })
+  if (!safety.ok) return safety
   const incoming = normalizedStateFromPayload(validation.payload)
   let nextState = incoming
   if (mode === 'merge') {

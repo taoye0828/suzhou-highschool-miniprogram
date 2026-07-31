@@ -28,6 +28,17 @@ const {
   storageWritesForState
 } = require('./storage-migration')
 const { LEGACY_STORAGE_KEYS } = require('./legacy/migration/storage-keys')
+const { schools } = require('../data/schools')
+const {
+  MAX_RESTORE_POINTS,
+  TRANSACTION_STAGES,
+  ERROR_CODES,
+  buildRestorePoint,
+  validateRestorePoint,
+  stateAfterRestore,
+  invokeFault,
+  canonicalJson
+} = require('./rc11-stability')
 
 const KEYS = {
   storageSchemaVersion: 'rc9.storage_schema_version',
@@ -43,7 +54,15 @@ const KEYS = {
   clearMarker: 'rc9.clear_marker.v4',
   importSnapshot: 'rc9.import_snapshot.v4',
   transactionJournal: 'rc10.transaction_journal.v1',
-  repairSnapshot: 'rc10.repair_snapshot.v1'
+  repairSnapshot: 'rc10.repair_snapshot.v1',
+  restorePointIndex: 'rc11.restore_point_index.v1',
+  restorePointPayloads: 'rc11.restore_point_payloads.v1',
+  restorePointTemporary: 'rc11.restore_point_temporary.v1',
+  restorePointOperationState: 'rc11.restore_point_operation_state.v1',
+  operationLock: 'rc11.operation_lock.v1',
+  restoreTemporary: 'rc11.restore_temporary.v1',
+  cleanupPending: 'rc11.cleanup_pending.v1',
+  startupRecovery: 'rc11.startup_recovery.v1'
 }
 
 const STORAGE_ERROR_MESSAGE = '本地存储失败，请清理空间后重试。'
@@ -114,20 +133,56 @@ function restoreSnapshot(snapshot, keys) {
   return ok
 }
 
-function atomicWrite(values) {
+function atomicWrite(values, {
+  operationType = 'write',
+  operationId,
+  faultInjector
+} = {}) {
+  try {
+    invokeFault(faultInjector, operationType, 'validate')
+  } catch (error) {
+    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'validate' }
+  }
   const keys = Object.keys(values)
+  if (!keys.length) return { ok: true }
+  const transactionId = operationId || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  try {
+    invokeFault(faultInjector, operationType, 'snapshot')
+  } catch (error) {
+    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'snapshot' }
+  }
   const before = storageSnapshot(keys)
   if (!before.ok) return { ok: false, message: before.message }
-  const transactionId = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  try {
+    invokeFault(faultInjector, operationType, 'prepare')
+    invokeFault(faultInjector, operationType, 'writeTemporary')
+  } catch (error) {
+    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: error.stage || 'prepare' }
+  }
   const journal = writeStorage(KEYS.transactionJournal, {
     transactionId,
+    operationType,
     createdAt: new Date().toISOString(),
     keys,
     before: before.values,
-    status: 'writing'
+    expected: clone(values),
+    status: 'prepared'
   })
   if (!journal.ok) {
     return { ok: false, message: '本地安全写入未开始，原数据已保留。' }
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'verifyTemporary')
+    const journalReadback = readStorage(KEYS.transactionJournal, null)
+    if (!journalReadback.ok || !journalReadback.exists ||
+        canonicalJson(journalReadback.value.expected) !== canonicalJson(values)) {
+      removeStorage(KEYS.transactionJournal)
+      return { ok: false, code: ERROR_CODES.STORAGE_READBACK_FAILED, stage: 'verifyTemporary' }
+    }
+    invokeFault(faultInjector, operationType, 'commit')
+  } catch (error) {
+    removeStorage(KEYS.transactionJournal)
+    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'commit' }
   }
   for (const key of keys) {
     const result = writeStorage(key, values[key])
@@ -153,11 +208,39 @@ function atomicWrite(values) {
       }
     }
   }
+  const committedJournal = writeStorage(KEYS.transactionJournal, {
+    transactionId,
+    operationType,
+    createdAt: new Date().toISOString(),
+    keys,
+    before: before.values,
+    expected: clone(values),
+    status: 'committed'
+  })
+  if (!committedJournal.ok) {
+    return { ok: false, code: ERROR_CODES.STORAGE_WRITE_FAILED, stage: 'verifyCommitted' }
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'verifyCommitted')
+    const after = storageSnapshot(keys)
+    if (!after.ok || canonicalJson(after.values) !== canonicalJson(values)) {
+      return { ok: false, code: ERROR_CODES.STORAGE_READBACK_FAILED, stage: 'verifyCommitted' }
+    }
+  } catch (error) {
+    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'verifyCommitted' }
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'cleanup')
+  } catch (error) {
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return { ok: true, warning: ERROR_CODES.CLEANUP_FAILED, stage: 'cleanup' }
+  }
   const cleaned = removeStorage(KEYS.transactionJournal)
   if (!cleaned.ok) {
     return { ok: false, message: '数据已保存，但临时事务标记清理失败，请运行数据检查。' }
   }
-  return { ok: true }
+  removeStorage(KEYS.cleanupPending)
+  return { ok: true, transactionId }
 }
 
 function atomicRemove(keys, finalWrites = {}) {
@@ -202,6 +285,24 @@ function recoverInterruptedTransaction() {
   if (!journalResult.ok) return journalResult
   if (!journalResult.exists || !journalResult.value) return { ok: true, recovered: false }
   const journal = journalResult.value
+  if (journal.status === 'committed') {
+    const keys = Array.isArray(journal.keys) ? journal.keys : []
+    const current = storageSnapshot(keys)
+    const expected = journal.expected && typeof journal.expected === 'object' ? journal.expected : {}
+    if (current.ok && canonicalJson(current.values) === canonicalJson(expected)) {
+      const removed = removeStorage(KEYS.transactionJournal)
+      if (removed.ok) removeStorage(KEYS.cleanupPending)
+      return removed.ok
+        ? { ok: true, recovered: true, state: 'committed_with_temp_residue' }
+        : { ok: true, recovered: true, state: 'committed_with_temp_residue', warning: ERROR_CODES.CLEANUP_FAILED }
+    }
+    return {
+      ok: false,
+      code: ERROR_CODES.STARTUP_RECOVERY_REQUIRED,
+      state: 'both_valid_different',
+      message: '检测到未完成写入，请在数据管理中确认保留当前数据。'
+    }
+  }
   const keys = Array.isArray(journal.keys) ? journal.keys : []
   const before = journal.before && typeof journal.before === 'object' ? journal.before : {}
   const restored = restoreSnapshot(before, keys)
@@ -413,17 +514,35 @@ function createStudentProfile(profile) {
   return result.ok ? { ok: true, profile: normalized, profiles } : result
 }
 
+function versionConflict(current, expectedVersion) {
+  if (!current || expectedVersion === undefined || expectedVersion === null) return null
+  const expected = Number(expectedVersion)
+  const actual = Number(current.version || 1)
+  return Number.isInteger(expected) && expected !== actual
+    ? {
+        ok: false,
+        code: ERROR_CODES.VERSION_CONFLICT,
+        expectedVersion: expected,
+        actualVersion: actual,
+        message: '这条内容已在其他页面更新，请重新载入后再修改。'
+      }
+    : null
+}
+
 function updateStudentProfile(id, changes) {
   const stateResult = getVersionedState()
   if (!stateResult.ok) return stateResult
   const current = stateResult.state.profiles.find((item) => item.id === id)
   if (!current) return { ok: false, message: '未找到学生档案。' }
+  const conflict = versionConflict(current, changes && (changes.expectedVersion ?? changes.version))
+  if (conflict) return conflict
   const updated = normalizeProfile({
     ...current,
     ...(changes || {}),
     id: current.id,
     createdAt: current.createdAt,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    version: Number(current.version || 1) + 1
   }, current.id)
   const profiles = stateResult.state.profiles.map((item) => item.id === id ? updated : item)
   const profileData = { ...stateResult.state.profileData }
@@ -550,6 +669,8 @@ function saveTargetRecord(record) {
   const existing = getTargetRecordsResult()
   if (!existing.ok) return existing
   const current = existing.records.find((item) => item.schoolId === normalized.schoolId)
+  const conflict = versionConflict(current, record && (record.expectedVersion ?? record.version))
+  if (conflict) return conflict
   const recordToSave = current
     ? {
         ...normalized,
@@ -558,7 +679,8 @@ function saveTargetRecord(record) {
           ? normalizeTargetLevel(record.level || record.targetLevel)
           : current.level,
         createdAt: current.createdAt,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        version: Number(current.version || 1) + 1
       }
     : normalized
   const records = [
@@ -653,8 +775,15 @@ function saveLearningTargetRecord(record) {
   const existing = getLearningTargetRecordsResult()
   if (!existing.ok) return existing
   const current = existing.records.find((item) => item.id === normalized.id)
+  const conflict = versionConflict(current, record && (record.expectedVersion ?? record.version))
+  if (conflict) return conflict
   const saved = current
-    ? { ...normalized, createdAt: current.createdAt, updatedAt: new Date().toISOString() }
+    ? {
+        ...normalized,
+        createdAt: current.createdAt,
+        updatedAt: new Date().toISOString(),
+        version: Number(current.version || 1) + 1
+      }
     : normalized
   const records = [
     saved,
@@ -703,12 +832,15 @@ function saveScoreRecord(record) {
   const existing = getScoreRecordsResult()
   if (!existing.ok) return existing
   const current = existing.records.find((item) => item.id === normalized.id)
+  const conflict = versionConflict(current, record && (record.expectedVersion ?? record.version))
+  if (conflict) return conflict
   const saved = current
     ? {
         ...current,
         ...normalized,
         createdAt: current.createdAt,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        version: Number(current.version || 1) + 1
       }
     : normalized
   const records = [
@@ -976,8 +1108,16 @@ function saveProfileRecord(field, record, normalizer, label, maxRecords = 1000) 
   if (!normalized) return { ok: false, message: `${label}格式无效，请检查后重试。` }
   const existing = listFromActiveData(field)
   const current = existing.find((item) => item.id === normalized.id)
+  const conflict = versionConflict(current, record && (record.expectedVersion ?? record.version))
+  if (conflict) return conflict
   const saved = current
-    ? { ...current, ...normalized, createdAt: current.createdAt, updatedAt: new Date().toISOString() }
+    ? {
+        ...current,
+        ...normalized,
+        createdAt: current.createdAt,
+        updatedAt: new Date().toISOString(),
+        version: Number(current.version || 1) + 1
+      }
     : normalized
   const records = [
     saved,
@@ -1064,22 +1204,393 @@ function saveSubjectConfigs(configs) {
   return updateActiveProfileData((data) => ({ ...data, subjectConfigs: normalized }))
 }
 
-function clearCurrentProfileData() {
+function operationStates() {
+  const result = readStorage(KEYS.restorePointOperationState, {})
+  return result.ok && result.value && typeof result.value === 'object' ? result.value : {}
+}
+
+function operationResult(operationId) {
+  if (!operationId) return null
+  const state = operationStates()[operationId]
+  if (!state) return null
+  if (state.status === 'committed') return { ...clone(state.result), idempotent: true }
+  if (state.status === 'running') {
+    return { ok: false, code: ERROR_CODES.TRANSACTION_ALREADY_RUNNING, message: '操作正在进行，请稍候。' }
+  }
+  return null
+}
+
+function acquireOperationLock({ operationId, operationType, profileId = '', entityId = '', global = false }) {
+  const now = Date.now()
+  const existing = readStorage(KEYS.operationLock, null)
+  if (!existing.ok) return { ok: false, code: ERROR_CODES.STORAGE_READBACK_FAILED }
+  if (existing.exists && existing.value) {
+    const created = Date.parse(existing.value.createdAt || '')
+    const stale = !Number.isFinite(created) || now - created > 5 * 60 * 1000
+    const conflicts = existing.value.global || global ||
+      (profileId && existing.value.profileId === profileId) ||
+      (entityId && existing.value.entityId === entityId)
+    if (!stale && existing.value.owner !== operationId && conflicts) {
+      return { ok: false, code: ERROR_CODES.OPERATION_LOCKED, message: '另一项本地数据操作正在进行。' }
+    }
+    if (stale) removeStorage(KEYS.operationLock)
+  }
+  const lock = {
+    owner: operationId,
+    operationType,
+    profileId,
+    entityId,
+    global,
+    createdAt: new Date(now).toISOString()
+  }
+  const written = writeStorage(KEYS.operationLock, lock)
+  return written.ok ? { ok: true, lock } : { ok: false, code: ERROR_CODES.STORAGE_WRITE_FAILED }
+}
+
+function finishOperation(operationId, status, result) {
+  const states = operationStates()
+  states[operationId] = {
+    operationId,
+    status,
+    finishedAt: new Date().toISOString(),
+    result: clone(result)
+  }
+  const ids = Object.keys(states).sort((left, right) =>
+    String(states[right].finishedAt || '').localeCompare(String(states[left].finishedAt || ''))
+  )
+  for (const id of ids.slice(100)) delete states[id]
+  writeStorage(KEYS.restorePointOperationState, states)
+  const lock = readStorage(KEYS.operationLock, null)
+  if (lock.ok && lock.exists && lock.value && lock.value.owner === operationId) {
+    removeStorage(KEYS.operationLock)
+  }
+}
+
+function beginOperation(context) {
+  const previous = operationResult(context.operationId)
+  if (previous) return previous
+  const lock = acquireOperationLock(context)
+  if (!lock.ok) return lock
+  const states = operationStates()
+  states[context.operationId] = {
+    ...context,
+    status: 'running',
+    startedAt: new Date().toISOString()
+  }
+  if (!writeStorage(KEYS.restorePointOperationState, states).ok) {
+    removeStorage(KEYS.operationLock)
+    return { ok: false, code: ERROR_CODES.STORAGE_WRITE_FAILED }
+  }
+  return { ok: true, started: true }
+}
+
+function restorePointRecord(point) {
+  const copy = clone(point)
+  delete copy.payload
+  return copy
+}
+
+function listRestorePoints() {
+  const result = readStorage(KEYS.restorePointIndex, [])
+  const points = result.ok && Array.isArray(result.value) ? result.value : []
+  return points.slice().sort((left, right) =>
+    String(right.createdAt).localeCompare(String(left.createdAt)) || String(right.id).localeCompare(String(left.id))
+  )
+}
+
+function getRestorePoint(id) {
+  const result = readStorage(KEYS.restorePointPayloads, {})
+  const point = result.ok && result.value && typeof result.value === 'object' ? result.value[id] : null
+  if (!point) return { ok: false, code: ERROR_CODES.RESTORE_POINT_NOT_FOUND, message: '未找到该恢复点。' }
+  const validation = validateRestorePoint(point)
+  return validation.ok
+    ? { ok: true, restorePoint: clone(point) }
+    : { ok: false, code: validation.code, message: '恢复点校验失败，当前数据未修改。' }
+}
+
+function createRestorePoint({
+  reason = 'manual',
+  profileScope = { type: 'full_user_state' },
+  operationId,
+  id,
+  createdAt,
+  createdBy = 'automatic',
+  note = '',
+  faultInjector
+} = {}) {
+  const resolvedOperationId = operationId || `restore_point_${reason}_${Date.now()}`
+  const started = beginOperation({
+    operationId: resolvedOperationId,
+    operationType: 'create_restore_point',
+    profileId: profileScope.profileId || '',
+    global: profileScope.type !== 'single_profile'
+  })
+  if (!started.ok || !started.started) return started
+  try {
+    invokeFault(faultInjector, 'create_restore_point', 'validate')
+    const state = getVersionedState()
+    if (!state.ok) throw Object.assign(new Error(state.message), { code: ERROR_CODES.FORMAL_DATA_INVALID })
+    invokeFault(faultInjector, 'create_restore_point', 'snapshot')
+    const timestamp = createdAt || new Date().toISOString()
+    const point = buildRestorePoint({
+      state: state.state,
+      reason,
+      profileScope,
+      id: id || `restore_${timestamp.replace(/[^0-9]/g, '').slice(0, 17)}_${String(listRestorePoints().length + 1).padStart(2, '0')}`,
+      createdAt: timestamp,
+      operationId: resolvedOperationId,
+      createdBy,
+      note,
+      sourcePlatform: 'miniprogram',
+      storageSchemaVersion: STORAGE_SCHEMA_VERSION,
+      backupFormatVersion: 2,
+      appDataVersion: 'rc11-2'
+    })
+    invokeFault(faultInjector, 'create_restore_point', 'prepare')
+    invokeFault(faultInjector, 'create_restore_point', 'writeTemporary')
+    if (!writeStorage(KEYS.restorePointTemporary, point).ok) {
+      throw Object.assign(new Error('恢复点临时写入失败'), { code: ERROR_CODES.STORAGE_WRITE_FAILED })
+    }
+    invokeFault(faultInjector, 'create_restore_point', 'verifyTemporary')
+    const temporary = readStorage(KEYS.restorePointTemporary, null)
+    const verification = temporary.ok && temporary.exists ? validateRestorePoint(temporary.value) : { ok: false }
+    if (!verification.ok) throw Object.assign(new Error('恢复点回读校验失败'), {
+      code: verification.code || ERROR_CODES.RESTORE_POINT_VERIFY_FAILED
+    })
+    invokeFault(faultInjector, 'create_restore_point', 'commit')
+    const payloadsResult = readStorage(KEYS.restorePointPayloads, {})
+    const payloads = payloadsResult.ok && payloadsResult.value && typeof payloadsResult.value === 'object'
+      ? payloadsResult.value
+      : {}
+    payloads[point.id] = point
+    let index = listRestorePoints().filter((item) => item.id !== point.id)
+    index.push(restorePointRecord(point))
+    index.sort((left, right) =>
+      String(left.createdAt).localeCompare(String(right.createdAt)) || String(left.id).localeCompare(String(right.id))
+    )
+    const evicted = index.length > MAX_RESTORE_POINTS ? index.slice(0, index.length - MAX_RESTORE_POINTS) : []
+    index = index.slice(-MAX_RESTORE_POINTS)
+    for (const item of evicted) delete payloads[item.id]
+    const committed = atomicWrite({
+      [KEYS.restorePointIndex]: index,
+      [KEYS.restorePointPayloads]: payloads
+    }, { operationType: 'create_restore_point', operationId: resolvedOperationId, faultInjector })
+    if (!committed.ok) throw Object.assign(new Error('恢复点保存失败'), {
+      code: committed.code || ERROR_CODES.RESTORE_POINT_CREATE_FAILED,
+      stage: committed.stage
+    })
+    invokeFault(faultInjector, 'create_restore_point', 'verifyCommitted')
+    const saved = getRestorePoint(point.id)
+    if (!saved.ok) throw Object.assign(new Error('恢复点保存校验失败'), { code: saved.code })
+    invokeFault(faultInjector, 'create_restore_point', 'cleanup')
+    removeStorage(KEYS.restorePointTemporary)
+    const result = { ok: true, restorePoint: point, evictedIds: evicted.map((item) => item.id) }
+    finishOperation(resolvedOperationId, 'committed', result)
+    return result
+  } catch (error) {
+    removeStorage(KEYS.restorePointTemporary)
+    const result = {
+      ok: false,
+      code: error.code || ERROR_CODES.RESTORE_POINT_CREATE_FAILED,
+      stage: error.stage || '',
+      message: '未能创建安全恢复点，本次操作未执行。'
+    }
+    finishOperation(resolvedOperationId, 'failed', result)
+    return result
+  }
+}
+
+function deleteRestorePoint(id, { operationId } = {}) {
+  const resolvedOperationId = operationId || `delete_restore_point_${id}_${Date.now()}`
+  const started = beginOperation({ operationId: resolvedOperationId, operationType: 'delete_restore_point', global: true })
+  if (!started.ok || !started.started) return started
+  const payloadsResult = readStorage(KEYS.restorePointPayloads, {})
+  const payloads = payloadsResult.ok && payloadsResult.value && typeof payloadsResult.value === 'object'
+    ? payloadsResult.value
+    : {}
+  if (!payloads[id]) {
+    const result = { ok: false, code: ERROR_CODES.RESTORE_POINT_NOT_FOUND, message: '未找到该恢复点。' }
+    finishOperation(resolvedOperationId, 'failed', result)
+    return result
+  }
+  delete payloads[id]
+  const index = listRestorePoints().filter((item) => item.id !== id)
+  const result = atomicWrite({ [KEYS.restorePointIndex]: index, [KEYS.restorePointPayloads]: payloads }, {
+    operationType: 'delete_restore_point', operationId: resolvedOperationId
+  })
+  const finalResult = result.ok ? { ok: true, id } : result
+  finishOperation(resolvedOperationId, result.ok ? 'committed' : 'failed', finalResult)
+  return finalResult
+}
+
+function clearRestorePoints({ operationId } = {}) {
+  const resolvedOperationId = operationId || `clear_restore_points_${Date.now()}`
+  const started = beginOperation({ operationId: resolvedOperationId, operationType: 'clear_restore_points', global: true })
+  if (!started.ok || !started.started) return started
+  const result = atomicWrite({ [KEYS.restorePointIndex]: [], [KEYS.restorePointPayloads]: {} }, {
+    operationType: 'clear_restore_points', operationId: resolvedOperationId
+  })
+  const finalResult = result.ok ? { ok: true } : result
+  finishOperation(resolvedOperationId, result.ok ? 'committed' : 'failed', finalResult)
+  return finalResult
+}
+
+function validateRestoreState(state) {
+  const profiles = Array.isArray(state && state.profiles) ? state.profiles : []
+  if (!profiles.length || new Set(profiles.map((item) => item.id)).size !== profiles.length) {
+    return { ok: false, code: ERROR_CODES.INVALID_PROFILE_REFERENCE }
+  }
+  if (!profiles.some((item) => item.id === state.activeProfileId)) {
+    return { ok: false, code: ERROR_CODES.INVALID_PROFILE_REFERENCE }
+  }
+  const validSchoolIds = new Set(schools.map((item) => item.id))
+  for (const profile of profiles) {
+    const data = state.profileData && state.profileData[profile.id]
+    if (!data || data.profileId !== profile.id) return { ok: false, code: ERROR_CODES.INVALID_PROFILE_REFERENCE }
+    for (const field of ['scoreRecords', 'scoreReviews', 'scoreLossReasons', 'targetRecords', 'stageGoals', 'learningTasks']) {
+      const records = Array.isArray(data[field]) ? data[field] : []
+      if (new Set(records.map((item) => item.id)).size !== records.length) {
+        return { ok: false, code: ERROR_CODES.DUPLICATE_ENTITY_ID }
+      }
+      if (records.some((item) => item.profileId && item.profileId !== profile.id)) {
+        return { ok: false, code: ERROR_CODES.INVALID_PROFILE_REFERENCE }
+      }
+    }
+    if ((data.scoreRecords || []).some((item) => !Number.isInteger(item.totalScore) || item.totalScore < 0 || item.totalScore > 740)) {
+      return { ok: false, code: ERROR_CODES.FORMAL_DATA_INVALID }
+    }
+    const schoolIds = [
+      ...(data.favoriteSchoolIds || []),
+      ...(data.targetRecords || []).map((item) => item.schoolId)
+    ]
+    if (schoolIds.some((id) => !validSchoolIds.has(id))) return { ok: false, code: ERROR_CODES.INVALID_SCHOOL_REFERENCE }
+  }
+  return { ok: true }
+}
+
+function restoreFromRestorePoint(id, { operationId, faultInjector } = {}) {
+  const resolvedOperationId = operationId || `restore_${id}_${Date.now()}`
+  const previous = operationResult(resolvedOperationId)
+  if (previous) return previous
+  const selected = getRestorePoint(id)
+  if (!selected.ok) return selected
+  const before = createRestorePoint({
+    reason: 'before_restore',
+    profileScope: { type: 'full_user_state' },
+    operationId: `${resolvedOperationId}_safety`,
+    createdBy: 'automatic'
+  })
+  if (!before.ok) return before
+  const started = beginOperation({ operationId: resolvedOperationId, operationType: 'restore', global: true })
+  if (!started.ok || !started.started) return started
+  try {
+    invokeFault(faultInjector, 'restore', 'validate')
+    const current = getVersionedState()
+    if (!current.ok) throw Object.assign(new Error(current.message), { code: ERROR_CODES.FORMAL_DATA_INVALID })
+    invokeFault(faultInjector, 'restore', 'snapshot')
+    const next = stateAfterRestore(current.state, selected.restorePoint)
+    invokeFault(faultInjector, 'restore', 'prepare')
+    const validation = validateRestoreState(next)
+    if (!validation.ok) throw Object.assign(new Error('恢复后数据校验失败'), { code: validation.code })
+    invokeFault(faultInjector, 'restore', 'writeTemporary')
+    if (!writeStorage(KEYS.restoreTemporary, next).ok) throw Object.assign(new Error(), { code: ERROR_CODES.STORAGE_WRITE_FAILED })
+    invokeFault(faultInjector, 'restore', 'verifyTemporary')
+    const temporary = readStorage(KEYS.restoreTemporary, null)
+    if (!temporary.ok || !temporary.exists || !validateRestoreState(temporary.value).ok) {
+      throw Object.assign(new Error(), { code: ERROR_CODES.TEMPORARY_DATA_INVALID })
+    }
+    invokeFault(faultInjector, 'restore', 'commit')
+    const committed = updateVersionedState(next)
+    if (!committed.ok) throw Object.assign(new Error(committed.message), { code: ERROR_CODES.STORAGE_WRITE_FAILED })
+    invokeFault(faultInjector, 'restore', 'verifyCommitted')
+    const readback = getVersionedState()
+    if (!readback.ok || canonicalJson(readback.state) !== canonicalJson(committed.state)) {
+      throw Object.assign(new Error(), { code: ERROR_CODES.STORAGE_READBACK_FAILED })
+    }
+    invokeFault(faultInjector, 'restore', 'cleanup')
+    removeStorage(KEYS.restoreTemporary)
+    const result = { ok: true, restorePointId: id, safetyRestorePointId: before.restorePoint.id }
+    finishOperation(resolvedOperationId, 'committed', result)
+    return result
+  } catch (error) {
+    removeStorage(KEYS.restoreTemporary)
+    const result = { ok: false, code: error.code || ERROR_CODES.RESTORE_POINT_VERIFY_FAILED, message: '恢复未完成，当前数据已保留。' }
+    finishOperation(resolvedOperationId, 'failed', result)
+    return result
+  }
+}
+
+function recoverStartupState() {
+  const transaction = recoverInterruptedTransaction()
+  if (!transaction.ok) return transaction
+  const temporary = readStorage(KEYS.restorePointTemporary, null)
+  let state = transaction.state || 'clean'
+  if (temporary.ok && temporary.exists) {
+    removeStorage(KEYS.restorePointTemporary)
+    state = 'temporary_only'
+  }
+  const restoreTemporary = readStorage(KEYS.restoreTemporary, null)
+  if (restoreTemporary.ok && restoreTemporary.exists) {
+    const formal = getVersionedState()
+    const tempValid = validateRestoreState(restoreTemporary.value).ok
+    if (formal.ok && !tempValid) {
+      removeStorage(KEYS.restoreTemporary)
+      state = 'formal_valid_temp_invalid'
+    } else if (formal.ok && tempValid) {
+      state = canonicalJson(formal.state) === canonicalJson(restoreTemporary.value)
+        ? 'committed_with_temp_residue'
+        : 'both_valid_different'
+      if (state === 'committed_with_temp_residue') removeStorage(KEYS.restoreTemporary)
+    } else if (!formal.ok && tempValid) state = 'formal_invalid_temp_valid'
+    else state = 'both_invalid'
+  }
+  const lock = readStorage(KEYS.operationLock, null)
+  if (lock.ok && lock.exists && lock.value) {
+    const age = Date.now() - Date.parse(lock.value.createdAt || '')
+    if (!Number.isFinite(age) || age > 5 * 60 * 1000) {
+      removeStorage(KEYS.operationLock)
+      state = state === 'clean' ? 'incomplete_lock' : state
+    }
+  }
+  const result = { ok: true, state, startupRecoveryVersion: 1, checkedAt: new Date().toISOString() }
+  writeStorage(KEYS.startupRecovery, result)
+  return result
+}
+
+function clearCurrentProfileData({ operationId } = {}) {
   const context = activeContext()
   if (!context.ok) return context
+  const restore = createRestorePoint({
+    reason: 'before_clear_profile',
+    profileScope: { type: 'single_profile', profileId: context.profile.id },
+    operationId: `${operationId || `clear_profile_${Date.now()}`}_safety`
+  })
+  if (!restore.ok) return restore
   const empty = createEmptyProfileData(context.profile.id)
   empty.examYear = context.profile.examYear
   const profileData = { ...context.state.profileData, [context.profile.id]: empty }
   return updateVersionedState({ ...context.state, profileData })
 }
 
-function clearLocalData() {
+function clearLocalData({ operationId } = {}) {
+  const restore = createRestorePoint({
+    reason: 'before_clear_all',
+    profileScope: { type: 'full_user_state' },
+    operationId: `${operationId || `clear_all_${Date.now()}`}_safety`
+  })
+  if (!restore.ok) return restore
   const marker = {
     clearedAt: new Date().toISOString(),
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
   const cleared = atomicRemove(
-    ALL_KNOWN_KEYS.filter((key) => key !== KEYS.clearMarker),
+    ALL_KNOWN_KEYS.filter((key) => key !== KEYS.clearMarker && ![
+      KEYS.restorePointIndex,
+      KEYS.restorePointPayloads,
+      KEYS.restorePointOperationState,
+      KEYS.operationLock,
+      KEYS.startupRecovery
+    ].includes(key)),
     { [KEYS.clearMarker]: marker }
   )
   if (!cleared.ok) return cleared
@@ -1114,6 +1625,60 @@ function replaceVersionedState(state, { importSnapshot = null } = {}) {
   return result.ok ? { ok: true, state: result.state } : result
 }
 
+function protectedCall(operationType, operationId, context, action) {
+  if (!operationId) return action()
+  const started = beginOperation({ operationId, operationType, ...context })
+  if (!started.ok || !started.started) return started
+  let result
+  try {
+    result = action()
+  } catch (error) {
+    result = { ok: false, message: '本地操作失败，原数据已保留。' }
+  }
+  finishOperation(operationId, result && result.ok ? 'committed' : 'failed', result)
+  return result
+}
+
+function protectedSaveScoreRecord(record, options = {}) {
+  return protectedCall('save_score', options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveScoreRecord(record))
+}
+
+function protectedDeleteScoreRecord(id, options = {}) {
+  return protectedCall('delete_score', options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteScoreRecord(id))
+}
+
+function protectedSaveTargetRecord(record, options = {}) {
+  return protectedCall('save_target', options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && (record.id || record.schoolId) || ''
+  }, () => saveTargetRecord(record))
+}
+
+function protectedSaveStageGoalRecord(record, options = {}) {
+  return protectedCall('save_stage_goal', options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveLearningTargetRecord(record))
+}
+
+function protectedSaveLearningTask(record, options = {}) {
+  return protectedCall('save_learning_task', options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveLearningTask(record, options))
+}
+
+function protectedSetFavorite(schoolId, nextValue, options = {}) {
+  return protectedCall('set_favorite', options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: schoolId
+  }, () => setFavorite(schoolId, nextValue))
+}
+
+function protectedSwitchStudentProfile(id, options = {}) {
+  return protectedCall('switch_profile', options.operationId, { global: true, entityId: id }, () => switchStudentProfile(id))
+}
+
 module.exports = {
   KEYS,
   ALL_KNOWN_KEYS,
@@ -1126,26 +1691,29 @@ module.exports = {
   atomicWrite,
   atomicRemove,
   recoverInterruptedTransaction,
+  recoverStartupState,
   isVersionedStorageActive,
   ensureStorageMigrated,
   getVersionedState,
   replaceVersionedState,
   getDataRevision,
+  TRANSACTION_STAGES,
+  ERROR_CODES,
   getProfilesResult,
   getProfiles,
   getActiveProfile,
   createStudentProfile,
   updateStudentProfile,
-  switchStudentProfile,
+  switchStudentProfile: protectedSwitchStudentProfile,
   deleteStudentProfile,
   getFavoriteIdsResult,
   getFavoriteIds,
   isFavorite,
-  setFavorite,
+  setFavorite: protectedSetFavorite,
   replaceFavoriteIds,
   getTargetRecordsResult,
   getTargetRecords,
-  saveTargetRecord,
+  saveTargetRecord: protectedSaveTargetRecord,
   deleteTargetRecord,
   clearTargetRecords,
   getPrimaryTargetSchoolId,
@@ -1158,16 +1726,16 @@ module.exports = {
   getLearningTargetRecords,
   getStageGoalRecordsResult,
   getStageGoalRecords,
-  saveLearningTargetRecord,
-  saveStageGoalRecord,
+  saveLearningTargetRecord: protectedSaveStageGoalRecord,
+  saveStageGoalRecord: protectedSaveStageGoalRecord,
   deleteLearningTargetRecord,
   deleteStageGoalRecord,
   clearLearningTargetRecords,
   clearStageGoalRecords,
   getScoreRecordsResult,
   getScoreRecords,
-  saveScoreRecord,
-  deleteScoreRecord,
+  saveScoreRecord: protectedSaveScoreRecord,
+  deleteScoreRecord: protectedDeleteScoreRecord,
   clearScoreRecords,
   getExamYearResult,
   getExamYear,
@@ -1194,10 +1762,18 @@ module.exports = {
   saveScoreLossReason,
   deleteScoreLossReason,
   getLearningTasks,
-  saveLearningTask,
+  saveLearningTask: protectedSaveLearningTask,
   deleteLearningTask,
   getSubjectConfigs,
   saveSubjectConfigs,
+  createRestorePoint,
+  listRestorePoints,
+  getRestorePoint,
+  restoreFromRestorePoint,
+  deleteRestorePoint,
+  clearRestorePoints,
+  validateRestoreState,
+  acquireOperationLock,
   clearCurrentProfileData,
   clearLocalData,
   clearLocalDemoData

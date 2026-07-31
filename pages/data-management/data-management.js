@@ -103,6 +103,10 @@ Page({
     wx.showToast({ title: '最近操作已清除', icon: 'success' })
   },
 
+  openRestorePoints() {
+    wx.navigateTo({ url: '/pages/restore-points/restore-points' })
+  },
+
   confirmTwice({ title, content, finalContent, onConfirm }) {
     wx.showModal({
       title,

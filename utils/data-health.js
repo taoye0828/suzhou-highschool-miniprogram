@@ -13,6 +13,7 @@ const {
   atomicWrite,
   getDataRevision
 } = require('./storage')
+const { createRestorePoint } = require('./storage')
 
 const ISSUE_LABELS = {
   duplicate_score_id: '重复成绩 ID',
@@ -219,6 +220,12 @@ function scanLocalData() {
 }
 
 function repairSafeIssues() {
+  const safety = createRestorePoint({
+    reason: 'before_data_repair',
+    profileScope: { type: 'full_user_state' },
+    operationId: `repair_${Date.now()}_safety`
+  })
+  if (!safety.ok) return safety
   const before = storageSnapshot()
   if (!before.ok) return before
   const report = scanLocalData()

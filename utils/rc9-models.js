@@ -154,6 +154,7 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
     nextActions: text(value.nextActions, 1000),
     notes: text(value.notes, 1000),
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -180,6 +181,7 @@ function normalizeTargetRecord(value, profileId = DEFAULT_PROFILE_ID) {
     createdAt,
     updatedAt: isoDate(value.updatedAt, createdAt),
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -231,6 +233,7 @@ function normalizeStageGoal(value, profileId = DEFAULT_PROFILE_ID) {
     createdAt,
     updatedAt: isoDate(value.updatedAt, createdAt),
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -251,6 +254,7 @@ function normalizeScoreReview(value, profileId = DEFAULT_PROFILE_ID) {
     nextActions: text(value.nextActions, 1000),
     createdAt,
     updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -275,6 +279,7 @@ function normalizeScoreLossReason(value, profileId = DEFAULT_PROFILE_ID) {
     improvementAction: text(value.improvementAction, 1000),
     createdAt,
     updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -307,6 +312,7 @@ function normalizeLearningTask(value, profileId = DEFAULT_PROFILE_ID) {
     notes: text(value.notes, 1000),
     createdAt,
     updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -374,6 +380,7 @@ function normalizeProfile(value, fallbackId = DEFAULT_PROFILE_ID) {
     createdAt,
     updatedAt: isoDate(value.updatedAt, createdAt),
     lastUsedAt: isoDate(value.lastUsedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }

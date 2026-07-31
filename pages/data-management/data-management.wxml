@@ -24,6 +24,12 @@
     </view>
   </view>
 
+  <view class="card management-card">
+    <view class="card-title">恢复点</view>
+    <view class="muted small management-note">危险操作前自动保留本机用户数据，最多保存 10 个；不包含学校和分数线。</view>
+    <button class="button secondary" bindtap="openRestorePoints">管理恢复点</button>
+  </view>
+
   <view class="card">
     <view class="card-title">最近浏览与操作</view>
     <view class="muted small">仅用于快速返回，不记录复盘正文或备注全文，也不会上传。</view>
