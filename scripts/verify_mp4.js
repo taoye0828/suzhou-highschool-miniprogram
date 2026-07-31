@@ -18,6 +18,7 @@ const requiredPages = [
   'pages/data-info/data-info',
   'pages/privacy/privacy',
   'pages/data-management/data-management',
+  'pages/restore-points/restore-points',
   'pages/profile-management/profile-management',
   'pages/backup-restore/backup-restore',
   'pages/help/help',

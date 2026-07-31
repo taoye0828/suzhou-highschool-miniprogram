@@ -1227,13 +1227,18 @@ function acquireOperationLock({ operationId, operationType, profileId = '', enti
   if (existing.exists && existing.value) {
     const created = Date.parse(existing.value.createdAt || '')
     const stale = !Number.isFinite(created) || now - created > 5 * 60 * 1000
+    const ownerState = operationStates()[existing.value.owner]
+    const ownerFinished = ownerState && ownerState.status !== 'running'
     const conflicts = existing.value.global || global ||
       (profileId && existing.value.profileId === profileId) ||
       (entityId && existing.value.entityId === entityId)
-    if (!stale && existing.value.owner !== operationId && conflicts) {
+    if (!stale && !ownerFinished && existing.value.owner !== operationId && conflicts) {
       return { ok: false, code: ERROR_CODES.OPERATION_LOCKED, message: '另一项本地数据操作正在进行。' }
     }
-    if (stale) removeStorage(KEYS.operationLock)
+    if (stale || ownerFinished) {
+      const released = removeStorage(KEYS.operationLock)
+      if (!released.ok) return { ok: false, code: ERROR_CODES.CLEANUP_FAILED, message: '上一次操作已结束，但临时锁清理失败。' }
+    }
   }
   const lock = {
     owner: operationId,
