@@ -10,6 +10,7 @@ const {
   normalizeProfile,
   normalizeProfileData
 } = require('./rc9-models')
+const { LEGACY_STORAGE_KEYS } = require('./legacy/migration/storage-keys')
 
 const MIGRATION_CHAIN = Object.freeze([
   { from: 1, to: 2, label: 'v1 → v2' },
@@ -151,14 +152,15 @@ function finalStateFromSnapshot(snapshot, keys) {
 
 function migrateStorageSnapshot(snapshot, { keys, now = new Date().toISOString(), ignoreLegacy = false } = {}) {
   if (!keys) throw new TypeError('keys are required')
-  const sourceVersion = Number(snapshot && snapshot[keys.storageSchemaVersion])
+  const migrationKeys = { ...keys, ...LEGACY_STORAGE_KEYS }
+  const sourceVersion = Number(snapshot && snapshot[migrationKeys.storageSchemaVersion])
   if (sourceVersion === STORAGE_SCHEMA_VERSION) {
     return {
       ok: true,
       fromVersion: STORAGE_SCHEMA_VERSION,
       toVersion: STORAGE_SCHEMA_VERSION,
       applied: [],
-      state: finalStateFromSnapshot(snapshot, keys)
+      state: finalStateFromSnapshot(snapshot, migrationKeys)
     }
   }
 
@@ -176,7 +178,7 @@ function migrateStorageSnapshot(snapshot, { keys, now = new Date().toISOString()
         onboarding: {},
         userSettings: {}
       }
-    : legacyStateFromSnapshot(snapshot, now, keys)
+    : legacyStateFromSnapshot(snapshot, now, migrationKeys)
   const applied = []
   for (const step of MIGRATION_CHAIN) {
     if (state.version !== step.from) {

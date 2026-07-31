@@ -305,6 +305,16 @@ function runPageRenderingHarness() {
       }
     }
   }
+  for (const relative of [
+    '../utils/storage',
+    '../utils/rc9-storage',
+    '../utils/backup-restore',
+    '../utils/onboarding'
+  ]) {
+    delete require.cache[require.resolve(relative)]
+  }
+  const storage = require('../utils/storage')
+  assert.strictEqual(storage.ensureStorageMigrated().ok, true)
 
   function flushQuery(width) {
     assert.ok(queryCallbacks.length > 0, 'expected a pending SelectorQuery')
@@ -361,7 +371,10 @@ function runPageRenderingHarness() {
     assert.deepStrictEqual(canvasRuns[0].arcs.map((item) => item.x), [38, 160, 282])
     assert.deepStrictEqual(canvasRuns[0].scoreTexts.map((item) => item.x), [38, 160, 282])
 
-    storageMemory.set('mp1.score_records', storedThreeRecords.slice(0, 2))
+    assert.strictEqual(storage.clearScoreRecords().ok, true)
+    for (const record of storedThreeRecords.slice(0, 2)) {
+      assert.strictEqual(storage.saveScoreRecord(record).ok, true)
+    }
     canvasRuns.length = 0
     page.loadRecords()
     assert.deepStrictEqual(page.data.visibleTrendPoints, [])

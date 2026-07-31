@@ -66,6 +66,7 @@ global.wx = {
 }
 const storagePath = require.resolve('../utils/storage')
 let storage = require(storagePath)
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
 
 for (const [index, level] of ['sprint', 'target', 'safe'].entries()) {
   const school = schools[index]
@@ -82,13 +83,14 @@ assert.deepStrictEqual(
   new Set(['sprint', 'target', 'safe'])
 )
 
-memory.set(storage.KEYS.targets, [{
+assert.strictEqual(storage.clearTargetRecords().ok, true)
+assert.strictEqual(storage.saveTargetRecord({
   id: 'target_legacy',
   schoolId: 'legacy',
   schoolName: '旧版冲刺目标',
   level: 'challenge',
   createdAt: '2026-07-01T00:00:00.000Z'
-}])
+}).ok, true)
 assert.strictEqual(storage.getTargetRecords()[0].level, 'sprint')
 
 assert.strictEqual(storage.clearTargetRecords().ok, true)

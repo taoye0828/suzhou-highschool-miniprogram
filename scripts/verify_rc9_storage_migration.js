@@ -77,7 +77,13 @@ storage = loadStorageFresh()
 const failed = storage.ensureStorageMigrated()
 assert.strictEqual(failed.ok, false)
 assert.strictEqual(storage.isVersionedStorageActive(), false)
-assert.strictEqual(storage.getScoreRecords()[0].id, 'legacy_score')
+assert.strictEqual(storage.getScoreRecordsResult().ok, false)
+assert.deepStrictEqual(storage.getScoreRecords(), [])
+assert.strictEqual(
+  harness.memory.get('mp1.score_records')[0].id,
+  'legacy_score',
+  '迁移失败时原始旧数据必须保留，但正式页面不得回退读取'
+)
 
 console.log('RC9 STORAGE MIGRATION VERIFY PASSED')
 console.log('- v1 → v2 → v3 → v4、损坏项隔离、未知字段保留、幂等与失败回滚通过')

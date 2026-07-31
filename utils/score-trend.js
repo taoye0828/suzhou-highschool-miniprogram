@@ -1,42 +1,18 @@
+const { EXAM_TOTAL_SCORE } = require('../config/app-config')
+const { sortScoreRecords } = require('./planning')
+
 const DEFAULT_LIMIT = 10
-const EXAM_TOTAL_SCORE = 740
 
 function roundAverage(value) {
   const rounded = Math.round(value * 10) / 10
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
 }
 
-function compareCreatedAt(leftValue, rightValue) {
-  const leftNumber = typeof leftValue === 'number' ? leftValue : Date.parse(leftValue)
-  const rightNumber = typeof rightValue === 'number' ? rightValue : Date.parse(rightValue)
-  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber - rightNumber
-  return String(leftValue || '').localeCompare(String(rightValue || ''))
-}
-
-function sortScoreRecords(records) {
-  return (Array.isArray(records) ? records : [])
-    .filter((record) => record &&
-      Number.isFinite(Number.isFinite(record.totalScore) ? record.totalScore : record.score) &&
-      typeof record.id === 'string')
-    .map((record, sourceIndex) => ({
-      ...record,
-      score: Number.isFinite(record.totalScore) ? record.totalScore : record.score,
-      sourceIndex
-    }))
-    .sort((left, right) => {
-      const dateCompare = String(left.examDate || left.date || '').localeCompare(
-        String(right.examDate || right.date || '')
-      )
-      if (dateCompare !== 0) return dateCompare
-      const createdCompare = compareCreatedAt(left.createdAt, right.createdAt)
-      return createdCompare !== 0 ? createdCompare : left.id.localeCompare(right.id)
-    })
-}
-
 function getVisibleTrendRecords(records, limit = DEFAULT_LIMIT) {
   const ordered = sortScoreRecords(records)
-  return ordered.slice(Math.max(0, ordered.length - limit)).map((record, displayIndex) => ({
-    ...record,
+  return ordered.slice(Math.max(0, ordered.length - limit)).map((source, displayIndex) => ({
+    ...source,
+    score: Number.isFinite(source.totalScore) ? source.totalScore : source.score,
     displayIndex: displayIndex + 1
   }))
 }

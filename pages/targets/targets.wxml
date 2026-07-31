@@ -385,7 +385,7 @@
         </view>
         <text class="status-badge status-{{task.status}}">{{task.status === 'not_started' ? '未开始' : task.status === 'in_progress' ? '进行中' : task.status === 'completed' ? '已完成' : '已暂停'}}</text>
       </view>
-      <view class="muted small">每周 {{task.weeklyTarget || '—'}} 次{{task.sourceReasonType ? ' · 来源：' + task.sourceReasonType : ''}}</view>
+      <view class="muted small">每周 {{task.weeklyTarget || '—'}} 次 · {{task.sourceStatusText}}</view>
       <picker
         range="{{statusOptions}}"
         range-key="label"

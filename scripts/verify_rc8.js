@@ -163,6 +163,7 @@ global.wx = {
 }
 const storage = require('../utils/storage')
 const onboarding = require('../utils/onboarding')
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
 
 assert.strictEqual(storage.saveTargetRecord({
   id: 'target_school',
@@ -196,11 +197,11 @@ assert.strictEqual(storage.saveLearningTargetRecord({
 assert.strictEqual(storage.getLearningTargetRecords().length, 1)
 
 const businessKeys = [
-  storage.KEYS.favorites,
-  storage.KEYS.targets,
-  storage.KEYS.learningTargets,
-  storage.KEYS.scoreRecords,
-  storage.KEYS.examYear
+  storage.KEYS.profiles,
+  storage.KEYS.activeProfileId,
+  storage.KEYS.profileData,
+  storage.KEYS.sharedFavorites,
+  storage.KEYS.storageSchemaVersion
 ]
 const existingBusinessValues = new Map(businessKeys.map((key) => [key, memory.get(key)]))
 let overlay = onboarding.onboardingForPage('/pages/home/home', { autoStart: true })

@@ -33,6 +33,8 @@ const externalLink = require('../utils/external-link')
 const { schools } = require('../data/schools')
 const { admissionScores } = require('../data/admission-scores')
 
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
+
 assert.ok(externalLink.externalLinkRoute('https://www.suzhou.gov.cn/example').startsWith('/pages/web-view/web-view?url='))
 assert.strictEqual(externalLink.externalLinkRoute('http://example.com'), '')
 assert.strictEqual(externalLink.externalLinkRoute('javascript:alert(1)'), '')
@@ -91,7 +93,7 @@ for (const item of storage.getTargetRecords()) {
   assert.ok(item.schoolId)
   assert.ok(item.schoolName)
   assert.ok(item.level)
-  assert.strictEqual(item.schemaVersion, 3)
+  assert.strictEqual(item.schemaVersion, storage.STORAGE_SCHEMA_VERSION)
 }
 assert.strictEqual(storage.saveTargetRecord(target('school_a', '学校A', 'safe', '2026-07-02T02:00:00.000Z')).ok, true)
 assert.strictEqual(storage.getTargetRecords().filter((item) => item.schoolId === 'school_a').length, 1)
@@ -108,26 +110,13 @@ for (const record of [
   assert.strictEqual(storage.saveTargetRecord(record).ok, false)
 }
 
-memory.set(storage.KEYS.targets, [
-  {},
-  { id: 'old_generic', currentScore: 500, targetScore: 550, createdAt: '2026-07-02T00:00:00.000Z' },
-  {
-    schoolId: 'legacy_school',
-    schoolName: '旧数据学校',
-    createdAt: '2026-07-02T00:00:00.000Z'
-  }
-])
-const legacySchoolTarget = storage.getTargetRecords()
-assert.strictEqual(legacySchoolTarget.length, 1)
-assert.strictEqual(legacySchoolTarget[0].schoolId, 'legacy_school')
-assert.strictEqual(legacySchoolTarget[0].level, 'target')
-
-memory.set(storage.KEYS.targets, Array.from({ length: 120 }, (_, index) => target(
+assert.strictEqual(storage.clearTargetRecords().ok, true)
+for (const record of Array.from({ length: 120 }, (_, index) => target(
   `school_${index}`,
   `学校${index}`,
   'target',
   new Date(2026, 6, 2, 0, index).toISOString()
-)))
+))) assert.strictEqual(storage.saveTargetRecord(record).ok, true)
 assert.strictEqual(storage.getTargetRecords().length, APP_CONFIG.targetScore.maxRecords)
 
 writeFailure = true
@@ -136,11 +125,11 @@ assert.strictEqual(storage.saveTargetDraft({ currentScore: '500' }).ok, false)
 writeFailure = false
 
 readFailure = true
-const recordsBeforeReadFailure = memory.get(storage.KEYS.targets)
+const recordsBeforeReadFailure = memory.get(storage.KEYS.profileData)
 assert.strictEqual(storage.getTargetRecordsResult().ok, false)
 assert.deepStrictEqual(storage.getTargetRecords(), [])
 assert.strictEqual(storage.saveTargetRecord(target('must_not_overwrite', '不得覆盖学校')).ok, false)
-assert.strictEqual(memory.get(storage.KEYS.targets), recordsBeforeReadFailure)
+assert.strictEqual(memory.get(storage.KEYS.profileData), recordsBeforeReadFailure)
 assert.strictEqual(storage.getFavoriteIdsResult().ok, false)
 assert.deepStrictEqual(storage.getFavoriteIds(), [])
 assert.strictEqual(storage.setFavorite('suzhou_high_school', true).ok, false)
@@ -154,7 +143,7 @@ assert.strictEqual(storage.saveTargetDraft({
 }).ok, true)
 assert.strictEqual(storage.getTargetDraft().targetScore, '550')
 assert.strictEqual(storage.getTargetDraft().targetLevel, 'sprint')
-memory.set(storage.KEYS.targetDraft, [])
+assert.strictEqual(storage.clearTargetDraft().ok, true)
 assert.deepStrictEqual(storage.getTargetDraft(), {})
 
 const firstScoreRecord = {

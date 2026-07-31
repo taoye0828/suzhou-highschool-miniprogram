@@ -12,6 +12,8 @@ const {
   getScenarioSettings,
   saveScenarioSettings,
   getLearningTasks,
+  getScoreReviews,
+  getScoreLossReasons,
   saveLearningTask,
   deleteLearningTask: removeLearningTask,
   recordRecentHistory,
@@ -312,6 +314,31 @@ function presentLearningTarget(record, currentScore, scoreRecords) {
   }
 }
 
+function presentLearningTask(task, scoreRecords, scoreReviews, lossReasons) {
+  const hasSource = Boolean(
+    task.sourceExamId || task.sourceReviewId || task.sourceLossReasonId
+  )
+  const examExists = !task.sourceExamId || scoreRecords.some(
+    (record) => record.id === task.sourceExamId
+  )
+  const reviewExists = !task.sourceReviewId || scoreReviews.some(
+    (review) => review.id === task.sourceReviewId
+  )
+  const reasonExists = !task.sourceLossReasonId || lossReasons.some(
+    (reason) => reason.id === task.sourceLossReasonId
+  )
+  const sourceAvailable = !hasSource || examExists && reviewExists && reasonExists
+  return {
+    ...task,
+    sourceAvailable,
+    sourceStatusText: !hasSource
+      ? '手动创建'
+      : sourceAvailable
+        ? `来源：${task.sourceReasonType || '考试复盘'}`
+        : '来源记录已删除，任务继续保留'
+  }
+}
+
 Page({
   data: {
     activeSegment: 'recommendation',
@@ -380,6 +407,8 @@ Page({
     const learningResult = getLearningTargetRecordsResult()
     const favoriteResult = getFavoriteIdsResult()
     const learningTasks = getLearningTasks()
+    const scoreReviews = getScoreReviews()
+    const lossReasons = getScoreLossReasons()
     const failedResult = [
       targetResult,
       scoreResult,
@@ -461,7 +490,12 @@ Page({
       learningRecords: learningResult.records.map((record) =>
         presentLearningTarget(record, current.score, scoreResult.records)
       ),
-      learningTasks,
+      learningTasks: learningTasks.map((task) => presentLearningTask(
+        task,
+        scoreResult.records,
+        scoreReviews,
+        lossReasons
+      )),
       goalProgressSummary: goalProgress(
         learningResult.records,
         learningTasks,

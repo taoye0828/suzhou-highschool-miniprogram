@@ -92,8 +92,8 @@ const countdown = calculateExamCountdown(2027, new Date(2026, 6, 25))
 assert.strictEqual(countdown.targetDate, '2027-06-17')
 assert.strictEqual(countdown.daysRemaining, 327)
 
-assert.ok(KEYS.scoreRecords)
-assert.ok(KEYS.examYear)
+assert.ok(KEYS.profileData)
+assert.ok(KEYS.storageSchemaVersion)
 
 const targetStorageSource = [
   read('utils/storage.js'),

@@ -71,6 +71,7 @@ global.wx = {
 }
 
 const storage = require('../utils/storage')
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
 const targetCases = [
   ['suzhou_high_school', '江苏省苏州中学校', 'sprint'],
   ['suzhou_high_school_sip', '江苏省苏州中学园区校', 'target'],

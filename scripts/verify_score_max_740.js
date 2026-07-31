@@ -31,6 +31,7 @@ global.wx = {
   removeStorageSync: (key) => memory.delete(key)
 }
 const storage = require('../utils/storage')
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
 const baseRecord = {
   id: 'score_max_check',
   date: '2026-07-09',
@@ -43,8 +44,8 @@ assert.strictEqual(storage.saveScoreRecord({ ...baseRecord, id: 'above_by_one', 
 assert.strictEqual(storage.saveScoreRecord({ ...baseRecord, id: 'old_wrong_max', score: EXAM_TOTAL_SCORE + 10 }).ok, false)
 
 const legacyRecord = { ...baseRecord, id: 'legacy_record', score: EXAM_TOTAL_SCORE + 10 }
-memory.set(storage.KEYS.scoreRecords, [legacyRecord])
-assert.deepStrictEqual(storage.getScoreRecords(), [])
+assert.strictEqual(storage.saveScoreRecord(legacyRecord).ok, false)
+assert.deepStrictEqual(storage.getScoreRecords().map((record) => record.id), ['score_max_check'])
 
 const runtimeFiles = ['pages', 'components', 'config', 'utils', 'app.js', 'app.json', 'app.wxss']
   .flatMap(walk)

@@ -14,7 +14,6 @@ const {
   normalizeScoreLossReason,
   normalizeLearningTask,
   normalizeProfile,
-  createDefaultProfile,
   normalizeRecommendationSettings,
   normalizeScenarioSettings,
   normalizeRecentHistory,
@@ -28,15 +27,9 @@ const {
   migrateStorageSnapshot,
   storageWritesForState
 } = require('./storage-migration')
+const { LEGACY_STORAGE_KEYS } = require('./legacy/migration/storage-keys')
 
 const KEYS = {
-  favorites: 'mp1.favorite_school_ids',
-  targets: 'mp1.target_records',
-  targetDraft: 'mp1.target_draft',
-  learningTargets: 'rc8.learning_target_records.v1',
-  scoreRecords: 'mp1.score_records',
-  examYear: 'mp1.exam_year',
-  onboarding: 'rc8.onboarding.v1',
   storageSchemaVersion: 'rc9.storage_schema_version',
   profiles: 'rc9.student_profiles.v4',
   activeProfileId: 'rc9.active_profile_id.v4',
@@ -54,7 +47,10 @@ const KEYS = {
 }
 
 const STORAGE_ERROR_MESSAGE = '本地存储失败，请清理空间后重试。'
-const ALL_KNOWN_KEYS = Object.values(KEYS)
+const ALL_KNOWN_KEYS = [
+  ...Object.values(KEYS),
+  ...Object.values(LEGACY_STORAGE_KEYS)
+]
 
 function logStorageError(operation, error) {
   const errorName = error && error.name ? error.name : 'Error'
@@ -353,32 +349,6 @@ function updateActiveProfileData(mutator) {
   return result.ok ? { ok: true, data: normalized, profile: context.profile } : result
 }
 
-function legacyNormalizeTarget(value) {
-  const record = normalizeTargetRecord(value)
-  return record ? { ...record, schemaVersion: 3 } : null
-}
-
-function legacyNormalizeScore(value) {
-  const record = normalizeExamRecord(value)
-  return record ? {
-    ...record,
-    schemaVersion: 1,
-    date: record.examDate,
-    score: record.totalScore
-  } : null
-}
-
-function legacyNormalizeStage(value) {
-  const record = normalizeStageGoal(value)
-  return record ? {
-    ...record,
-    schemaVersion: 1,
-    stage: record.title,
-    targetScore: record.targetTotalScore,
-    note: record.notes
-  } : null
-}
-
 function compareScoreRecords(left, right) {
   const dateCompare = String(left.examDate || left.date).localeCompare(String(right.examDate || right.date))
   if (dateCompare !== 0) return dateCompare
@@ -388,7 +358,12 @@ function compareScoreRecords(left, right) {
 
 function getProfilesResult() {
   if (!isVersionedStorageActive()) {
-    return { ok: true, profiles: [createDefaultProfile()], activeProfileId: DEFAULT_PROFILE_ID }
+    return {
+      ok: false,
+      profiles: [],
+      activeProfileId: '',
+      message: '本地数据迁移尚未完成，旧数据不会被正式页面回退读取。'
+    }
   }
   const state = getVersionedState()
   return state.ok
@@ -515,11 +490,6 @@ function deleteStudentProfile(id) {
 }
 
 function getFavoriteIdsResult() {
-  if (!isVersionedStorageActive()) {
-    const readResult = readStorage(KEYS.favorites, [])
-    const ids = normalizeStringList(readResult.value, 1000, 120).sort()
-    return readResult.ok ? { ok: true, ids } : { ok: false, ids, message: readResult.message }
-  }
   const context = activeContext()
   if (!context.ok) return { ok: false, ids: [], message: context.message }
   const ids = context.profile.favoritesMode === 'shared'
@@ -538,9 +508,6 @@ function isFavorite(schoolId) {
 
 function replaceFavoriteIds(ids) {
   const cleanIds = normalizeStringList(ids, 1000, 120).sort()
-  if (!isVersionedStorageActive()) {
-    return cleanIds.length ? writeStorage(KEYS.favorites, cleanIds) : removeStorage(KEYS.favorites)
-  }
   const context = activeContext()
   if (!context.ok) return context
   if (context.profile.favoritesMode === 'shared') {
@@ -566,21 +533,6 @@ function setFavorite(schoolId, nextValue) {
 }
 
 function getTargetRecordsResult() {
-  if (!isVersionedStorageActive()) {
-    const readResult = readStorage(KEYS.targets, [])
-    const seen = new Set()
-    const records = (Array.isArray(readResult.value) ? readResult.value : [])
-      .map(legacyNormalizeTarget)
-      .filter(Boolean)
-      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
-      .filter((item) => {
-        if (seen.has(item.schoolId)) return false
-        seen.add(item.schoolId)
-        return true
-      })
-      .slice(0, APP_CONFIG.targetScore.maxRecords)
-    return readResult.ok ? { ok: true, records } : { ok: false, records, message: readResult.message }
-  }
   const context = activeContext()
   return context.ok
     ? { ok: true, records: context.data.targetRecords }
@@ -593,9 +545,7 @@ function getTargetRecords() {
 
 function saveTargetRecord(record) {
   const profileId = getActiveProfile() && getActiveProfile().id || DEFAULT_PROFILE_ID
-  const normalized = isVersionedStorageActive()
-    ? normalizeTargetRecord(record, profileId)
-    : legacyNormalizeTarget(record)
+  const normalized = normalizeTargetRecord(record, profileId)
   if (!normalized) return { ok: false, message: '目标记录格式无效，请检查后重试。' }
   const existing = getTargetRecordsResult()
   if (!existing.ok) return existing
@@ -615,10 +565,6 @@ function saveTargetRecord(record) {
     recordToSave,
     ...existing.records.filter((item) => item.schoolId !== recordToSave.schoolId)
   ].slice(0, APP_CONFIG.targetScore.maxRecords)
-  if (!isVersionedStorageActive()) {
-    const result = writeStorage(KEYS.targets, records)
-    return result.ok ? { ok: true, records } : result
-  }
   const result = updateActiveProfileData((data) => ({ ...data, targetRecords: records }))
   return result.ok ? { ok: true, records } : result
 }
@@ -630,10 +576,6 @@ function deleteTargetRecord(id) {
   if (!existing.ok) return existing
   const removed = existing.records.find((item) => item.id === key)
   const records = existing.records.filter((item) => item.id !== key)
-  if (!isVersionedStorageActive()) {
-    const result = records.length ? writeStorage(KEYS.targets, records) : removeStorage(KEYS.targets)
-    return result.ok ? { ok: true, records } : result
-  }
   const result = updateActiveProfileData((data) => ({
     ...data,
     targetRecords: records,
@@ -645,7 +587,6 @@ function deleteTargetRecord(id) {
 }
 
 function clearTargetRecords() {
-  if (!isVersionedStorageActive()) return removeStorage(KEYS.targets)
   return updateActiveProfileData((data) => ({
     ...data,
     targetRecords: [],
@@ -668,23 +609,6 @@ function setPrimaryTargetSchool(schoolId) {
 }
 
 function getTargetDraftResult() {
-  if (!isVersionedStorageActive()) {
-    const result = readStorage(KEYS.targetDraft, {})
-    const source = result.value && typeof result.value === 'object' && !Array.isArray(result.value)
-      ? result.value
-      : {}
-    const draft = Object.keys(source).length
-      ? {
-          ...clone(source),
-          currentScore: source.currentScore === undefined ? '' : String(source.currentScore).slice(0, 3),
-          targetScore: source.targetScore === undefined ? '' : String(source.targetScore).slice(0, 3),
-          targetLevel: normalizeTargetLevel(source.targetLevel),
-          stage: text(source.stage, APP_CONFIG.learningTarget.stageMaxLength),
-          note: text(source.note, APP_CONFIG.learningTarget.noteMaxLength)
-        }
-      : {}
-    return result.ok ? { ok: true, draft } : { ok: false, draft, message: result.message }
-  }
   const context = activeContext()
   return context.ok
     ? { ok: true, draft: clone(context.data.targetDraft) }
@@ -697,7 +621,6 @@ function getTargetDraft() {
 
 function saveTargetDraft(draft) {
   const source = draft && typeof draft === 'object' && !Array.isArray(draft) ? clone(draft) : {}
-  if (!isVersionedStorageActive()) return writeStorage(KEYS.targetDraft, source)
   const existing = getTargetDraft()
   return updateActiveProfileData((data) => ({
     ...data,
@@ -706,20 +629,10 @@ function saveTargetDraft(draft) {
 }
 
 function clearTargetDraft() {
-  if (!isVersionedStorageActive()) return removeStorage(KEYS.targetDraft)
   return updateActiveProfileData((data) => ({ ...data, targetDraft: {} }))
 }
 
 function getLearningTargetRecordsResult() {
-  if (!isVersionedStorageActive()) {
-    const result = readStorage(KEYS.learningTargets, [])
-    const records = (Array.isArray(result.value) ? result.value : [])
-      .map(legacyNormalizeStage)
-      .filter(Boolean)
-      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
-      .slice(0, APP_CONFIG.learningTarget.maxRecords)
-    return result.ok ? { ok: true, records } : { ok: false, records, message: result.message }
-  }
   const context = activeContext()
   return context.ok
     ? { ok: true, records: context.data.stageGoals }
@@ -735,9 +648,7 @@ const getStageGoalRecords = getLearningTargetRecords
 
 function saveLearningTargetRecord(record) {
   const profileId = getActiveProfile() && getActiveProfile().id || DEFAULT_PROFILE_ID
-  const normalized = isVersionedStorageActive()
-    ? normalizeStageGoal(record, profileId)
-    : legacyNormalizeStage(record)
+  const normalized = normalizeStageGoal(record, profileId)
   if (!normalized) return { ok: false, message: '阶段目标格式无效，请检查后重试。' }
   const existing = getLearningTargetRecordsResult()
   if (!existing.ok) return existing
@@ -749,10 +660,6 @@ function saveLearningTargetRecord(record) {
     saved,
     ...existing.records.filter((item) => item.id !== saved.id)
   ].slice(0, APP_CONFIG.learningTarget.maxRecords)
-  if (!isVersionedStorageActive()) {
-    const result = writeStorage(KEYS.learningTargets, records)
-    return result.ok ? { ok: true, records } : result
-  }
   const result = updateActiveProfileData((data) => ({ ...data, stageGoals: records }))
   return result.ok ? { ok: true, records } : result
 }
@@ -763,12 +670,6 @@ function deleteLearningTargetRecord(id) {
   const existing = getLearningTargetRecordsResult()
   if (!existing.ok) return existing
   const records = existing.records.filter((item) => item.id !== id)
-  if (!isVersionedStorageActive()) {
-    const result = records.length
-      ? writeStorage(KEYS.learningTargets, records)
-      : removeStorage(KEYS.learningTargets)
-    return result.ok ? { ok: true, records } : result
-  }
   const result = updateActiveProfileData((data) => ({ ...data, stageGoals: records }))
   return result.ok ? { ok: true, records } : result
 }
@@ -776,22 +677,12 @@ function deleteLearningTargetRecord(id) {
 const deleteStageGoalRecord = deleteLearningTargetRecord
 
 function clearLearningTargetRecords() {
-  if (!isVersionedStorageActive()) return removeStorage(KEYS.learningTargets)
   return updateActiveProfileData((data) => ({ ...data, stageGoals: [] }))
 }
 
 const clearStageGoalRecords = clearLearningTargetRecords
 
 function getScoreRecordsResult() {
-  if (!isVersionedStorageActive()) {
-    const result = readStorage(KEYS.scoreRecords, [])
-    const records = (Array.isArray(result.value) ? result.value : [])
-      .map(legacyNormalizeScore)
-      .filter(Boolean)
-      .sort(compareScoreRecords)
-      .slice(-APP_CONFIG.scoreRecord.maxRecords)
-    return result.ok ? { ok: true, records } : { ok: false, records, message: result.message }
-  }
   const context = activeContext()
   return context.ok
     ? {
@@ -807,9 +698,7 @@ function getScoreRecords() {
 
 function saveScoreRecord(record) {
   const profileId = getActiveProfile() && getActiveProfile().id || DEFAULT_PROFILE_ID
-  const normalized = isVersionedStorageActive()
-    ? normalizeExamRecord(record, profileId)
-    : legacyNormalizeScore(record)
+  const normalized = normalizeExamRecord(record, profileId)
   if (!normalized) return { ok: false, message: '成绩记录格式无效，请检查后重试。' }
   const existing = getScoreRecordsResult()
   if (!existing.ok) return existing
@@ -826,10 +715,6 @@ function saveScoreRecord(record) {
     ...existing.records.filter((item) => item.id !== saved.id),
     saved
   ].sort(compareScoreRecords).slice(-APP_CONFIG.scoreRecord.maxRecords)
-  if (!isVersionedStorageActive()) {
-    const result = writeStorage(KEYS.scoreRecords, records)
-    return result.ok ? { ok: true, records } : result
-  }
   const result = updateActiveProfileData((data) => ({
     ...data,
     scoreRecords: records,
@@ -847,10 +732,6 @@ function deleteScoreRecord(id) {
   const existing = getScoreRecordsResult()
   if (!existing.ok) return existing
   const records = existing.records.filter((item) => item.id !== id)
-  if (!isVersionedStorageActive()) {
-    const result = records.length ? writeStorage(KEYS.scoreRecords, records) : removeStorage(KEYS.scoreRecords)
-    return result.ok ? { ok: true, records } : result
-  }
   const result = updateActiveProfileData((data) => ({
     ...data,
     scoreRecords: records,
@@ -865,7 +746,6 @@ function deleteScoreRecord(id) {
 }
 
 function clearScoreRecords() {
-  if (!isVersionedStorageActive()) return removeStorage(KEYS.scoreRecords)
   return updateActiveProfileData((data) => ({
     ...data,
     scoreRecords: [],
@@ -876,16 +756,6 @@ function clearScoreRecords() {
 }
 
 function getExamYearResult() {
-  if (!isVersionedStorageActive()) {
-    const result = readStorage(KEYS.examYear, APP_CONFIG.countdown.defaultYear)
-    const year = Number(result.value)
-    const normalized = Number.isInteger(year) &&
-      year >= APP_CONFIG.countdown.minYear &&
-      year <= APP_CONFIG.countdown.maxYear
-      ? year
-      : APP_CONFIG.countdown.defaultYear
-    return result.ok ? { ok: true, year: normalized } : { ok: false, year: normalized, message: result.message }
-  }
   const context = activeContext()
   return context.ok
     ? { ok: true, year: context.data.examYear }
@@ -903,7 +773,6 @@ function saveExamYear(year) {
       value > APP_CONFIG.countdown.maxYear) {
     return { ok: false, message: '目标年份无效，请重新选择。' }
   }
-  if (!isVersionedStorageActive()) return writeStorage(KEYS.examYear, value)
   const context = activeContext()
   if (!context.ok) return context
   const profiles = context.state.profiles.map((profile) => profile.id === context.profile.id
@@ -917,8 +786,17 @@ function saveExamYear(year) {
 }
 
 function getOnboardingState() {
-  const key = isVersionedStorageActive() ? KEYS.onboardingV4 : KEYS.onboarding
-  const result = readStorage(key, {})
+  if (!isVersionedStorageActive()) {
+    return {
+      version: 0,
+      completed: false,
+      skipped: false,
+      currentStep: 0,
+      active: false,
+      flow: 'full'
+    }
+  }
+  const result = readStorage(KEYS.onboardingV4, {})
   const value = result.value && typeof result.value === 'object' && !Array.isArray(result.value)
     ? result.value
     : {}
@@ -934,7 +812,9 @@ function getOnboardingState() {
 }
 
 function saveOnboardingState(state) {
-  const key = isVersionedStorageActive() ? KEYS.onboardingV4 : KEYS.onboarding
+  if (!isVersionedStorageActive()) {
+    return { ok: false, message: '本地数据迁移尚未完成，教程状态未写入。' }
+  }
   const value = {
     ...(state || {}),
     version: Number(state && state.version) || 0,
@@ -944,8 +824,8 @@ function saveOnboardingState(state) {
     active: Boolean(state && state.active),
     flow: text(state && state.flow, 40) || 'full'
   }
-  const result = writeStorage(key, value)
-  if (result.ok && isVersionedStorageActive()) bumpRevision()
+  const result = writeStorage(KEYS.onboardingV4, value)
+  if (result.ok) bumpRevision()
   return result
 }
 
