@@ -1,12 +1,12 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentPhase": "P1",
-  "currentStepId": "P1-S10",
+  "currentHead": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
+  "currentPhase": "P2",
+  "currentStepId": "P2-S07",
   "currentStepStatus": "completed",
-  "lastStableCommit": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "lastPushedCommit": "217c55af2c55e061f7e28fa064c9d738596cc204",
+  "lastStableCommit": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
+  "lastPushedCommit": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -16,6 +16,7 @@
     "D006",
     "D007",
     "D008",
+    "D009",
     "D010",
     "D011",
     "D012",
@@ -23,7 +24,13 @@
     "D014",
     "D015",
     "D016",
-    "D017"
+    "D017",
+    "D018",
+    "D019",
+    "D020",
+    "D021",
+    "D041",
+    "D043"
   ],
   "completedFeatureIds": [
     "P0-GIT-GATE",
@@ -38,7 +45,16 @@
     "P1-OPERATION-LOCK",
     "P1-COMPACT-OPERATION-STATE",
     "P1-STARTUP-RECOVERY-UI",
-    "P1-DANGEROUS-RESTORE-POINTS"
+    "P1-DANGEROUS-RESTORE-POINTS",
+    "P2-PRODUCT-RULES",
+    "P2-CANONICAL-SHA256",
+    "P2-SCHEMA-V5",
+    "P2-BACKUP-V3",
+    "P2-RESTORE-POINT-V2",
+    "P2-V4-V5-MIGRATION",
+    "P2-LEGACY-BACKUP-V2",
+    "P2-LEGACY-RESTORE-POINT-V1",
+    "P2-FORMAL-APPID"
   ],
   "completedTestIds": [
     "P0-GIT",
@@ -53,11 +69,15 @@
     "RC11-2-P1-REGRESSION",
     "RC11-1-P1-REGRESSION",
     "JS-SYNTAX-P1",
-    "SMOKE-PAGE-P1"
+    "SMOKE-PAGE-P1",
+    "V1-P2-13",
+    "RC9-P2-REGRESSION",
+    "RC10-P2-REGRESSION",
+    "RC11-1-P2-REGRESSION",
+    "RC11-2-P2-REGRESSION",
+    "UPLOAD-IGNORE-P2"
   ],
   "pendingTestIds": [
-    "V1-MIGRATION",
-    "V1-BACKUP",
     "V1-EXAM",
     "V1-TREND",
     "V1-LEARNING",
@@ -77,7 +97,20 @@
     "scripts/v1/test-helpers.js",
     "scripts/v1/transaction-suite.js",
     "scripts/v1/recovery-suite.js",
-    "scripts/verify_v1_p1.js"
+    "scripts/verify_v1_p1.js",
+    "shared-spec/product_rules_v1.json",
+    "utils/generated/product-rules.js",
+    "utils/canonical-json.js",
+    "utils/checksum.js",
+    "utils/file-share.js",
+    "scripts/generate_product_rules.js",
+    "scripts/verify_product_rules_generated.js",
+    "scripts/v1/migration-suite.js",
+    "scripts/v1/backup-suite.js",
+    "scripts/verify_v1_p2.js",
+    "docs/v1_data_model_spec.md",
+    "docs/v1_migration_report.md",
+    "docs/v1_backup_restore_spec.md"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -98,14 +131,26 @@
     "scripts/smoke_page_logic.js",
     "docs/rc11_2_restore_point_spec.json",
     "docs/rc11_final_existing_defects.md"
+    ,
+    "config/app-config.js",
+    "project.config.json",
+    "utils/rc9-models.js",
+    "utils/storage-migration.js",
+    "utils/backup-restore.js",
+    "scripts/verify_rc9_backup_restore.js",
+    "scripts/verify_rc9_storage_migration.js",
+    "scripts/verify_upload_package_ignore.js"
   ],
-  "createdCommits": [],
+  "createdCommits": [
+    "f181e2689a6e2e566703b05869ea03359761a029",
+    "928f4c85f71adc98180ff1507b4ea9f5e7993342"
+  ],
   "pushPendingCommits": [],
-  "lastSuccessfulCommand": "V1 P1 18 TEST-ID, RC11-2, RC11-1, RC9, RC10, JS syntax, local/page smoke and upload ignore passed",
+  "lastSuccessfulCommand": "V1 P2 13 TEST-ID plus RC9, RC10, RC11-1, RC11-2, smoke and upload ignore regressions passed; formal data files unchanged",
   "lastFailedCommand": "",
   "lastErrorSummary": "",
-  "nextAction": "Commit and push P1 stable checkpoint, then start P2",
+  "nextAction": "Commit and push P2 stable checkpoint, then start P3 business consistency fixes",
   "safeToResume": true,
   "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T16:54:42+08:00"
+  "updatedAt": "2026-08-01T17:45:00+08:00"
 }

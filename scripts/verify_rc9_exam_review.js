@@ -31,7 +31,7 @@ assert.strictEqual(storage.saveScoreRecord({
 }).ok, true)
 saved = storage.getScoreRecords()[0]
 assert.strictEqual(saved.totalScore, 660)
-assert.strictEqual(saved.unknownField, 'preserve-me')
+assert.strictEqual(saved.legacyExtensions.unknownField, 'preserve-me')
 assert.strictEqual(saved.lossNotes, '已完成错题分类')
 
 assert.strictEqual(storage.saveScoreRecord({ ...original, id: 'bad-rank', classRank: -1 }).ok, true)
@@ -50,4 +50,4 @@ for (const marker of [
 }
 
 console.log('RC9 EXAM REVIEW VERIFY PASSED')
-console.log('- 复盘字段、可选排名、编辑保留未知字段与复制入口通过')
+console.log('- 复盘字段、可选排名、编辑将安全未知字段收敛到 legacyExtensions 与复制入口通过')

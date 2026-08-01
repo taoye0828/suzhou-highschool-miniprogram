@@ -1,4 +1,6 @@
-const EXAM_TOTAL_SCORE = 740
+const { PRODUCT_RULES } = require('../utils/generated/product-rules')
+
+const EXAM_TOTAL_SCORE = PRODUCT_RULES.examTotalScoreMax
 const SOURCE_CHECKED_AT = '2026-07-09'
 const DEFAULT_EXAM_YEAR = 2027
 const TARGET_LEVELS = [
@@ -8,9 +10,14 @@ const TARGET_LEVELS = [
 ]
 
 const APP_CONFIG = {
-  name: '苏程记录',
+  name: PRODUCT_RULES.productName,
   version: '2.0.0',
-  releaseStatus: 'RC10 数据质量与学习目标深化版',
+  releaseStatus: PRODUCT_RULES.releaseStatus,
+  productStage: PRODUCT_RULES.productStage,
+  featureFreezeVersion: PRODUCT_RULES.featureFreezeVersion,
+  storageSchemaVersion: PRODUCT_RULES.storageSchemaVersion,
+  backupFormatVersion: PRODUCT_RULES.backupFormatVersion,
+  restorePointFormatVersion: PRODUCT_RULES.restorePointFormatVersion,
   targetScore: {
     min: 0,
     max: EXAM_TOTAL_SCORE,

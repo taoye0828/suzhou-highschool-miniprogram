@@ -1,4 +1,5 @@
 const { APP_CONFIG } = require('../config/app-config')
+const { PRODUCT_RULES } = require('./generated/product-rules')
 const {
   STORAGE_SCHEMA_VERSION,
   DEFAULT_PROFILE_ID,
@@ -67,9 +68,9 @@ const KEYS = {
 }
 
 const STORAGE_ERROR_MESSAGE = '本地存储失败，请清理空间后重试。'
-const OPERATION_LOCK_TTL_MS = 5 * 60 * 1000
+const OPERATION_LOCK_TTL_MS = PRODUCT_RULES.operationLockTtlMs
 const MAX_OPERATION_STATES = 100
-const MAX_OPERATION_STATE_BYTES = 2048
+const MAX_OPERATION_STATE_BYTES = PRODUCT_RULES.limits.maxOperationStateBytes
 const OWNER_SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 const ALL_KNOWN_KEYS = [
   ...Object.values(KEYS),
@@ -600,7 +601,63 @@ function ensureStorageMigrated() {
     applied: migration.applied,
     migratedAt: new Date().toISOString()
   }
-  writes[KEYS.dataRevision] = 1
+  if (migration.fromVersion === 4) {
+    const timestamp = new Date().toISOString()
+    const migrationPoint = buildRestorePoint({
+      state: migration.beforeState,
+      reason: 'before_migration',
+      profileScope: { type: 'full_user_state' },
+      id: `restore_before_migration_${timestamp.replace(/[^0-9]/g, '').slice(0, 17)}`,
+      createdAt: timestamp,
+      operationId: `migration_v4_v5_${timestamp.replace(/[^0-9]/g, '')}`,
+      createdBy: 'automatic',
+      note: 'Storage Schema v4 → v5 迁移前',
+      sourcePlatform: 'miniprogram',
+      storageSchemaVersion: 4,
+      backupFormatVersion: 2,
+      appDataVersion: 'rc11-2'
+    })
+    const verified = validateRestorePoint(migrationPoint)
+    if (!verified.ok) return { ok: false, message: '迁移前恢复点校验失败，原数据未修改。' }
+    const payloads = raw[KEYS.restorePointPayloads] && typeof raw[KEYS.restorePointPayloads] === 'object'
+      ? clone(raw[KEYS.restorePointPayloads])
+      : {}
+    payloads[migrationPoint.id] = migrationPoint
+    let index = Array.isArray(raw[KEYS.restorePointIndex]) ? clone(raw[KEYS.restorePointIndex]) : []
+    index = index.filter((item) => item && item.id !== migrationPoint.id)
+    index.push(restorePointRecord(migrationPoint))
+    index.sort((left, right) => String(left.createdAt).localeCompare(String(right.createdAt)))
+    for (const evicted of index.slice(0, Math.max(0, index.length - MAX_RESTORE_POINTS))) delete payloads[evicted.id]
+    writes[KEYS.restorePointIndex] = index.slice(-MAX_RESTORE_POINTS)
+    writes[KEYS.restorePointPayloads] = payloads
+  }
+  const legacyStates = raw[KEYS.restorePointOperationState]
+  if (legacyStates && typeof legacyStates === 'object') {
+    const compacted = {}
+    const ids = Object.keys(legacyStates).sort((left, right) =>
+      String(legacyStates[right] && (legacyStates[right].finishedAt || legacyStates[right].startedAt) || '')
+        .localeCompare(String(legacyStates[left] && (legacyStates[left].finishedAt || legacyStates[left].startedAt) || ''))
+    )
+    for (const id of ids.slice(0, MAX_OPERATION_STATES)) {
+      const state = legacyStates[id] || {}
+      compacted[id] = state.status === 'running'
+        ? {
+            operationId: String(id).slice(0, 160),
+            operationType: String(state.operationType || '').slice(0, 80),
+            status: 'running',
+            profileId: String(state.profileId || '').slice(0, 120),
+            entityId: String(state.entityId || '').slice(0, 120),
+            startedAt: String(state.startedAt || '').slice(0, 40)
+          }
+        : compactOperationState(id, state.status || 'failed', state.result || state, state)
+    }
+    writes[KEYS.restorePointOperationState] = compacted
+  }
+  const currentRevision = Number(raw[KEYS.dataRevision])
+  writes[KEYS.dataRevision] = Number.isSafeInteger(currentRevision) ? currentRevision + 1 : 1
+  const finalSchemaVersion = writes[KEYS.storageSchemaVersion]
+  delete writes[KEYS.storageSchemaVersion]
+  writes[KEYS.storageSchemaVersion] = finalSchemaVersion
   const result = atomicWrite(writes)
   return result.ok
     ? {
@@ -1646,7 +1703,7 @@ function getRestorePoint(id) {
   if (!point) return { ok: false, code: ERROR_CODES.RESTORE_POINT_NOT_FOUND, message: '未找到该恢复点。' }
   const validation = validateRestorePoint(point)
   return validation.ok
-    ? { ok: true, restorePoint: clone(point) }
+    ? { ok: true, restorePoint: clone(validation.restorePoint || point) }
     : { ok: false, code: validation.code, message: '恢复点校验失败，当前数据未修改。' }
 }
 
@@ -1685,8 +1742,8 @@ function createRestorePoint({
       note,
       sourcePlatform: 'miniprogram',
       storageSchemaVersion: STORAGE_SCHEMA_VERSION,
-      backupFormatVersion: 2,
-      appDataVersion: 'rc11-2'
+      backupFormatVersion: PRODUCT_RULES.backupFormatVersion,
+      appDataVersion: PRODUCT_RULES.appDataVersion
     })
     invokeFault(faultInjector, 'create_restore_point', 'prepare')
     invokeFault(faultInjector, 'create_restore_point', 'writeTemporary')
@@ -1789,7 +1846,10 @@ function validateRestoreState(state) {
   for (const profile of profiles) {
     const data = state.profileData && state.profileData[profile.id]
     if (!data || data.profileId !== profile.id) return { ok: false, code: ERROR_CODES.INVALID_PROFILE_REFERENCE }
-    for (const field of ['scoreRecords', 'scoreReviews', 'scoreLossReasons', 'targetRecords', 'stageGoals', 'learningTasks']) {
+    for (const field of [
+      'scoreRecords', 'scoreReviews', 'scoreLossReasons', 'targetRecords', 'stageGoals', 'learningTasks',
+      'examTemplates', 'scoreSchemes', 'mistakeRecords', 'weeklyPlans', 'stageReviews', 'schoolUserStates'
+    ]) {
       const records = Array.isArray(data[field]) ? data[field] : []
       if (new Set(records.map((item) => item.id)).size !== records.length) {
         return { ok: false, code: ERROR_CODES.DUPLICATE_ENTITY_ID }
@@ -1801,9 +1861,36 @@ function validateRestoreState(state) {
     if ((data.scoreRecords || []).some((item) => !Number.isInteger(item.totalScore) || item.totalScore < 0 || item.totalScore > 740)) {
       return { ok: false, code: ERROR_CODES.FORMAL_DATA_INVALID }
     }
+    const ids = (field) => new Set((data[field] || []).map((item) => item.id))
+    const examIds = ids('scoreRecords')
+    const reviewIds = ids('scoreReviews')
+    const reasonIds = ids('scoreLossReasons')
+    const taskIds = ids('learningTasks')
+    const stageGoalIds = ids('stageGoals')
+    const schemeIds = new Set([
+      ...PRODUCT_RULES.builtInScoreSchemes.map((item) => item.id),
+      ...(data.scoreSchemes || []).map((item) => item.id)
+    ])
+    if ((data.scoreReviews || []).some((item) => !examIds.has(item.examRecordId)) ||
+        (data.scoreLossReasons || []).some((item) => !examIds.has(item.examRecordId) ||
+          (item.reviewId && !reviewIds.has(item.reviewId))) ||
+        (data.mistakeRecords || []).some((item) =>
+          (item.examRecordId && !examIds.has(item.examRecordId)) ||
+          (item.reviewId && !reviewIds.has(item.reviewId)) ||
+          (item.linkedTaskIds || []).some((id) => !taskIds.has(id))) ||
+        (data.learningTasks || []).some((item) =>
+          (item.sourceExamId && !examIds.has(item.sourceExamId)) ||
+          (item.sourceReviewId && !reviewIds.has(item.sourceReviewId)) ||
+          (item.sourceLossReasonId && !reasonIds.has(item.sourceLossReasonId))) ||
+        (data.weeklyPlans || []).some((item) => (item.taskItems || []).some((id) => !taskIds.has(id))) ||
+        (data.stageReviews || []).some((item) => !stageGoalIds.has(item.stageGoalId)) ||
+        (data.examTemplates || []).some((item) => item.scoreSchemeId && !schemeIds.has(item.scoreSchemeId))) {
+      return { ok: false, code: ERROR_CODES.INVALID_PROFILE_REFERENCE }
+    }
     const schoolIds = [
       ...(data.favoriteSchoolIds || []),
-      ...(data.targetRecords || []).map((item) => item.schoolId)
+      ...(data.targetRecords || []).map((item) => item.schoolId),
+      ...(data.schoolUserStates || []).map((item) => item.schoolId)
     ]
     if (schoolIds.some((id) => !validSchoolIds.has(id))) return { ok: false, code: ERROR_CODES.INVALID_SCHOOL_REFERENCE }
   }
@@ -2511,6 +2598,7 @@ module.exports = {
   ensureStorageMigrated,
   getVersionedState,
   replaceVersionedState,
+  validateRestoreState,
   getDataRevision,
   TRANSACTION_STAGES,
   ERROR_CODES,

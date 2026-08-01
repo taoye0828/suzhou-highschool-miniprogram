@@ -227,7 +227,7 @@ for (const phrase of ['我的目标分析', 'currentScoreText', 'referenceScoreT
 }
 
 const projectConfig = JSON.parse(read('project.config.json'))
-assert.strictEqual(projectConfig.appid, 'wx17e903f81714736f')
+assert.strictEqual(projectConfig.appid, 'wxc2a2a94f767438dd')
 assert.strictEqual(schools.length, 55)
 assert.strictEqual(admissionScores.length, 146)
 assert.strictEqual(admissionScores.filter((item) => item.year === 2025).length, 103)

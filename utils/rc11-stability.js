@@ -1,6 +1,13 @@
-const RESTORE_POINT_FORMAT_VERSION = 1
+const { PRODUCT_RULES } = require('./generated/product-rules')
+const { canonicalJson } = require('./canonical-json')
+const { CHECKSUM_ALGORITHM, checksumFor, sha256 } = require('./checksum')
+
+const RESTORE_POINT_FORMAT_VERSION = PRODUCT_RULES.restorePointFormatVersion
 const MAX_RESTORE_POINTS = 10
-const CHECKSUM_ALGORITHM = 'sha256'
+const SUPPORTED_RESTORE_POINT_FORMATS = Object.freeze([1, RESTORE_POINT_FORMAT_VERSION])
+const SUPPORTED_STORAGE_SCHEMAS = Object.freeze([4, PRODUCT_RULES.storageSchemaVersion])
+const SUPPORTED_BACKUP_FORMATS = Object.freeze([2, PRODUCT_RULES.backupFormatVersion])
+const SUPPORTED_APP_DATA_VERSIONS = Object.freeze(['rc11-2', PRODUCT_RULES.appDataVersion])
 const RESTORE_POINT_REASONS = Object.freeze([
   'before_migration',
   'before_import',
@@ -51,76 +58,6 @@ function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value))
 }
 
-function canonicalValue(value) {
-  if (Array.isArray(value)) return value.map(canonicalValue)
-  if (value && typeof value === 'object') {
-    return Object.keys(value).sort().reduce((result, key) => {
-      if (value[key] !== undefined) result[key] = canonicalValue(value[key])
-      return result
-    }, {})
-  }
-  return value
-}
-
-function canonicalJson(value) {
-  return JSON.stringify(canonicalValue(value))
-}
-
-// Small synchronous SHA-256 implementation suitable for both Node tests and
-// the WeChat runtime. It has no platform crypto or persisted debug dependency.
-function sha256(input) {
-  const text = unescape(encodeURIComponent(String(input)))
-  const words = []
-  const bitLength = text.length * 8
-  for (let index = 0; index < text.length; index += 1) {
-    words[index >> 2] = (words[index >> 2] || 0) |
-      (text.charCodeAt(index) << (24 - (index % 4) * 8))
-  }
-  words[bitLength >> 5] = (words[bitLength >> 5] || 0) | (0x80 << (24 - bitLength % 32))
-  words[(((bitLength + 64) >> 9) << 4) + 15] = bitLength
-  const constants = []
-  const initial = []
-  let candidate = 2
-  while (constants.length < 64) {
-    let prime = true
-    for (let factor = 2; factor * factor <= candidate; factor += 1) {
-      if (candidate % factor === 0) { prime = false; break }
-    }
-    if (prime) {
-      if (initial.length < 8) initial.push((Math.sqrt(candidate) * 0x100000000) | 0)
-      constants.push((Math.pow(candidate, 1 / 3) * 0x100000000) | 0)
-    }
-    candidate += 1
-  }
-  let hash = initial.slice()
-  const schedule = new Array(64)
-  const rotate = (value, amount) => (value >>> amount) | (value << (32 - amount))
-  for (let offset = 0; offset < words.length; offset += 16) {
-    const previous = hash.slice()
-    for (let round = 0; round < 64; round += 1) {
-      if (round < 16) schedule[round] = words[offset + round] | 0
-      else {
-        const x = schedule[round - 15]
-        const y = schedule[round - 2]
-        const s0 = rotate(x, 7) ^ rotate(x, 18) ^ (x >>> 3)
-        const s1 = rotate(y, 17) ^ rotate(y, 19) ^ (y >>> 10)
-        schedule[round] = (schedule[round - 16] + s0 + schedule[round - 7] + s1) | 0
-      }
-      const e = hash[4]
-      const a = hash[0]
-      const sum1 = rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25)
-      const choice = (e & hash[5]) ^ (~e & hash[6])
-      const temp1 = (hash[7] + sum1 + choice + constants[round] + schedule[round]) | 0
-      const sum0 = rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22)
-      const majority = (a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2])
-      const temp2 = (sum0 + majority) | 0
-      hash = [(temp1 + temp2) | 0, hash[0], hash[1], hash[2], (hash[3] + temp1) | 0, hash[4], hash[5], hash[6]]
-    }
-    hash = hash.map((value, index) => (value + previous[index]) | 0)
-  }
-  return hash.map((value) => (value >>> 0).toString(16).padStart(8, '0')).join('')
-}
-
 function checksumInput(point) {
   const copy = clone(point)
   delete copy.checksum
@@ -128,7 +65,7 @@ function checksumInput(point) {
 }
 
 function checksumForRestorePoint(point) {
-  return sha256(checksumInput(point))
+  return checksumFor(point)
 }
 
 function summaryForPayload(payload) {
@@ -189,9 +126,9 @@ function buildRestorePoint({
   createdBy = 'automatic',
   note = '',
   sourcePlatform = 'miniprogram',
-  storageSchemaVersion = 4,
-  backupFormatVersion = 2,
-  appDataVersion = 'rc11-2'
+  storageSchemaVersion = PRODUCT_RULES.storageSchemaVersion,
+  backupFormatVersion = PRODUCT_RULES.backupFormatVersion,
+  appDataVersion = PRODUCT_RULES.appDataVersion
 }) {
   if (!RESTORE_POINT_REASONS.includes(reason)) {
     throw Object.assign(new Error('恢复点原因无效'), { code: ERROR_CODES.RESTORE_POINT_CREATE_FAILED })
@@ -220,7 +157,12 @@ function validateRestorePoint(point) {
   if (!point || typeof point !== 'object' || Array.isArray(point)) {
     return { ok: false, code: ERROR_CODES.RESTORE_POINT_VERIFY_FAILED }
   }
-  if (point.restorePointFormatVersion !== RESTORE_POINT_FORMAT_VERSION) {
+  if (!SUPPORTED_RESTORE_POINT_FORMATS.includes(point.restorePointFormatVersion)) {
+    return { ok: false, code: ERROR_CODES.RESTORE_POINT_VERSION_UNSUPPORTED }
+  }
+  if (!SUPPORTED_STORAGE_SCHEMAS.includes(point.storageSchemaVersion) ||
+      !SUPPORTED_BACKUP_FORMATS.includes(point.backupFormatVersion) ||
+      !SUPPORTED_APP_DATA_VERSIONS.includes(point.appDataVersion)) {
     return { ok: false, code: ERROR_CODES.RESTORE_POINT_VERSION_UNSUPPORTED }
   }
   if (!RESTORE_POINT_REASONS.includes(point.reason) ||
@@ -235,7 +177,13 @@ function validateRestorePoint(point) {
   if (canonicalJson(expectedSummary) !== canonicalJson(point.summary)) {
     return { ok: false, code: ERROR_CODES.RESTORE_POINT_VERIFY_FAILED }
   }
-  return { ok: true }
+  const payloadBytes = unescape(encodeURIComponent(canonicalJson(point.payload || {}))).length
+  if (payloadBytes > PRODUCT_RULES.limits.maxRestorePointPayloadBytes) {
+    return { ok: false, code: ERROR_CODES.RESTORE_POINT_VERIFY_FAILED }
+  }
+  const adapted = clone(point)
+  if (adapted.restorePointFormatVersion === 1) adapted.adaptedFromRestorePointFormatVersion = 1
+  return { ok: true, restorePoint: adapted }
 }
 
 function stateAfterRestore(current, point) {
@@ -272,6 +220,10 @@ module.exports = {
   RESTORE_POINT_FORMAT_VERSION,
   MAX_RESTORE_POINTS,
   CHECKSUM_ALGORITHM,
+  SUPPORTED_RESTORE_POINT_FORMATS,
+  SUPPORTED_STORAGE_SCHEMAS,
+  SUPPORTED_BACKUP_FORMATS,
+  SUPPORTED_APP_DATA_VERSIONS,
   RESTORE_POINT_REASONS,
   PROFILE_SCOPES,
   TRANSACTION_STAGES,

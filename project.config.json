@@ -35,6 +35,10 @@
         "type": "folder"
       },
       {
+        "value": "shared-spec",
+        "type": "folder"
+      },
+      {
         "value": "README.md",
         "type": "file"
       },
@@ -119,8 +123,8 @@
   },
   "compileType": "miniprogram",
   "libVersion": "3.7.12",
-  "appid": "wx17e903f81714736f",
-  "projectname": "suzhou-highschool-miniprogram",
+  "appid": "wxc2a2a94f767438dd",
+  "projectname": "苏程记录",
   "miniprogramRoot": "./",
   "condition": {},
   "simulatorPluginLibVersion": {},

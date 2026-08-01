@@ -25,8 +25,9 @@ const exported = backup.createBackupEnvelope({
 })
 assert.strictEqual(exported.ok, true)
 assert.strictEqual(exported.backup.format, 'suzhou-highschool-local-backup')
-assert.strictEqual(exported.backup.storageSchemaVersion, 4)
-assert.strictEqual(exported.backup.checksum.algorithm, 'fnv1a32')
+assert.strictEqual(exported.backup.storageSchemaVersion, 5)
+assert.strictEqual(exported.backup.backupFormatVersion, 3)
+assert.strictEqual(exported.backup.checksum.algorithm, 'sha256')
 assert.strictEqual(backup.validateBackupEnvelope(exported.backup).ok, true)
 assert.strictEqual(backup.backupPreview(exported.backup).scoreCount, 1)
 
@@ -65,7 +66,7 @@ defaultData.targetRecords.push({
   createdAt: '2026-09-01T08:00:00.000Z',
   updatedAt: '2026-09-01T08:00:00.000Z',
   profileId: 'profile_default',
-  schemaVersion: 4
+  schemaVersion: 5
 })
 incoming.scoreRecords = incoming.profiles.flatMap((profile) => incoming.profileData[profile.id].scoreRecords)
 incoming.targetSchools = incoming.profiles.flatMap((profile) => incoming.profileData[profile.id].targetRecords)

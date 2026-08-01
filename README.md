@@ -52,7 +52,7 @@
 - 数据核对日期：2026-07-09
 - 成绩上限：740 分
 - 本地存储版本：4
-- `project.config.json` 已写入 AppID：`wx17e903f81714736f`
+- `project.config.json` 已写入正式 AppID：`wxc2a2a94f767438dd`
 - 不写入 AppSecret，不提交账号、密码、token、cookie 或其他密钥
 
 ## 当前功能
@@ -97,7 +97,7 @@
 ## MP6-Release-Check 验收状态（2026-07-26）
 
 - Git：验收开始时 `main` 工作区干净，`HEAD` 与 `origin/main` 均为 `e2f36046be16d0493fef624109af87f7bb38675a`。
-- 配置：开发者工具打开的项目路径正确，AppID 为 `wx17e903f81714736f`；运行目录未发现 AppSecret、token、password 或密钥形态内容。
+- 配置：开发者工具打开的项目路径正确，正式 AppID 为 `wxc2a2a94f767438dd`；运行目录未发现 AppSecret、token、password 或密钥形态内容。
 - 自动验证：MP1/MP2/MP4/MP5/MP6、740 分上限、2026 分数线、上传包忽略、RC6、逻辑/页面 smoke、全部 JavaScript 语法和双端一致性检查通过。
 - 编译状态：微信开发者工具 Stable `2.01.2510290` 已实际打开项目并点击编译，但模拟器因 `INVALID_LOGIN, access_token expired` 启动失败；调试器显示 1 个登录错误、0 个警告，不能记为编译通过。
 - 人工测试状态：首页、学校库、学校详情、收藏、目标规划、成绩分析、学校对比、成绩趋势和我的页面均未执行真实模拟器点击验收；脚本验证不能替代人工验收。

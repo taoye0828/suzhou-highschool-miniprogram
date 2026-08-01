@@ -39,7 +39,7 @@ const hashes = {
 for (const [file, hash] of Object.entries(hashes)) {
   assert.strictEqual(crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex'), hash)
 }
-assert.strictEqual(readJson('project.config.json').appid, 'wx17e903f81714736f')
+assert.strictEqual(readJson('project.config.json').appid, 'wxc2a2a94f767438dd')
 const runtime = runtimeText()
 for (const marker of ['wx.login', 'wx.request', 'wx.uploadFile', 'wx.cloud', '录取概率', '成功率']) {
   assert.strictEqual(runtime.includes(marker), false, `禁止项：${marker}`)

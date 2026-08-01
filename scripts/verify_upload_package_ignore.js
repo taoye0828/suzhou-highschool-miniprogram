@@ -9,7 +9,7 @@ const ignoreRules = projectConfig.packOptions && projectConfig.packOptions.ignor
 const gitignore = fs.readFileSync(path.join(root, '.gitignore'), 'utf8').split(/\r?\n/).filter(Boolean)
 
 assert.ok(Array.isArray(ignoreRules), 'packOptions.ignore must be an array')
-assert.strictEqual(projectConfig.appid, 'wx17e903f81714736f')
+assert.strictEqual(projectConfig.appid, 'wxc2a2a94f767438dd')
 assert.strictEqual(projectConfig.compileType, 'miniprogram')
 assert.strictEqual(projectConfig.miniprogramRoot, './')
 assert.strictEqual(Object.hasOwn(projectConfig, 'cloudfunctionRoot'), false)
@@ -68,6 +68,7 @@ function assertNotIgnored(relativePath) {
 
 assert.ok(hasRule('folder', 'docs'), 'docs folder ignore rule missing')
 assert.ok(hasRule('folder', 'scripts'), 'scripts folder ignore rule missing')
+assert.ok(hasRule('folder', 'shared-spec'), 'shared-spec folder ignore rule missing')
 assert.ok(hasRule('file', 'README.md'), 'README.md ignore rule missing')
 assert.ok(hasRule('suffix', '.md'), '*.md suffix ignore rule missing')
 assert.ok(hasRule('folder', 'docs/mp5_official_images'), 'official image cache ignore rule missing')
@@ -89,6 +90,7 @@ assert.ok(hasRule('suffix', '.log'), '*.log ignore rule missing')
   'docs/mp5_official_pages/4199.html',
   'docs/mp5_scores_to_confirm.md',
   'scripts/verify_mp1.js',
+  'shared-spec/product_rules_v1.json',
   'README.md',
   '.git/config',
   '.DS_Store',

@@ -59,7 +59,8 @@ function testModel() {
     id: 'restore-model',
     createdAt: new FixedClock().nowIso()
   }).restorePoint
-  assert.strictEqual(point.restorePointFormatVersion, 1)
+  assert.strictEqual(point.restorePointFormatVersion, stability.RESTORE_POINT_FORMAT_VERSION)
+  assert.strictEqual(point.restorePointFormatVersion, 2)
   assert.strictEqual(point.checksumAlgorithm, 'sha256')
   assert.strictEqual(point.summary.profileCount, 1)
   assert.strictEqual(stability.validateRestorePoint(point).ok, true)

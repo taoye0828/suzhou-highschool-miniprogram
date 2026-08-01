@@ -12,7 +12,7 @@
 | D006 | fixed_verified | high | `pages/**`、`protectedCall` | 除恢复点页外写操作未提供稳定 operationId | 页面 OperationContext 覆盖正式写入口 | V1-LOCK-006 | P1 checkpoint | 主要正式页面显式传入，service 兜底生成 |
 | D007 | fixed_verified | critical | `protectedCall` | operationId 为空直接 action，幂等和锁被旁路 | service 强制生成/校验上下文，不允许旁路 | V1-LOCK-007 | P1 checkpoint | 生产旁路已删除 |
 | D008 | fixed_verified | high | `finishOperation` | operation state 保存完整 result，可含数组/payload | 只存紧凑摘要，100 条/2048 字节 | V1-LOCK-008 | P1 checkpoint | 105 次操作后数量和单条字节门禁通过 |
-| D009 | confirmed | high | `importBackupEnvelope` | 同 checksum 导入复用固定 safety operationId | 每次危险操作新 operationId/新恢复点 | V1-BACKUP-009 | pending | pending |
+| D009 | fixed_verified | high | `importBackupEnvelope` | 同 checksum 导入原先复用固定 safety operationId | 每次导入使用独立 operationId 和新恢复点 | V1-BACKUP-009 | P2 | 同一备份连续导入产生两个不同恢复点 |
 | D010 | fixed_verified | high | `deleteRestorePoint`、operation state | 恢复点删除后旧幂等结果仍可报成功 | 幂等返回前校验恢复点仍存在 | V1-RECOVERY-010 | P1 checkpoint | 删除后同 operationId 可安全重建 |
 | D011 | fixed_verified | high | `app.js`、`pages/data-management` | 启动异常只记录状态，没有完整用户处理入口 | 未完成数据操作卡片和安全操作 | V1-RECOVERY-011 | P1 checkpoint | 数据管理提供重试、保留正式、使用临时入口 |
 | D012 | fixed_verified | critical | `deleteStudentProfile` | 删除档案前无 full_user_state 恢复点 | 删除前创建唯一恢复点 | V1-RECOVERY-012 | P1 checkpoint | full_user_state 恢复点验证通过 |
@@ -21,10 +21,10 @@
 | D015 | fixed_verified | critical | stage/task clear | 清空阶段目标或任务前无恢复点 | 每次新恢复点 | V1-RECOVERY-015 | P1 checkpoint | 两类清空均有独立恢复点 |
 | D016 | fixed_verified | critical | `payloadForScope/stateAfterRestore` | shared 档案 single_profile 默认携带并恢复共享收藏 | 默认排除共享收藏，显式 opt-in | V1-RECOVERY-016 | P1 checkpoint | 共享收藏保持当前值 |
 | D017 | fixed_verified | high | `stateAfterRestore` | 档案已删除时抛 PROFILE_NOT_FOUND | 支持恢复为新档案 | V1-RECOVERY-012 | P1 checkpoint | 已删除档案及成绩恢复通过 |
-| D018 | confirmed | high | `validateRestorePoint` | 未校验 storageSchemaVersion | v1 adapter/v2 门禁 | V1-RECOVERY-018 | pending | pending |
-| D019 | confirmed | high | `validateRestorePoint` | 未校验 backupFormatVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-019 | pending | pending |
-| D020 | confirmed | high | `validateRestorePoint` | 未校验 appDataVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-020 | pending | pending |
-| D021 | confirmed | critical | `validateRestoreState` | 引用完整性未覆盖全部实体/共享范围 | 生命周期引用全检 | V1-DATA-021 | pending | pending |
+| D018 | fixed_verified | high | `validateRestorePoint` | 原实现未校验 storageSchemaVersion | v1 适配读取、v2 版本门禁 | V1-RECOVERY-018 | P2 | 高版本拒绝，Schema v4 恢复点兼容 |
+| D019 | fixed_verified | high | `validateRestorePoint` | 原实现未校验 backupFormatVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-019 | P2 | Backup v2/v3 门禁通过 |
+| D020 | fixed_verified | high | `validateRestorePoint` | 原实现未校验 appDataVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-020 | P2 | rc11-2/v1 兼容和未来版本拒绝通过 |
+| D021 | fixed_verified | critical | `validateRestoreState` | 原引用校验只覆盖旧实体 | 扩展考试、复盘、错题、任务、周计划、阶段复盘、学校状态和方案引用 | V1-DATA-021 | P2 | 无效周计划任务引用被拒绝 |
 | D022 | confirmed | critical | `restoreRepairSnapshot` | repairSnapshot 恢复绕过 before_restore | 接入恢复点与 protected transaction | V1-RECOVERY-022 | pending | pending |
 | D023 | confirmed | critical | `pages/score-trend` save flows | 成绩和复盘分次写，可能半成功 | service 单事务保存聚合 | V1-TXN-023 | pending | pending |
 | D024 | confirmed | high | `saveTargetRecord` | 修改等级用新对象替换，缺省 reference 字段被清空 | patch 合并保留未提供字段 | V1-DATA-024 | pending | pending |
@@ -44,9 +44,9 @@
 | D038 | confirmed | high | `pages/favorites` | 打开收藏页就写回删除无效 ID | 只展示告警，不在读取路径写入 | V1-SCHOOL-038 | pending | pending |
 | D039 | confirmed | high | `utils/subject-analysis`/趋势页 | 学科趋势只看当前 config maxScore | 优先历史 subject score/scheme snapshot | V1-TREND-039 | pending | pending |
 | D040 | confirmed | medium | `normalizeSubjectConfig` | 配置缺完整 version/createdAt/updatedAt | 归一化并在保存时递增版本 | V1-EXAM-040 | pending | pending |
-| D041 | confirmed | critical | `mergeProfileData` | 对象展开让备份设置直接覆盖本机设置 | 字段级冲突计划与用户选择 | V1-BACKUP-041 | pending | pending |
+| D041 | fixed_verified | critical | `mergeProfileData` | 对象展开会让备份设置直接覆盖本机设置 | 实体逐项合并，设置默认保留本机并支持显式 backup 选择 | V1-BACKUP-041 | P2 | 本机推荐/情景/筛选/年份保持 |
 | D042 | confirmed | high | `exportBackupFile`/UI | 文件只在沙盒生成，没有主动带走链路 | FileShareAdapter + 摘要/隐私确认 | V1-BACKUP-042 | pending | pending |
-| D043 | confirmed | high | backup vs restore checksum | 备份 FNV-1a、恢复点 SHA-256 两套 | 新写统一 SHA-256，v2 FNV 只读 | V1-BACKUP-043 | pending | pending |
+| D043 | fixed_verified | high | `utils/checksum.js` | 备份 FNV-1a、恢复点 SHA-256 两套 | 新写统一 SHA-256，v2 FNV 只读适配 | V1-BACKUP-043 | P2 | canonical 边界和 v2/v3 摘要通过 |
 | D044 | confirmed | high | `scripts/verify_rc11_2_*` | 历史 PASS 未覆盖生产页面旁路和提交后失败 | V1 分套件覆盖真实 service/page 契约 | V1-FREEZE-044 | pending | pending |
 
 ## 开始验证证据

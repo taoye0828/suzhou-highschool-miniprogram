@@ -10,16 +10,44 @@ const storage = loadStorageFresh()
 storage.ensureStorageMigrated()
 storage.saveScoreRecord(makeExam('exam', 620))
 const backup = require('../utils/backup-restore')
-const exported = backup.createBackupEnvelope({ exportedAt: '2026-09-01T00:00:00Z' }).backup
+const currentExport = backup.createBackupEnvelope({ exportedAt: '2026-09-01T00:00:00Z' }).backup
 for (const key of [
   'backupFormatVersion', 'storageSchemaVersion', 'appDataVersion', 'exportedAt',
   'sourcePlatform', 'profiles', 'scoreRecords', 'scoreReviews', 'scoreLossReasons',
   'favorites', 'targetSchools', 'stageGoals', 'learningTasks',
   'recommendationSettings', 'onboardingState', 'recentHistory', 'userSettings', 'checksum'
-]) assert.ok(Object.hasOwn(exported, key), `备份缺少 ${key}`)
-assert.strictEqual(exported.backupFormatVersion, 2)
+]) assert.ok(Object.hasOwn(currentExport, key), `备份缺少 ${key}`)
+assert.strictEqual(currentExport.backupFormatVersion, 3)
+assert.strictEqual(backup.validateBackupEnvelope(currentExport).ok, true)
+const payload = clone(backup.backupPayload(currentExport))
+for (const profile of payload.profiles) {
+  const data = payload.profileData[profile.id]
+  for (const field of ['examTemplates', 'scoreSchemes', 'mistakeRecords', 'weeklyPlans', 'stageReviews', 'schoolUserStates', 'legacyExtensions']) {
+    delete data[field]
+  }
+  for (const record of data.scoreRecords) {
+    for (const field of [
+      'examType', 'scoreSchemeId', 'scoreSchemeName', 'scoreSchemeSnapshot', 'totalMaxScore',
+      'metricType', 'admissionScaleMax', 'eligibilityRuleId', 'scoreRateBasisPoints',
+      'migrationSource', 'legacyExtensions'
+    ]) delete record[field]
+    record.schemaVersion = 4
+  }
+}
+payload.scoreRecords = payload.profiles.flatMap((profile) => payload.profileData[profile.id].scoreRecords)
+const exported = {
+  ...clone(currentExport),
+  ...payload,
+  backupFormatVersion: 2,
+  storageSchemaVersion: 4,
+  appDataVersion: 'rc10',
+  checksum: {
+    algorithm: 'fnv1a32',
+    value: backup.checksumForPayload(payload, 'fnv1a32')
+  }
+}
 assert.strictEqual(backup.validateBackupEnvelope(exported).ok, true)
-const damaged = clone(exported)
+const damaged = clone(currentExport)
 damaged.scoreRecords[0].totalScore = 741
 assert.strictEqual(backup.validateBackupEnvelope(damaged).ok, false)
 
@@ -56,6 +84,6 @@ const flutterValidate = spawnSync(
   ],
   { cwd: flutterRoot, encoding: 'utf8' }
 )
-assert.strictEqual(flutterValidate.status, 0, flutterValidate.stderr)
+assert.strictEqual(flutterValidate.status, 0, `${flutterValidate.stderr}\n${flutterValidate.stdout}`)
 
-console.log('RC10 CROSS PLATFORM BACKUP VERIFY PASSED (微信↔Flutter 双向解析)')
+console.log('RC10 CROSS PLATFORM BACKUP COMPATIBILITY VERIFY PASSED (仅验证既有 Backup v2 互解析；未修改 Flutter)')

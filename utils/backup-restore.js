@@ -1,4 +1,12 @@
 const { schools } = require('../data/schools')
+const { PRODUCT_RULES } = require('./generated/product-rules')
+const { canonicalJson, assertSafeJsonValue } = require('./canonical-json')
+const {
+  CHECKSUM_ALGORITHM,
+  LEGACY_FNV_ALGORITHM,
+  legacyFnv1a32,
+  checksumFor
+} = require('./checksum')
 const {
   BACKUP_FORMAT,
   BACKUP_FORMAT_VERSION,
@@ -10,6 +18,12 @@ const {
   normalizeScoreReview,
   normalizeScoreLossReason,
   normalizeLearningTask,
+  normalizeExamTemplate,
+  normalizeScoreScheme,
+  normalizeMistakeRecord,
+  normalizeWeeklyPlan,
+  normalizeStageReview,
+  normalizeSchoolUserState,
   normalizeProfile,
   normalizeProfileData,
   normalizeStringList
@@ -21,38 +35,18 @@ const {
   createRestorePoint
 } = require('./storage')
 
-const APP_DATA_VERSION = 'rc10'
-const CHECKSUM_ALGORITHM = 'fnv1a32'
-
-function stableValue(value) {
-  if (Array.isArray(value)) return value.map(stableValue)
-  if (value && typeof value === 'object') {
-    return Object.keys(value)
-      .sort()
-      .reduce((result, key) => {
-        result[key] = stableValue(value[key])
-        return result
-      }, {})
-  }
-  return value
-}
+const APP_DATA_VERSION = PRODUCT_RULES.appDataVersion
 
 function stableStringify(value) {
-  return JSON.stringify(stableValue(value))
+  return canonicalJson(value)
 }
 
-function fnv1a32(value) {
-  let hash = 0x811c9dc5
-  const input = unescape(encodeURIComponent(String(value)))
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index)
-    hash = Math.imul(hash, 0x01000193) >>> 0
-  }
-  return hash.toString(16).padStart(8, '0')
-}
+const fnv1a32 = legacyFnv1a32
 
-function checksumForPayload(payload) {
-  return fnv1a32(stableStringify(payload))
+function checksumForPayload(payload, algorithm = CHECKSUM_ALGORITHM) {
+  return algorithm === LEGACY_FNV_ALGORITHM
+    ? legacyFnv1a32(canonicalJson(payload))
+    : checksumFor(payload)
 }
 
 function statePayload(state) {
@@ -134,7 +128,7 @@ function createBackupEnvelope({ exportedAt = new Date().toISOString() } = {}) {
       ...payload,
       checksum: {
         algorithm: CHECKSUM_ALGORITHM,
-        value: checksumForPayload(payload)
+        value: checksumForPayload(payload, CHECKSUM_ALGORITHM)
       }
     }
   }
@@ -163,6 +157,25 @@ function validateProfileData(raw, profileId, validSchoolIds, errors) {
   const scoreReviews = Array.isArray(raw.scoreReviews) ? raw.scoreReviews : []
   const scoreLossReasons = Array.isArray(raw.scoreLossReasons) ? raw.scoreLossReasons : []
   const learningTasks = Array.isArray(raw.learningTasks) ? raw.learningTasks : []
+  const examTemplates = Array.isArray(raw.examTemplates) ? raw.examTemplates : []
+  const scoreSchemes = Array.isArray(raw.scoreSchemes) ? raw.scoreSchemes : []
+  const mistakeRecords = Array.isArray(raw.mistakeRecords) ? raw.mistakeRecords : []
+  const weeklyPlans = Array.isArray(raw.weeklyPlans) ? raw.weeklyPlans : []
+  const stageReviews = Array.isArray(raw.stageReviews) ? raw.stageReviews : []
+  const schoolUserStates = Array.isArray(raw.schoolUserStates) ? raw.schoolUserStates : []
+  for (const [items, limit, label] of [
+    [scoreRecords, PRODUCT_RULES.limits.maxExamRecordsPerProfile, '考试记录'],
+    [learningTasks, PRODUCT_RULES.limits.maxLearningTasksPerProfile, '学习任务'],
+    [examTemplates, PRODUCT_RULES.limits.maxCustomExamTemplatesPerProfile, '自定义考试模板'],
+    [scoreSchemes, PRODUCT_RULES.limits.maxCustomScoreSchemesPerProfile, '自定义分值方案'],
+    [mistakeRecords, PRODUCT_RULES.limits.maxMistakeRecordsPerProfile, '错题记录'],
+    [weeklyPlans, PRODUCT_RULES.limits.maxWeeklyPlansPerProfile, '周计划'],
+    [stageGoals, PRODUCT_RULES.limits.maxStageGoalsPerProfile, '阶段目标'],
+    [stageReviews, PRODUCT_RULES.limits.maxStageReviewsPerProfile, '阶段复盘'],
+    [schoolUserStates, PRODUCT_RULES.limits.maxSchoolUserStatesPerProfile, '学校个人状态']
+  ]) {
+    if (items.length > limit) errors.push(`档案 ${profileId} 的${label}超过数量限制`)
+  }
   const duplicateScoreIds = duplicateValues(scoreRecords, (item) => item && item.id)
   const duplicateStageIds = duplicateValues(stageGoals, (item) => item && item.id)
   const duplicateTargetIds = duplicateValues(targetRecords, (item) => item && item.id)
@@ -178,6 +191,12 @@ function validateProfileData(raw, profileId, validSchoolIds, errors) {
   if (duplicateReviewIds.length) errors.push(`档案 ${profileId} 存在重复复盘 ID`)
   if (duplicateReasonIds.length) errors.push(`档案 ${profileId} 存在重复失分原因 ID`)
   if (duplicateTaskIds.length) errors.push(`档案 ${profileId} 存在重复学习任务 ID`)
+  for (const [items, label] of [
+    [examTemplates, '考试模板'], [scoreSchemes, '分值方案'], [mistakeRecords, '错题'],
+    [weeklyPlans, '周计划'], [stageReviews, '阶段复盘'], [schoolUserStates, '学校个人状态']
+  ]) {
+    if (duplicateValues(items, (item) => item && item.id).length) errors.push(`档案 ${profileId} 存在重复${label} ID`)
+  }
   for (const item of scoreRecords) {
     if (!normalizeExamRecord(item, profileId)) {
       errors.push(`档案 ${profileId} 含结构无效的考试记录`)
@@ -247,11 +266,23 @@ function validateProfileData(raw, profileId, validSchoolIds, errors) {
       break
     }
   }
+  for (const [items, normalizer, label] of [
+    [examTemplates, normalizeExamTemplate, '考试模板'],
+    [scoreSchemes, normalizeScoreScheme, '分值方案'],
+    [mistakeRecords, normalizeMistakeRecord, '错题记录'],
+    [weeklyPlans, normalizeWeeklyPlan, '周计划'],
+    [stageReviews, normalizeStageReview, '阶段复盘'],
+    [schoolUserStates, normalizeSchoolUserState, '学校个人状态']
+  ]) {
+    if (items.some((item) => !normalizer(item, profileId))) errors.push(`档案 ${profileId} 含结构无效的${label}`)
+    if (items.some((item) => item.profileId && item.profileId !== profileId)) errors.push(`档案 ${profileId} 含串档的${label}`)
+  }
   const schoolIds = [
     ...(Array.isArray(raw.favoriteSchoolIds) ? raw.favoriteSchoolIds : []),
     ...(Array.isArray(raw.comparisonSchoolIds) ? raw.comparisonSchoolIds : []),
     ...(Array.isArray(raw.recentViewedSchoolIds) ? raw.recentViewedSchoolIds : []),
-    ...targetRecords.map((item) => item && item.schoolId)
+    ...targetRecords.map((item) => item && item.schoolId),
+    ...schoolUserStates.map((item) => item && item.schoolId)
   ].filter(Boolean)
   const invalidSchoolIds = [...new Set(schoolIds.filter((id) => !validSchoolIds.has(id)))]
   if (invalidSchoolIds.length) errors.push(`档案 ${profileId} 含未知 schoolId：${invalidSchoolIds.join('、')}`)
@@ -295,6 +326,9 @@ function backupPreview(payload) {
 function validateBackupEnvelope(input) {
   let backup = input
   if (typeof input === 'string') {
+    if (unescape(encodeURIComponent(input)).length > PRODUCT_RULES.limits.maxImportFileBytes) {
+      return { ok: false, errors: ['备份文件超过 4 MB 限制。'] }
+    }
     try {
       backup = JSON.parse(input)
     } catch (error) {
@@ -305,26 +339,37 @@ function validateBackupEnvelope(input) {
   if (!backup || typeof backup !== 'object' || Array.isArray(backup)) {
     return { ok: false, errors: ['备份根结构无效。'] }
   }
+  try {
+    assertSafeJsonValue(backup)
+  } catch (error) {
+    return { ok: false, errors: [error.code === 'JSON_DEPTH_EXCEEDED' ? '备份 JSON 层级过深。' : '备份包含不安全对象键。'] }
+  }
   if (backup.format !== BACKUP_FORMAT) errors.push('备份格式标识不匹配。')
   const formatVersion = backup.backupFormatVersion === undefined
     ? backup.backupVersion
     : backup.backupFormatVersion
-  if (![1, BACKUP_FORMAT_VERSION].includes(formatVersion)) errors.push('备份格式版本不受支持。')
-  if (backup.storageSchemaVersion !== STORAGE_SCHEMA_VERSION) {
+  if (![1, 2, BACKUP_FORMAT_VERSION].includes(formatVersion)) errors.push('备份格式版本不受支持。')
+  const expectedStorageVersions = formatVersion === BACKUP_FORMAT_VERSION ? [STORAGE_SCHEMA_VERSION] : [4]
+  if (!expectedStorageVersions.includes(backup.storageSchemaVersion)) {
     errors.push('存储版本不受支持。')
   }
-  if (!['rc9', APP_DATA_VERSION].includes(backup.appDataVersion)) errors.push('应用数据版本不受支持。')
+  const supportedAppDataVersions = formatVersion === BACKUP_FORMAT_VERSION
+    ? [APP_DATA_VERSION]
+    : ['rc9', 'rc10', 'rc11-2']
+  if (!supportedAppDataVersions.includes(backup.appDataVersion)) errors.push('应用数据版本不受支持。')
   if (typeof backup.exportedAt !== 'string' || !Number.isFinite(Date.parse(backup.exportedAt))) {
     errors.push('导出时间无效。')
   }
   const payload = backupPayload(backup)
-  if (!backup.checksum || backup.checksum.algorithm !== CHECKSUM_ALGORITHM) {
+  const expectedAlgorithm = formatVersion === BACKUP_FORMAT_VERSION ? CHECKSUM_ALGORITHM : LEGACY_FNV_ALGORITHM
+  if (!backup.checksum || backup.checksum.algorithm !== expectedAlgorithm) {
     errors.push('校验摘要算法不受支持。')
-  } else if (checksumForPayload(payload) !== backup.checksum.value) {
+  } else if (checksumForPayload(payload, expectedAlgorithm) !== backup.checksum.value) {
     errors.push('校验摘要不匹配，文件可能已损坏。')
   }
   const profiles = Array.isArray(payload.profiles) ? payload.profiles : []
   if (!profiles.length) errors.push('备份至少需要一个学生档案。')
+  if (profiles.length > PRODUCT_RULES.limits.maxProfiles) errors.push('备份中的学生档案超过数量限制。')
   const duplicateProfileIds = duplicateValues(profiles, (item) => item && item.id)
   if (duplicateProfileIds.length) errors.push('备份存在重复档案 ID。')
   if (profiles.some((item) => !normalizeProfile(item))) errors.push('备份含结构无效的学生档案。')
@@ -352,6 +397,9 @@ function validateBackupEnvelope(input) {
 function newerRecord(local, incoming) {
   if (!local) return incoming
   if (!incoming) return local
+  const localVersion = Number(local.version) || 0
+  const incomingVersion = Number(incoming.version) || 0
+  if (localVersion !== incomingVersion) return incomingVersion > localVersion ? incoming : local
   const localTime = Date.parse(local.updatedAt || local.createdAt || 0)
   const incomingTime = Date.parse(incoming.updatedAt || incoming.createdAt || 0)
   return incomingTime >= localTime ? incoming : local
@@ -367,12 +415,12 @@ function mergeBy(itemsA, itemsB, keySelector) {
   return [...result.values()]
 }
 
-function mergeProfileData(local, incoming, profileId) {
+function mergeProfileData(local, incoming, profileId, { settingsChoice = 'local' } = {}) {
   const left = normalizeProfileData(local, profileId)
   const right = normalizeProfileData(incoming, profileId)
+  const settings = settingsChoice === 'backup' ? right : left
   return normalizeProfileData({
     ...left,
-    ...right,
     profileId,
     favoriteSchoolIds: [...new Set([...left.favoriteSchoolIds, ...right.favoriteSchoolIds])],
     scoreRecords: mergeBy(left.scoreRecords, right.scoreRecords, (item) => item.id),
@@ -381,14 +429,25 @@ function mergeProfileData(local, incoming, profileId) {
     targetRecords: mergeBy(left.targetRecords, right.targetRecords, (item) => item.schoolId),
     stageGoals: mergeBy(left.stageGoals, right.stageGoals, (item) => item.id),
     learningTasks: mergeBy(left.learningTasks, right.learningTasks, (item) => item.id),
-    comparisonSchoolIds: right.comparisonSchoolIds.length
-      ? right.comparisonSchoolIds
-      : left.comparisonSchoolIds,
+    examTemplates: mergeBy(left.examTemplates, right.examTemplates, (item) => item.id),
+    scoreSchemes: mergeBy(left.scoreSchemes, right.scoreSchemes, (item) => item.id),
+    mistakeRecords: mergeBy(left.mistakeRecords, right.mistakeRecords, (item) => item.id),
+    weeklyPlans: mergeBy(left.weeklyPlans, right.weeklyPlans, (item) => item.id),
+    stageReviews: mergeBy(left.stageReviews, right.stageReviews, (item) => item.id),
+    schoolUserStates: mergeBy(left.schoolUserStates, right.schoolUserStates, (item) => item.schoolId),
+    recommendationSettings: settings.recommendationSettings,
+    scenarioSettings: settings.scenarioSettings,
+    schoolFilters: settings.schoolFilters,
+    comparisonSchoolIds: settings.comparisonSchoolIds,
+    primaryTargetSchoolId: settings.primaryTargetSchoolId,
+    examYear: settings.examYear,
+    targetDraft: settings.targetDraft,
+    subjectConfigs: settings.subjectConfigs,
     recentViewedSchoolIds: [...new Set([
       ...right.recentViewedSchoolIds,
       ...left.recentViewedSchoolIds
     ])].slice(0, 20),
-    subjectConfigs: mergeBy(left.subjectConfigs, right.subjectConfigs, (item) => item.subjectId)
+    legacyExtensions: settings.legacyExtensions
   }, profileId)
 }
 
@@ -411,7 +470,7 @@ function normalizedStateFromPayload(payload) {
   }
 }
 
-function importBackupEnvelope(input, { mode = 'merge' } = {}) {
+function importBackupEnvelope(input, { mode = 'merge', settingsChoice = 'local', operationId } = {}) {
   if (!['merge', 'overwrite'].includes(mode)) {
     return { ok: false, message: '导入模式必须是 merge 或 overwrite。' }
   }
@@ -420,7 +479,7 @@ function importBackupEnvelope(input, { mode = 'merge' } = {}) {
   const safety = createRestorePoint({
     reason: 'before_import',
     profileScope: { type: 'full_user_state' },
-    operationId: `import_${validation.backup.checksum.value}_${mode}_safety`
+    operationId: `${operationId || `import_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`}_safety`
   })
   if (!safety.ok) return safety
   const incoming = normalizedStateFromPayload(validation.payload)
@@ -439,7 +498,7 @@ function importBackupEnvelope(input, { mode = 'merge' } = {}) {
     const profileData = Object.fromEntries(profiles.map((profile) => [
       profile.id,
       incoming.profileData[profile.id] && local.profileData[profile.id]
-        ? mergeProfileData(local.profileData[profile.id], incoming.profileData[profile.id], profile.id)
+        ? mergeProfileData(local.profileData[profile.id], incoming.profileData[profile.id], profile.id, { settingsChoice })
         : normalizeProfileData(
           incoming.profileData[profile.id] || local.profileData[profile.id],
           profile.id
@@ -454,8 +513,8 @@ function importBackupEnvelope(input, { mode = 'merge' } = {}) {
         ...local.sharedFavoriteSchoolIds,
         ...incoming.sharedFavoriteSchoolIds
       ])],
-      onboarding: newerRecord(local.onboarding, incoming.onboarding),
-      userSettings: { ...local.userSettings, ...incoming.userSettings }
+      onboarding: settingsChoice === 'backup' ? clone(incoming.onboarding) : clone(local.onboarding),
+      userSettings: settingsChoice === 'backup' ? clone(incoming.userSettings) : clone(local.userSettings)
     }
   }
   const result = replaceVersionedState(nextState, {
@@ -480,7 +539,11 @@ function exportBackupFile() {
   const stamp = envelope.backup.exportedAt.replace(/[-:.TZ]/gu, '').slice(0, 14)
   const filePath = `${wx.env.USER_DATA_PATH}/suzhou_highschool_backup_${stamp}.json`
   try {
-    wx.getFileSystemManager().writeFileSync(filePath, JSON.stringify(envelope.backup, null, 2), 'utf8')
+    const content = JSON.stringify(envelope.backup, null, 2)
+    if (unescape(encodeURIComponent(content)).length > PRODUCT_RULES.limits.maxBackupFileBytes) {
+      return { ok: false, code: 'FILE_TOO_LARGE', message: '备份文件超过 4 MB 限制，未写入文件。' }
+    }
+    wx.getFileSystemManager().writeFileSync(filePath, content, 'utf8')
     return {
       ok: true,
       filePath,
@@ -502,9 +565,18 @@ function readBackupFile(filePath) {
   }
 }
 
+const BackupExportService = Object.freeze({
+  createEnvelope: createBackupEnvelope,
+  exportFile: exportBackupFile,
+  readFile: readBackupFile,
+  validate: validateBackupEnvelope,
+  importEnvelope: importBackupEnvelope
+})
+
 module.exports = {
   APP_DATA_VERSION,
   CHECKSUM_ALGORITHM,
+  LEGACY_FNV_ALGORITHM,
   stableStringify,
   fnv1a32,
   checksumForPayload,
@@ -516,5 +588,6 @@ module.exports = {
   mergeProfileData,
   importBackupEnvelope,
   exportBackupFile,
-  readBackupFile
+  readBackupFile,
+  BackupExportService
 }

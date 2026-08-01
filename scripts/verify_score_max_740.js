@@ -81,6 +81,6 @@ assert.strictEqual(admissionScores.filter((item) => item.year === 2026).length, 
 assert.strictEqual(sha256('data/schools.js'), 'c185182c8dd8577b3165278c16014dbff98249585cf76bd1182b6ea1581d62f2')
 
 const projectConfig = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json'), 'utf8'))
-assert.strictEqual(projectConfig.appid, 'wx17e903f81714736f')
+assert.strictEqual(projectConfig.appid, 'wxc2a2a94f767438dd')
 
 console.log('SCORE MAX 740 VERIFY PASSED')

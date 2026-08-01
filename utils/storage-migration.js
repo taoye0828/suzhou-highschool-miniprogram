@@ -15,7 +15,8 @@ const { LEGACY_STORAGE_KEYS } = require('./legacy/migration/storage-keys')
 const MIGRATION_CHAIN = Object.freeze([
   { from: 1, to: 2, label: 'v1 → v2' },
   { from: 2, to: 3, label: 'v2 → v3' },
-  { from: 3, to: 4, label: 'v3 → v4' }
+  { from: 3, to: 4, label: 'v3 → v4' },
+  { from: 4, to: 5, label: 'v4 → v5' }
 ])
 
 function array(value) {
@@ -90,7 +91,7 @@ function migrateV3ToV4(state, now) {
     targetDraft: object(source.targetDraft)
   }, profileId)
   return {
-    version: STORAGE_SCHEMA_VERSION,
+    version: 4,
     profiles: [profile || createDefaultProfile(now)],
     activeProfileId: profileId,
     profileData: { [profileId]: profileData },
@@ -98,6 +99,38 @@ function migrateV3ToV4(state, now) {
     onboarding: object(source.onboarding),
     userSettings: object(source.userSettings),
     migratedAt: now
+  }
+}
+
+function migrateV4ToV5(state, now) {
+  const source = object(state)
+  const profiles = array(source.profiles).map(normalizeProfile).filter(Boolean)
+  const safeProfiles = profiles.length ? profiles : [createDefaultProfile(now)]
+  const activeProfileId = safeProfiles.some((profile) => profile.id === source.activeProfileId)
+    ? source.activeProfileId
+    : safeProfiles[0].id
+  const rawProfileData = object(source.profileData)
+  return {
+    version: STORAGE_SCHEMA_VERSION,
+    profiles: safeProfiles,
+    activeProfileId,
+    profileData: Object.fromEntries(safeProfiles.map((profile) => [
+      profile.id,
+      normalizeProfileData({
+        ...rawProfileData[profile.id],
+        examTemplates: array(rawProfileData[profile.id] && rawProfileData[profile.id].examTemplates),
+        scoreSchemes: array(rawProfileData[profile.id] && rawProfileData[profile.id].scoreSchemes),
+        mistakeRecords: array(rawProfileData[profile.id] && rawProfileData[profile.id].mistakeRecords),
+        weeklyPlans: array(rawProfileData[profile.id] && rawProfileData[profile.id].weeklyPlans),
+        stageReviews: array(rawProfileData[profile.id] && rawProfileData[profile.id].stageReviews),
+        schoolUserStates: array(rawProfileData[profile.id] && rawProfileData[profile.id].schoolUserStates)
+      }, profile.id)
+    ])),
+    sharedFavoriteSchoolIds: array(source.sharedFavoriteSchoolIds),
+    onboarding: object(source.onboarding),
+    userSettings: object(source.userSettings),
+    migratedAt: now,
+    migrationFromVersion: 4
   }
 }
 
@@ -126,7 +159,7 @@ function legacyStateFromSnapshot(snapshot, now, keys) {
   }
 }
 
-function finalStateFromSnapshot(snapshot, keys) {
+function stateFromVersionedSnapshot(snapshot, keys, version) {
   const source = object(snapshot)
   const profiles = array(source[keys.profiles]).map(normalizeProfile).filter(Boolean)
   const safeProfiles = profiles.length ? profiles : [createDefaultProfile()]
@@ -139,7 +172,7 @@ function finalStateFromSnapshot(snapshot, keys) {
     normalizeProfileData(rawProfileData[profile.id], profile.id)
   ]))
   return {
-    version: STORAGE_SCHEMA_VERSION,
+    version,
     profiles: safeProfiles,
     activeProfileId,
     profileData,
@@ -154,17 +187,28 @@ function migrateStorageSnapshot(snapshot, { keys, now = new Date().toISOString()
   if (!keys) throw new TypeError('keys are required')
   const migrationKeys = { ...keys, ...LEGACY_STORAGE_KEYS }
   const sourceVersion = Number(snapshot && snapshot[migrationKeys.storageSchemaVersion])
+  if (Number.isFinite(sourceVersion) && sourceVersion > STORAGE_SCHEMA_VERSION) {
+    return {
+      ok: false,
+      fromVersion: sourceVersion,
+      toVersion: sourceVersion,
+      applied: [],
+      error: `存储版本 v${sourceVersion} 高于当前支持的 v${STORAGE_SCHEMA_VERSION}`
+    }
+  }
   if (sourceVersion === STORAGE_SCHEMA_VERSION) {
     return {
       ok: true,
       fromVersion: STORAGE_SCHEMA_VERSION,
       toVersion: STORAGE_SCHEMA_VERSION,
       applied: [],
-      state: finalStateFromSnapshot(snapshot, migrationKeys)
+      state: stateFromVersionedSnapshot(snapshot, migrationKeys, STORAGE_SCHEMA_VERSION)
     }
   }
 
-  let state = ignoreLegacy
+  let state = sourceVersion === 4
+    ? stateFromVersionedSnapshot(snapshot, migrationKeys, 4)
+    : ignoreLegacy
     ? {
         version: 1,
         profileId: DEFAULT_PROFILE_ID,
@@ -179,20 +223,23 @@ function migrateStorageSnapshot(snapshot, { keys, now = new Date().toISOString()
         userSettings: {}
       }
     : legacyStateFromSnapshot(snapshot, now, migrationKeys)
+  const beforeState = clone(state)
   const applied = []
-  for (const step of MIGRATION_CHAIN) {
-    if (state.version !== step.from) {
+  while (state.version < STORAGE_SCHEMA_VERSION) {
+    const step = MIGRATION_CHAIN.find((item) => item.from === state.version)
+    if (!step) {
       return {
         ok: false,
         fromVersion: Number.isInteger(sourceVersion) ? sourceVersion : 1,
         toVersion: state.version,
         applied,
-        error: `迁移链中断：期望 v${step.from}，实际 v${state.version}`
+        error: `迁移链中断：未找到 v${state.version} 的下一步`
       }
     }
     if (step.to === 2) state = migrateV1ToV2(state, now)
     if (step.to === 3) state = migrateV2ToV3(state, now)
     if (step.to === 4) state = migrateV3ToV4(state, now)
+    if (step.to === 5) state = migrateV4ToV5(state, now)
     applied.push(step.label)
   }
   return {
@@ -200,7 +247,8 @@ function migrateStorageSnapshot(snapshot, { keys, now = new Date().toISOString()
     fromVersion: Number.isInteger(sourceVersion) ? sourceVersion : 1,
     toVersion: STORAGE_SCHEMA_VERSION,
     applied,
-    state
+    state,
+    beforeState
   }
 }
 
@@ -213,7 +261,7 @@ function storageWritesForState(state, keys) {
     [keys.onboardingV4]: clone(state.onboarding),
     [keys.userSettings]: clone(state.userSettings),
     [keys.lastMigration]: {
-      fromVersion: state.version === STORAGE_SCHEMA_VERSION ? 1 : state.version,
+      fromVersion: state.migrationFromVersion || state.version,
       toVersion: STORAGE_SCHEMA_VERSION,
       migratedAt: state.migratedAt || new Date().toISOString()
     },
@@ -226,8 +274,10 @@ module.exports = {
   migrateV1ToV2,
   migrateV2ToV3,
   migrateV3ToV4,
+  migrateV4ToV5,
   legacyStateFromSnapshot,
-  finalStateFromSnapshot,
+  finalStateFromSnapshot: (snapshot, keys) => stateFromVersionedSnapshot(snapshot, keys, STORAGE_SCHEMA_VERSION),
+  stateFromVersionedSnapshot,
   migrateStorageSnapshot,
   storageWritesForState
 }

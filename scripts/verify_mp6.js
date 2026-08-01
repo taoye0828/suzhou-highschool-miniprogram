@@ -4,7 +4,7 @@ const path = require('path')
 const root = path.resolve(__dirname, '..')
 const failures = []
 const notes = []
-const expectedAppId = 'wx17e903f81714736f'
+const expectedAppId = 'wxc2a2a94f767438dd'
 const forbiddenPublicPhrases = [
   '提交前说明',
   '真实 AppID',

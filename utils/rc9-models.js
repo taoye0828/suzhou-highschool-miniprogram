@@ -1,8 +1,10 @@
 const { APP_CONFIG } = require('../config/app-config')
+const { PRODUCT_RULES } = require('./generated/product-rules')
+const { assertSafeJsonValue } = require('./canonical-json')
 
-const STORAGE_SCHEMA_VERSION = 4
+const STORAGE_SCHEMA_VERSION = PRODUCT_RULES.storageSchemaVersion
 const BACKUP_FORMAT = 'suzhou-highschool-local-backup'
-const BACKUP_FORMAT_VERSION = 2
+const BACKUP_FORMAT_VERSION = PRODUCT_RULES.backupFormatVersion
 const DEFAULT_PROFILE_ID = 'profile_default'
 const FAVORITES_MODES = ['independent', 'shared']
 const STAGE_GOAL_STATUSES = ['not_started', 'in_progress', 'completed', 'paused']
@@ -93,6 +95,28 @@ function normalizeStringList(value, maxItems = 100, maxLength = 200) {
     : []
 }
 
+function normalizeLegacyExtensions(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  try {
+    assertSafeJsonValue(value)
+    const cloned = clone(value)
+    return unescape(encodeURIComponent(JSON.stringify(cloned))).length <= PRODUCT_RULES.limits.maxLegacyExtensionsBytes
+      ? cloned
+      : {}
+  } catch (error) {
+    return {}
+  }
+}
+
+function collectLegacyExtensions(source, knownKeys) {
+  const extensions = normalizeLegacyExtensions(source && source.legacyExtensions)
+  const known = new Set([...knownKeys, 'legacyExtensions'])
+  for (const key of Object.keys(source || {})) {
+    if (!known.has(key)) extensions[key] = clone(source[key])
+  }
+  return normalizeLegacyExtensions(extensions)
+}
+
 function normalizeSubjectConfig(value, index = 0) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const subjectName = text(value.subjectName || value.name, 40)
@@ -100,6 +124,7 @@ function normalizeSubjectConfig(value, index = 0) {
   if (!subjectName || maxScore === null) return null
   const subjectId = text(value.subjectId || value.id, 80) ||
     `subject_${subjectName.replace(/\s+/gu, '_')}_${index + 1}`
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
   return {
     ...clone(value),
     subjectId,
@@ -107,7 +132,10 @@ function normalizeSubjectConfig(value, index = 0) {
     maxScore,
     includedInTotal: value.includedInTotal !== false,
     displayOrder: optionalInteger(value.displayOrder, { min: 0, max: 9999 }) ?? index,
-    configVersion: optionalInteger(value.configVersion, { min: 1, max: 9999 }) ?? 1
+    configVersion: optionalInteger(value.configVersion, { min: 1, max: 9999 }) ?? 1,
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt)
   }
 }
 
@@ -125,9 +153,13 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
   const id = text(value.id, 120)
   const examName = text(value.examName, APP_CONFIG.scoreRecord.examNameMaxLength)
   const examDate = text(value.examDate || value.date, 10)
+  const totalMaxScore = optionalInteger(value.totalMaxScore, {
+    min: 1,
+    max: PRODUCT_RULES.examTotalScoreMax
+  }) ?? PRODUCT_RULES.examTotalScoreMax
   const totalScore = optionalInteger(
     value.totalScore === undefined ? value.score : value.totalScore,
-    { min: 0, max: APP_CONFIG.targetScore.max }
+    { min: 0, max: totalMaxScore }
   )
   if (!id || !examName || !validDate(examDate) || totalScore === null) return null
   const createdAt = isoDate(value.createdAt, `${examDate}T00:00:00.000Z`)
@@ -136,8 +168,35 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
     .map(normalizeSubjectScore)
     .filter(Boolean)
     .sort((left, right) => left.displayOrder - right.displayOrder || left.subjectId.localeCompare(right.subjectId))
+  const builtInScheme = PRODUCT_RULES.builtInScoreSchemes[0]
+  const metricType = PRODUCT_RULES.statusEnums.metricType.includes(value.metricType)
+    ? value.metricType
+    : 'full_total'
+  const admissionScaleMax = optionalInteger(value.admissionScaleMax, {
+    min: 1,
+    max: PRODUCT_RULES.examTotalScoreMax
+  }) ?? (totalMaxScore === PRODUCT_RULES.examTotalScoreMax && metricType === 'full_total'
+    ? PRODUCT_RULES.examTotalScoreMax
+    : null)
+  const scoreSchemeId = text(value.scoreSchemeId, 120) || 'suzhou_admission_740_v1'
+  const scoreSchemeName = text(value.scoreSchemeName, 120) || builtInScheme.name
+  const eligibilityRuleId = text(value.eligibilityRuleId, 120) ||
+    (totalMaxScore === PRODUCT_RULES.examTotalScoreMax && metricType === 'full_total'
+      ? 'legacy_740_total'
+      : '')
+  const scoreSchemeSnapshot = value.scoreSchemeSnapshot && typeof value.scoreSchemeSnapshot === 'object' &&
+    !Array.isArray(value.scoreSchemeSnapshot)
+    ? clone(value.scoreSchemeSnapshot)
+    : {
+        ...clone(builtInScheme),
+        id: scoreSchemeId,
+        name: scoreSchemeName,
+        metricType,
+        totalMaxScore,
+        admissionScaleMax,
+        eligibilityRuleId
+      }
   return {
-    ...clone(value),
     id,
     examName,
     examDate,
@@ -146,6 +205,16 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
     updatedAt,
     totalScore,
     score: totalScore,
+    examType: PRODUCT_RULES.examTypes.includes(value.examType) ? value.examType : 'custom',
+    scoreSchemeId,
+    scoreSchemeName,
+    scoreSchemeSnapshot,
+    totalMaxScore,
+    metricType,
+    admissionScaleMax,
+    eligibilityRuleId,
+    scoreRateBasisPoints: Math.round(totalScore * PRODUCT_RULES.scoreRateBasis / totalMaxScore),
+    migrationSource: text(value.migrationSource, 120) || 'legacy_740_total',
     subjectScores,
     classRank: optionalInteger(value.classRank, { min: 1, max: 100000 }),
     gradeRank: optionalInteger(value.gradeRank, { min: 1, max: 100000 }),
@@ -153,6 +222,13 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
     lossNotes: text(value.lossNotes, 1000),
     nextActions: text(value.nextActions, 1000),
     notes: text(value.notes, 1000),
+    legacyExtensions: collectLegacyExtensions(value, [
+      'id', 'examName', 'examDate', 'date', 'totalScore', 'score', 'createdAt', 'updatedAt',
+      'subjectScores', 'classRank', 'gradeRank', 'improvementNotes', 'lossNotes', 'nextActions',
+      'notes', 'profileId', 'version', 'schemaVersion', 'examType', 'scoreSchemeId', 'scoreSchemeName',
+      'scoreSchemeSnapshot', 'totalMaxScore', 'metricType', 'admissionScaleMax', 'eligibilityRuleId',
+      'scoreRateBasisPoints', 'migrationSource'
+    ]),
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
     version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
@@ -171,7 +247,6 @@ function normalizeTargetRecord(value, profileId = DEFAULT_PROFILE_ID) {
   if (!schoolId || !schoolName) return null
   const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
   return {
-    ...clone(value),
     id: text(value.id, 120) || `target_${schoolId}`,
     schoolId,
     schoolName,
@@ -213,7 +288,6 @@ function normalizeStageGoal(value, profileId = DEFAULT_PROFILE_ID) {
     { min: 0, max: APP_CONFIG.targetScore.max }
   )
   return {
-    ...clone(value),
     id,
     title,
     stage: title,
@@ -245,9 +319,9 @@ function normalizeScoreReview(value, profileId = DEFAULT_PROFILE_ID) {
   if (!id || !examRecordId) return null
   const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
   return {
-    ...clone(value),
     id,
     examRecordId,
+    reviewId: text(value.reviewId, 120),
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
     summary: text(value.summary, 1000),
     improvementNotes: text(value.improvementNotes, 1000),
@@ -268,9 +342,9 @@ function normalizeScoreLossReason(value, profileId = DEFAULT_PROFILE_ID) {
   if (!id || !examRecordId || !subjectId || !LOSS_REASON_TYPES.includes(reasonType)) return null
   const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
   return {
-    ...clone(value),
     id,
     examRecordId,
+    reviewId: text(value.reviewId, 120),
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
     subjectId,
     subjectName: text(value.subjectName, 40),
@@ -293,7 +367,6 @@ function normalizeLearningTask(value, profileId = DEFAULT_PROFILE_ID) {
   const status = LEARNING_TASK_STATUSES.includes(value.status) ? value.status : 'not_started'
   const weeklyTarget = optionalInteger(value.weeklyTarget, { min: 1, max: 1000 })
   return {
-    ...clone(value),
     id,
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
     title,
@@ -301,6 +374,9 @@ function normalizeLearningTask(value, profileId = DEFAULT_PROFILE_ID) {
     subjectName: text(value.subjectName, 40),
     sourceExamId: text(value.sourceExamId, 120),
     sourceReviewId: text(value.sourceReviewId, 120),
+    sourceLossReasonId: text(value.sourceLossReasonId, 120),
+    sourceMistakeRecordId: text(value.sourceMistakeRecordId, 120),
+    sourceTitleSnapshot: text(value.sourceTitleSnapshot, 200),
     sourceReasonType: LOSS_REASON_TYPES.includes(value.sourceReasonType)
       ? value.sourceReasonType
       : '',
@@ -310,6 +386,155 @@ function normalizeLearningTask(value, profileId = DEFAULT_PROFILE_ID) {
     weeklyTarget,
     status,
     notes: text(value.notes, 1000),
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeExamTemplate(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  const name = text(value.name, 80)
+  if (!id || !name) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    id,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    name,
+    examType: PRODUCT_RULES.examTypes.includes(value.examType) ? value.examType : 'custom',
+    defaultExamName: text(value.defaultExamName, 80),
+    scoreSchemeId: text(value.scoreSchemeId, 120),
+    enableSubjectScores: value.enableSubjectScores !== false,
+    enableRank: value.enableRank !== false,
+    enableReview: value.enableReview !== false,
+    displayOrder: optionalInteger(value.displayOrder, { min: 0, max: 9999 }) ?? 0,
+    isBuiltIn: false,
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeScoreScheme(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  const name = text(value.name, 80)
+  const metricType = PRODUCT_RULES.statusEnums.metricType.includes(value.metricType)
+    ? value.metricType
+    : ''
+  const totalMaxScore = optionalInteger(value.totalMaxScore, { min: 1, max: PRODUCT_RULES.examTotalScoreMax })
+  if (!id || !name || !metricType || totalMaxScore === null) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    id,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    name,
+    metricType,
+    subjectRules: (Array.isArray(value.subjectRules) ? value.subjectRules : [])
+      .map((item, index) => normalizeSubjectConfig(item, index))
+      .filter(Boolean),
+    totalMaxScore,
+    admissionScaleMax: optionalInteger(value.admissionScaleMax, { min: 1, max: PRODUCT_RULES.examTotalScoreMax }),
+    eligibilityRuleId: text(value.eligibilityRuleId, 120),
+    isBuiltIn: false,
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeMistakeRecord(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  if (!id) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    id,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    examRecordId: text(value.examRecordId, 120),
+    reviewId: text(value.reviewId, 120),
+    subjectId: text(value.subjectId, 80),
+    subjectName: text(value.subjectName, 40),
+    questionType: text(value.questionType, 80),
+    knowledgePoint: text(value.knowledgePoint, 200),
+    lostScore: optionalInteger(value.lostScore, { min: 0, max: PRODUCT_RULES.examTotalScoreMax }) ?? 0,
+    reasonType: text(value.reasonType, 40),
+    detail: text(value.detail, PRODUCT_RULES.limits.maxNoteLength),
+    corrected: Boolean(value.corrected),
+    correctedDate: validDate(value.correctedDate) ? value.correctedDate : '',
+    repeatedErrorConfirmed: Boolean(value.repeatedErrorConfirmed),
+    improvementAction: text(value.improvementAction, PRODUCT_RULES.limits.maxNoteLength),
+    linkedTaskIds: normalizeStringList(value.linkedTaskIds, 100, 120),
+    notes: text(value.notes, PRODUCT_RULES.limits.maxNoteLength),
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeWeeklyPlan(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  if (!id || !validDate(value.weekStartDate) || !validDate(value.weekEndDate)) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    id,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    weekStartDate: value.weekStartDate,
+    weekEndDate: value.weekEndDate,
+    title: text(value.title, 120),
+    taskItems: normalizeStringList(value.taskItems, 100, 120),
+    notes: text(value.notes, PRODUCT_RULES.limits.maxNoteLength),
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeStageReview(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const id = text(value.id, 120)
+  const stageGoalId = text(value.stageGoalId, 120)
+  if (!id || !stageGoalId) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    id,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    stageGoalId,
+    stageGoalSnapshot: clone(value.stageGoalSnapshot || {}),
+    startDataSnapshot: clone(value.startDataSnapshot || {}),
+    endDataSnapshot: clone(value.endDataSnapshot || {}),
+    taskSummarySnapshot: clone(value.taskSummarySnapshot || {}),
+    examSummarySnapshot: clone(value.examSummarySnapshot || {}),
+    summary: text(value.summary, PRODUCT_RULES.limits.maxNoteLength),
+    createdAt,
+    updatedAt: isoDate(value.updatedAt, createdAt),
+    version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
+    schemaVersion: STORAGE_SCHEMA_VERSION
+  }
+}
+
+function normalizeSchoolUserState(value, profileId = DEFAULT_PROFILE_ID) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const schoolId = text(value.schoolId, 120)
+  if (!schoolId) return null
+  const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
+  return {
+    id: text(value.id, 120) || `school_state_${schoolId}`,
+    profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
+    schoolId,
+    candidateStatus: PRODUCT_RULES.statusEnums.candidateStatus.includes(value.candidateStatus)
+      ? value.candidateStatus
+      : 'none',
+    tags: normalizeStringList(value.tags, 20, 40),
+    note: text(value.note, PRODUCT_RULES.limits.maxNoteLength),
+    customOrder: optionalInteger(value.customOrder, { min: 0, max: 9999 }) ?? 0,
     createdAt,
     updatedAt: isoDate(value.updatedAt, createdAt),
     version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
@@ -467,6 +692,12 @@ function createEmptyProfileData(profileId = DEFAULT_PROFILE_ID) {
     targetRecords: [],
     stageGoals: [],
     learningTasks: [],
+    examTemplates: [],
+    scoreSchemes: [],
+    mistakeRecords: [],
+    weeklyPlans: [],
+    stageReviews: [],
+    schoolUserStates: [],
     recommendationSettings: normalizeRecommendationSettings({}),
     scenarioSettings: normalizeScenarioSettings({}),
     schoolFilters: normalizeSchoolFilters({}),
@@ -477,6 +708,7 @@ function createEmptyProfileData(profileId = DEFAULT_PROFILE_ID) {
     primaryTargetSchoolId: null,
     examYear: APP_CONFIG.countdown.defaultYear,
     targetDraft: {},
+    legacyExtensions: {},
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -494,7 +726,6 @@ function normalizeProfileData(value, profileId = DEFAULT_PROFILE_ID) {
   })
   return {
     ...createEmptyProfileData(profileId),
-    ...clone(source),
     profileId,
     favoriteSchoolIds: normalizeStringList(source.favoriteSchoolIds, 1000, 120).sort(),
     scoreRecords: (Array.isArray(source.scoreRecords) ? source.scoreRecords : [])
@@ -513,6 +744,24 @@ function normalizeProfileData(value, profileId = DEFAULT_PROFILE_ID) {
     learningTasks: (Array.isArray(source.learningTasks) ? source.learningTasks : [])
       .map((item) => normalizeLearningTask(item, profileId))
       .filter(Boolean),
+    examTemplates: (Array.isArray(source.examTemplates) ? source.examTemplates : [])
+      .map((item) => normalizeExamTemplate(item, profileId))
+      .filter(Boolean),
+    scoreSchemes: (Array.isArray(source.scoreSchemes) ? source.scoreSchemes : [])
+      .map((item) => normalizeScoreScheme(item, profileId))
+      .filter(Boolean),
+    mistakeRecords: (Array.isArray(source.mistakeRecords) ? source.mistakeRecords : [])
+      .map((item) => normalizeMistakeRecord(item, profileId))
+      .filter(Boolean),
+    weeklyPlans: (Array.isArray(source.weeklyPlans) ? source.weeklyPlans : [])
+      .map((item) => normalizeWeeklyPlan(item, profileId))
+      .filter(Boolean),
+    stageReviews: (Array.isArray(source.stageReviews) ? source.stageReviews : [])
+      .map((item) => normalizeStageReview(item, profileId))
+      .filter(Boolean),
+    schoolUserStates: (Array.isArray(source.schoolUserStates) ? source.schoolUserStates : [])
+      .map((item) => normalizeSchoolUserState(item, profileId))
+      .filter(Boolean),
     recommendationSettings: normalizeRecommendationSettings(source.recommendationSettings),
     scenarioSettings: normalizeScenarioSettings(source.scenarioSettings),
     schoolFilters: normalizeSchoolFilters(source.schoolFilters),
@@ -530,6 +779,7 @@ function normalizeProfileData(value, profileId = DEFAULT_PROFILE_ID) {
     targetDraft: source.targetDraft && typeof source.targetDraft === 'object' && !Array.isArray(source.targetDraft)
       ? clone(source.targetDraft)
       : {},
+    legacyExtensions: normalizeLegacyExtensions(source.legacyExtensions),
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
 }
@@ -552,6 +802,7 @@ module.exports = {
   validDate,
   isoDate,
   normalizeStringList,
+  normalizeLegacyExtensions,
   normalizeSubjectConfig,
   normalizeSubjectScore,
   normalizeExamRecord,
@@ -561,6 +812,12 @@ module.exports = {
   normalizeScoreReview,
   normalizeScoreLossReason,
   normalizeLearningTask,
+  normalizeExamTemplate,
+  normalizeScoreScheme,
+  normalizeMistakeRecord,
+  normalizeWeeklyPlan,
+  normalizeStageReview,
+  normalizeSchoolUserState,
   normalizeScenarioSettings,
   normalizeRecentHistory,
   normalizeProfile,

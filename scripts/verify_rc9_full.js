@@ -48,7 +48,7 @@ const appJson = readJson('app.json')
 
 assert.strictEqual(APP_CONFIG.name, '苏程记录')
 assert.strictEqual(APP_CONFIG.version, '2.0.0')
-assert.strictEqual(projectConfig.appid, 'wx17e903f81714736f')
+assert.strictEqual(projectConfig.appid, 'wxc2a2a94f767438dd')
 assert.strictEqual(appJson.window.navigationBarTitleText, '苏程记录')
 assert.strictEqual(EXAM_TOTAL_SCORE, 740)
 assert.strictEqual(schools.length, 55)
