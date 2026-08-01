@@ -17,7 +17,9 @@ const {
   deleteScoreLossReason,
   getLearningTargetRecords,
   saveLearningTask,
-  recordRecentHistory
+  recordRecentHistory,
+  getExamTemplates,
+  getScoreSchemes
 } = require('../../utils/rc9-storage')
 const { LOSS_REASON_TYPES } = require('../../utils/rc9-models')
 const { lossReasonStatistics } = require('../../utils/rc10-features')
@@ -34,6 +36,14 @@ const {
   analyzeSubjects,
   roundOne
 } = require('../../utils/subject-analysis')
+const {
+  EXAM_TYPE_LABELS,
+  scoreSchemeSnapshot,
+  resolveExamScoreSchemeSnapshot,
+  formatScoreRate,
+  recommendationEligibility
+} = require('../../utils/v1-domain')
+const { PRODUCT_RULES } = require('../../utils/generated/product-rules')
 
 const CHART_HEIGHT = 280
 const CHART_PADDING = 38
@@ -41,6 +51,10 @@ const MAX_LAYOUT_RETRIES = 3
 const LAYOUT_RETRY_DELAY_MS = 80
 const RANK_MAX = 100000
 const SCORE_SEGMENTS = ['records', 'trend', 'review']
+const EXAM_TYPE_OPTIONS = PRODUCT_RULES.examTypes.map((value) => ({
+  value,
+  label: EXAM_TYPE_LABELS[value] || value
+}))
 
 let recordSequence = 0
 let subjectSequence = 0
@@ -184,7 +198,51 @@ function mergeSubjectFormFields(subjectConfigs, currentFields, keepUnconfigured 
   return merged.concat(retained)
 }
 
-function emptyRecordForm(subjectConfigs = []) {
+function defaultScoreScheme(scoreSchemes = []) {
+  return scoreSchemes.find((item) => item.id === 'suzhou_admission_740_v1') ||
+    scoreSchemes[0] || PRODUCT_RULES.builtInScoreSchemes[0]
+}
+
+function scoreSchemeFields(scheme) {
+  return (Array.isArray(scheme && scheme.subjectRules) ? scheme.subjectRules : []).map((item, index) => ({
+    subjectId: item.subjectId || item.id,
+    subjectName: item.subjectName || item.name,
+    maxScore: item.maxScore,
+    maxScoreText: `${item.maxScore} 分`,
+    includedInTotal: item.includedInTotal !== false,
+    displayOrder: Number.isInteger(item.displayOrder) ? item.displayOrder : index,
+    configVersion: Number.isInteger(item.configVersion) ? item.configVersion : 1,
+    scoreInput: '',
+    source: item
+  })).filter((item) => item.subjectId && item.subjectName && Number.isInteger(item.maxScore))
+}
+
+function scoreSchemeFormState(scoreSchemes, schemeId, currentFields = []) {
+  const schemes = Array.isArray(scoreSchemes) ? scoreSchemes : []
+  const index = Math.max(0, schemes.findIndex((item) => item.id === schemeId))
+  const scheme = schemes[index] || defaultScoreScheme(schemes)
+  const nextFields = scoreSchemeFields(scheme)
+  const currentById = new Map((Array.isArray(currentFields) ? currentFields : [])
+    .map((item) => [item.subjectId, item]))
+  return {
+    scoreSchemeIndex: index,
+    selectedScoreSchemeId: scheme.id,
+    selectedScoreSchemeName: scheme.name,
+    formScoreSchemeSnapshot: scoreSchemeSnapshot(scheme),
+    scoreSchemeSelectionChanged: false,
+    scoreMax: scheme.totalMaxScore,
+    formEnableSubjectScores: true,
+    formEnableRank: true,
+    formEnableReview: true,
+    selectedScoreSchemeSummary: `${scheme.name} · 满分 ${scheme.totalMaxScore}`,
+    formSubjectScores: nextFields.map((item) => currentById.has(item.subjectId)
+      ? { ...item, scoreInput: currentById.get(item.subjectId).scoreInput }
+      : item)
+  }
+}
+
+function emptyRecordForm(subjectConfigs = [], scoreSchemes = []) {
+  const scheme = defaultScoreScheme(scoreSchemes)
   return {
     selectedDate: localDateLabel(),
     examName: '',
@@ -195,7 +253,17 @@ function emptyRecordForm(subjectConfigs = []) {
     lossNotes: '',
     nextActions: '',
     notes: '',
-    formSubjectScores: subjectFormFields(subjectConfigs),
+    formSubjectScores: scoreSchemeFields(scheme).length
+      ? scoreSchemeFields(scheme)
+      : subjectFormFields(subjectConfigs),
+    examTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((item) => item.value === 'custom')),
+    selectedExamTemplateId: '',
+    examTemplateIndex: 0,
+    scoreSchemeIndex: Math.max(0, scoreSchemes.findIndex((item) => item.id === scheme.id)),
+    selectedScoreSchemeId: scheme.id,
+    selectedScoreSchemeName: scheme.name,
+    selectedScoreSchemeSummary: `${scheme.name} · 满分 ${scheme.totalMaxScore}`,
+    scoreMax: scheme.totalMaxScore,
     inputError: '',
     editingRecordId: '',
     templateSourceId: '',
@@ -206,7 +274,8 @@ function emptyRecordForm(subjectConfigs = []) {
   }
 }
 
-function recordFormFromRecord(record, subjectConfigs) {
+function recordFormFromRecord(record, subjectConfigs, scoreSchemes = []) {
+  const schemeIndex = Math.max(0, scoreSchemes.findIndex((item) => item.id === record.scoreSchemeId))
   return {
     selectedDate: examDate(record),
     examName: record.examName || '',
@@ -218,6 +287,19 @@ function recordFormFromRecord(record, subjectConfigs) {
     nextActions: record.nextActions || '',
     notes: record.notes || '',
     formSubjectScores: subjectFormFields(subjectConfigs, record),
+    examTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((item) => item.value === record.examType)),
+    selectedExamTemplateId: record.examTemplateId || '',
+    examTemplateIndex: 0,
+    scoreSchemeIndex: schemeIndex,
+    selectedScoreSchemeId: record.scoreSchemeId,
+    selectedScoreSchemeName: record.scoreSchemeName,
+    formScoreSchemeSnapshot: record.scoreSchemeSnapshot,
+    scoreSchemeSelectionChanged: false,
+    selectedScoreSchemeSummary: `${record.scoreSchemeName} · 满分 ${record.totalMaxScore}`,
+    scoreMax: record.totalMaxScore,
+    formEnableSubjectScores: true,
+    formEnableRank: true,
+    formEnableReview: true,
     inputError: '',
     editingRecordId: record.id,
     templateSourceId: '',
@@ -228,7 +310,8 @@ function recordFormFromRecord(record, subjectConfigs) {
   }
 }
 
-function templateFormFromRecord(record, subjectConfigs) {
+function templateFormFromRecord(record, subjectConfigs, scoreSchemes = []) {
+  const schemeIndex = Math.max(0, scoreSchemes.findIndex((item) => item.id === record.scoreSchemeId))
   return {
     selectedDate: localDateLabel(),
     examName: record.examName || '',
@@ -243,6 +326,19 @@ function templateFormFromRecord(record, subjectConfigs) {
       blankScores: true,
       template: true
     }),
+    examTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((item) => item.value === record.examType)),
+    selectedExamTemplateId: record.examTemplateId || '',
+    examTemplateIndex: 0,
+    scoreSchemeIndex: schemeIndex,
+    selectedScoreSchemeId: record.scoreSchemeId,
+    selectedScoreSchemeName: record.scoreSchemeName,
+    formScoreSchemeSnapshot: record.scoreSchemeSnapshot,
+    scoreSchemeSelectionChanged: false,
+    selectedScoreSchemeSummary: `${record.scoreSchemeName} · 满分 ${record.totalMaxScore}`,
+    scoreMax: record.totalMaxScore,
+    formEnableSubjectScores: true,
+    formEnableRank: true,
+    formEnableReview: true,
     inputError: '',
     editingRecordId: '',
     templateSourceId: record.id,
@@ -290,6 +386,9 @@ function presentRecordCards(records, keyword, dateFilter, expandedRecordId) {
         date: examDate(record),
         totalScore: scoreValue(record),
         score: scoreValue(record),
+        examTypeLabel: EXAM_TYPE_LABELS[record.examType] || '自定义',
+        scoreRateText: formatScoreRate(record.scoreRateBasisPoints),
+        eligibility: recommendationEligibility(record),
         subjectScores: subjects,
         classRankText: rankText(record.classRank),
         gradeRankText: rankText(record.gradeRank),
@@ -299,7 +398,7 @@ function presentRecordCards(records, keyword, dateFilter, expandedRecordId) {
     })
 }
 
-function subjectTrendItems(points) {
+function subjectTrendItems(points, metric = 'raw') {
   const recentPoints = Array.isArray(points) ? points : []
   return recentPoints.map((point, index) => {
     const previous = index > 0 ? recentPoints[index - 1].score : null
@@ -310,18 +409,18 @@ function subjectTrendItems(points) {
       displayDate: point.examDate && point.examDate.length >= 10
         ? point.examDate.slice(5, 10)
         : point.examDate,
-      scoreText: scoreText(point.score),
+      scoreText: metric === 'rate' ? `${Number(point.score).toFixed(2)}%` : scoreText(point.score),
       deltaText: delta === null
         ? '起点'
         : delta > 0
-          ? `+${displayNumber(delta)}`
-          : displayNumber(delta),
+          ? metric === 'rate' ? `+${Number(delta).toFixed(2)}%` : `+${displayNumber(delta)}`
+          : metric === 'rate' ? `${Number(delta).toFixed(2)}%` : displayNumber(delta),
       deltaClass: delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
     }
   })
 }
 
-function selectedSubjectPresentation(records, subjectConfigs, subjectId) {
+function selectedSubjectPresentation(records, subjectConfigs, subjectId, metric = 'raw') {
   if (!subjectId) {
     return {
       selectedSubjectId: '',
@@ -337,27 +436,41 @@ function selectedSubjectPresentation(records, subjectConfigs, subjectId) {
       subjectConclusions: []
     }
   }
-  const analysis = analyzeSubject(records, subjectId, subjectConfigs)
+  const analysis = analyzeSubject(records, subjectId, subjectConfigs, { metric })
   const stats = analysis.statistics
+  const valueText = (value) => metric === 'rate'
+    ? Number.isFinite(value) ? `${Number(value).toFixed(2)}%` : '—'
+    : scoreText(value)
+  const changeValueText = (value) => {
+    if (!Number.isFinite(value)) return '暂无上次数据'
+    if (metric === 'rate') {
+      if (value > 0) return `提升 +${Number(value).toFixed(2)} 个百分点`
+      if (value < 0) return `下降 ${Number(value).toFixed(2)} 个百分点`
+      return '持平'
+    }
+    return changeText(value)
+  }
   return {
     selectedSubjectId: subjectId,
     selectedSubjectName: analysis.subjectName,
-    selectedSubjectMaxText: Number.isFinite(analysis.maxScore)
+    selectedSubjectMaxText: metric === 'rate'
+      ? '按每次考试历史学科满分计算'
+      : Number.isFinite(analysis.maxScore)
       ? `配置满分 ${analysis.maxScore} 分`
       : '沿用记录中的学科配置',
-    subjectHighestText: scoreText(stats.highest),
-    subjectLowestText: scoreText(stats.lowest),
-    subjectAverageText: scoreText(stats.average),
-    subjectChangeText: changeText(stats.recentChange),
-    subjectRecentThreeText: scoreText(stats.recentThreeAverage),
-    subjectHistoryAverageText: scoreText(stats.historicalAverage),
-    subjectTrendItems: subjectTrendItems(stats.recentPoints),
+    subjectHighestText: valueText(stats.highest),
+    subjectLowestText: valueText(stats.lowest),
+    subjectAverageText: valueText(stats.average),
+    subjectChangeText: changeValueText(stats.recentChange),
+    subjectRecentThreeText: valueText(stats.recentThreeAverage),
+    subjectHistoryAverageText: valueText(stats.historicalAverage),
+    subjectTrendItems: subjectTrendItems(stats.recentPoints, metric),
     subjectConclusions: analysis.conclusions || []
   }
 }
 
-function presentSubjects(records, subjectConfigs, requestedSubjectId) {
-  const overview = analyzeSubjects(records, subjectConfigs)
+function presentSubjects(records, subjectConfigs, requestedSubjectId, metric = 'raw') {
+  const overview = analyzeSubjects(records, subjectConfigs, { metric })
   const subjectOptions = overview.subjects.map((item) => ({
     subjectId: item.subjectId,
     label: `${item.subjectName}（${item.statistics.count} 次）`
@@ -377,7 +490,7 @@ function presentSubjects(records, subjectConfigs, requestedSubjectId) {
     subjectOptions,
     selectedSubjectIndex,
     subjectVolatilityText: volatilityText,
-    ...selectedSubjectPresentation(records, subjectConfigs, selectedSubjectId)
+    ...selectedSubjectPresentation(records, subjectConfigs, selectedSubjectId, metric)
   }
 }
 
@@ -411,6 +524,7 @@ function reviewState(records, subjectConfigs, requestedRecordId) {
       selectedReviewRecordId: '',
       selectedReviewExamName: '',
       selectedReviewExamDate: '',
+      reviewScoreMax: EXAM_TOTAL_SCORE,
       reviewDraft: emptyReviewDraft(),
       reviewSubjectScores: [],
       reviewError: ''
@@ -422,6 +536,7 @@ function reviewState(records, subjectConfigs, requestedRecordId) {
     selectedReviewRecordId,
     selectedReviewExamName: record.examName,
     selectedReviewExamDate: examDate(record),
+    reviewScoreMax: record.totalMaxScore || EXAM_TOTAL_SCORE,
     reviewDraft: {
       totalScore: String(scoreValue(record)),
       classRank: Number.isInteger(record.classRank) ? String(record.classRank) : '',
@@ -437,7 +552,7 @@ function reviewState(records, subjectConfigs, requestedRecordId) {
 }
 
 function presentRecords(records, options = {}) {
-  const summary = summarizeScoreRecords(records)
+  const summary = summarizeScoreRecords(records, 10, options.trendMetric || 'raw')
   const ascending = orderedRecords(records)
   const descending = ascending.slice().reverse()
   const keyword = options.keyword || ''
@@ -461,7 +576,8 @@ function presentRecords(records, options = {}) {
     ...presentSubjects(
       ascending,
       options.subjectConfigs || [],
-      options.selectedSubjectId || ''
+      options.selectedSubjectId || '',
+      options.subjectMetric || 'raw'
     ),
     ...reviewState(
       descending,
@@ -494,6 +610,18 @@ Page({
     recordSaveButtonText: '保存成绩记录',
     showRecordDetails: false,
     recordFormInitialized: false,
+    examTemplates: [],
+    examTemplateOptions: [{ id: '', label: '不使用模板' }],
+    examTemplateIndex: 0,
+    selectedExamTemplateId: '',
+    examTypeOptions: EXAM_TYPE_OPTIONS,
+    examTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((item) => item.value === 'custom')),
+    scoreSchemes: [],
+    scoreSchemeOptions: [{ id: 'suzhou_admission_740_v1', label: '苏州中考 740 分制 · 740 分 · 内置' }],
+    scoreSchemeIndex: 0,
+    selectedScoreSchemeId: 'suzhou_admission_740_v1',
+    selectedScoreSchemeName: '苏州中考 740 分制',
+    selectedScoreSchemeSummary: '苏州中考 740 分制 · 满分 740',
     recordKeyword: '',
     recordDateFilter: '',
     expandedRecordId: '',
@@ -510,6 +638,13 @@ Page({
     changeClass: 'flat',
     maxRecords: APP_CONFIG.scoreRecord.maxRecords,
     scoreMax: EXAM_TOTAL_SCORE,
+    trendMetric: 'raw',
+    trendMetricOptions: [
+      { value: 'raw', label: '原始分' },
+      { value: 'rate', label: '得分率' }
+    ],
+    trendTitle: '总分原始分趋势',
+    subjectMetric: 'raw',
     canvasWidth: null,
     subjectConfigs: [],
     subjectConfigNameInput: '',
@@ -537,6 +672,7 @@ Page({
     selectedReviewRecordId: '',
     selectedReviewExamName: '',
     selectedReviewExamDate: '',
+    reviewScoreMax: EXAM_TOTAL_SCORE,
     reviewDraft: emptyReviewDraft(),
     reviewSubjectScores: [],
     reviewError: '',
@@ -652,6 +788,8 @@ Page({
     const result = getScoreRecordsResult()
     notifyStorageReadResult(this, result)
     const subjectConfigs = getSubjectConfigs()
+    const examTemplates = getExamTemplates()
+    const scoreSchemes = getScoreSchemes()
     const activeProfile = getActiveProfile()
     const activeProfileId = activeProfile && activeProfile.id || ''
     const allLossReasons = getScoreLossReasons()
@@ -676,7 +814,9 @@ Page({
       expandedRecordId: this.data.expandedRecordId,
       subjectConfigs,
       selectedSubjectId: this.data.selectedSubjectId,
-      selectedReviewRecordId
+      selectedReviewRecordId,
+      trendMetric: this.data.trendMetric,
+      subjectMetric: this.data.subjectMetric
     })
     const effectiveReviewRecordId = presentation.selectedReviewRecordId
     const taskStageGoals = [
@@ -693,6 +833,20 @@ Page({
     const nextData = {
       ...presentation,
       subjectConfigs,
+      examTemplates,
+      examTemplateOptions: [
+        { id: '', label: '不使用模板' },
+        ...examTemplates.map((item) => ({
+          id: item.id,
+          label: `${item.name}${item.isBuiltIn ? ' · 内置' : ''}`
+        }))
+      ],
+      scoreSchemes,
+      scoreSchemeOptions: scoreSchemes.map((item) => ({
+        id: item.id,
+        label: `${item.name} · ${item.totalMaxScore} 分${item.isBuiltIn ? ' · 内置' : ''}`
+      })),
+      trendTitle: this.data.trendMetric === 'rate' ? '总分得分率趋势' : '总分原始分趋势',
       activeProfileId,
       activeProfileName: activeProfile && activeProfile.nickname || '默认档案',
       dataRevision: getDataRevision()
@@ -705,7 +859,7 @@ Page({
       taskStageGoalIndex: Math.min(this.data.taskStageGoalIndex, taskStageGoals.length - 1)
     }
     if (shouldResetRecordForm) {
-      Object.assign(nextData, emptyRecordForm(subjectConfigs))
+      Object.assign(nextData, emptyRecordForm(subjectConfigs, scoreSchemes))
     } else if (options.refreshSubjectFields) {
       nextData.formSubjectScores = mergeSubjectFormFields(
         subjectConfigs,
@@ -815,9 +969,79 @@ Page({
       context.setFillStyle('#0f766e')
       context.setFontSize(20)
       context.setTextAlign('center')
-      context.fillText(String(point.score), point.x, Math.max(22, point.y - 14))
+      context.fillText(
+        point.trendMetric === 'rate' ? `${Number(point.score).toFixed(2)}%` : String(point.score),
+        point.x,
+        Math.max(22, point.y - 14)
+      )
     })
     context.draw()
+  },
+
+  onExamTemplateChange(event) {
+    const index = Number(event.detail.value)
+    const template = index > 0 ? this.data.examTemplates[index - 1] : null
+    if (!template) {
+      this.setData({ examTemplateIndex: 0, selectedExamTemplateId: '' })
+      return
+    }
+    const schemeState = scoreSchemeFormState(
+      this.data.scoreSchemes,
+      template.scoreSchemeId,
+      []
+    )
+    this.setData({
+      examTemplateIndex: index,
+      selectedExamTemplateId: template.id,
+      examTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((item) => item.value === template.examType)),
+      examName: template.defaultExamName || template.name,
+      showRecordDetails: template.enableSubjectScores || template.enableRank || template.enableReview,
+      formEnableSubjectScores: template.enableSubjectScores,
+      formEnableRank: template.enableRank,
+      formEnableReview: template.enableReview,
+      ...schemeState,
+      formScoreSchemeSnapshot: scoreSchemeSnapshot(
+        this.data.scoreSchemes.find((item) => item.id === schemeState.selectedScoreSchemeId)
+      ),
+      scoreSchemeSelectionChanged: true,
+      inputError: ''
+    })
+  },
+
+  openExamSettings() {
+    wx.navigateTo({ url: '/pages/exam-settings/exam-settings' })
+  },
+
+  onExamTypeChange(event) {
+    const examTypeIndex = Number(event.detail.value)
+    if (!EXAM_TYPE_OPTIONS[examTypeIndex]) return
+    this.setData({ examTypeIndex, selectedExamTemplateId: '', examTemplateIndex: 0, inputError: '' })
+  },
+
+  onScoreSchemeChange(event) {
+    const scoreSchemeIndex = Number(event.detail.value)
+    const scheme = this.data.scoreSchemes[scoreSchemeIndex]
+    if (!scheme) return
+    this.setData({
+      ...scoreSchemeFormState(this.data.scoreSchemes, scheme.id, []),
+      formScoreSchemeSnapshot: scoreSchemeSnapshot(scheme),
+      scoreSchemeSelectionChanged: true,
+      selectedExamTemplateId: '',
+      examTemplateIndex: 0,
+      inputError: ''
+    })
+  },
+
+  onTrendMetricChange(event) {
+    const metric = event.currentTarget.dataset.metric
+    if (!['raw', 'rate'].includes(metric) || metric === this.data.trendMetric) return
+    this.setData({ trendMetric: metric }, () => this.loadRecords())
+  },
+
+  onSubjectMetricChange(event) {
+    const metric = event.currentTarget.dataset.metric
+    if (!['raw', 'rate'].includes(metric) || metric === this.data.subjectMetric) return
+    this.setData({ subjectMetric: metric }, () => this.loadRecords())
   },
 
   onDateChange(event) {
@@ -1074,6 +1298,7 @@ Page({
     const examName = String(values.examName || '').trim()
     const rawScore = String(values.totalScore || '').trim()
     const totalScore = Number(rawScore)
+    const totalMaxScore = Number(values.totalMaxScore)
     if (!examName || examName.length > APP_CONFIG.scoreRecord.examNameMaxLength) {
       return {
         ok: false,
@@ -1087,9 +1312,12 @@ Page({
       !/^\d+$/.test(rawScore) ||
       !Number.isInteger(totalScore) ||
       totalScore < 0 ||
-      totalScore > EXAM_TOTAL_SCORE
+      !Number.isInteger(totalMaxScore) ||
+      totalMaxScore < 1 ||
+      totalMaxScore > EXAM_TOTAL_SCORE ||
+      totalScore > totalMaxScore
     ) {
-      return { ok: false, message: `成绩必须是 0 至 ${EXAM_TOTAL_SCORE} 的整数。` }
+      return { ok: false, message: `成绩必须是 0 至 ${totalMaxScore || EXAM_TOTAL_SCORE} 的整数。` }
     }
     const ranks = this.validateRanks(values.classRank, values.gradeRank)
     if (!ranks.ok) return ranks
@@ -1100,6 +1328,7 @@ Page({
       examName,
       examDate: values.examDate,
       totalScore,
+      totalMaxScore,
       classRank: ranks.classRank,
       gradeRank: ranks.gradeRank,
       subjectScores: subjects.subjectScores,
@@ -1121,13 +1350,27 @@ Page({
       improvementNotes: this.data.improvementNotes,
       lossNotes: this.data.lossNotes,
       nextActions: this.data.nextActions,
-      notes: this.data.notes
+      notes: this.data.notes,
+      totalMaxScore: this.data.scoreMax
     })
     if (!values.ok) {
       this.setData({ inputError: values.message })
       return
     }
     const original = this.data.records.find((record) => record.id === this.data.editingRecordId)
+    const selectedScheme = this.data.scoreSchemes.find((item) => item.id === this.data.selectedScoreSchemeId) ||
+      defaultScoreScheme(this.data.scoreSchemes)
+    const schemeSnapshot = resolveExamScoreSchemeSnapshot({
+      originalRecord: original,
+      formSnapshot: this.data.formScoreSchemeSnapshot,
+      selectedScheme,
+      selectionChanged: this.data.scoreSchemeSelectionChanged
+    })
+    if (!schemeSnapshot) {
+      this.setData({ inputError: '分值方案无效，请重新选择。' })
+      return
+    }
+    const examType = EXAM_TYPE_OPTIONS[this.data.examTypeIndex] || EXAM_TYPE_OPTIONS[EXAM_TYPE_OPTIONS.length - 1]
     const now = new Date().toISOString()
     const payload = {
       ...(original || {}),
@@ -1138,6 +1381,16 @@ Page({
       date: values.examDate,
       totalScore: values.totalScore,
       score: values.totalScore,
+      totalMaxScore: values.totalMaxScore,
+      examType: examType.value,
+      examTemplateId: this.data.selectedExamTemplateId,
+      scoreSchemeId: schemeSnapshot.id,
+      scoreSchemeName: schemeSnapshot.name,
+      scoreSchemeSnapshot: schemeSnapshot,
+      metricType: schemeSnapshot.metricType,
+      admissionScaleMax: schemeSnapshot.admissionScaleMax,
+      eligibilityRuleId: schemeSnapshot.eligibilityRuleId,
+      migrationSource: original && original.migrationSource || 'v1_user_entry',
       subjectScores: values.subjectScores,
       classRank: values.classRank,
       gradeRank: values.gradeRank,
@@ -1168,7 +1421,7 @@ Page({
     this.rememberSegment('records')
     this.setData({
       activeSegment: 'records',
-      ...recordFormFromRecord(record, this.data.subjectConfigs)
+      ...recordFormFromRecord(record, this.data.subjectConfigs, this.data.scoreSchemes)
     })
   },
 
@@ -1179,13 +1432,13 @@ Page({
     this.rememberSegment('records')
     this.setData({
       activeSegment: 'records',
-      ...templateFormFromRecord(record, this.data.subjectConfigs)
+      ...templateFormFromRecord(record, this.data.subjectConfigs, this.data.scoreSchemes)
     })
     wx.showToast({ title: '已复制结构，请确认日期和新成绩', icon: 'none' })
   },
 
   cancelRecordEdit() {
-    this.setData(emptyRecordForm(this.data.subjectConfigs))
+    this.setData(emptyRecordForm(this.data.subjectConfigs, this.data.scoreSchemes))
   },
 
   toggleRecordCard(event) {
@@ -1301,7 +1554,8 @@ Page({
       ...selectedSubjectPresentation(
         this.data.records,
         this.data.subjectConfigs,
-        selected.subjectId
+        selected.subjectId,
+        this.data.subjectMetric
       )
     })
   },
@@ -1367,7 +1621,8 @@ Page({
       improvementNotes: this.data.reviewDraft.improvementNotes,
       lossNotes: this.data.reviewDraft.lossNotes,
       nextActions: this.data.reviewDraft.nextActions,
-      notes: this.data.reviewDraft.notes
+      notes: this.data.reviewDraft.notes,
+      totalMaxScore: record.totalMaxScore || EXAM_TOTAL_SCORE
     })
     if (!values.ok) {
       this.setData({ reviewError: values.message })

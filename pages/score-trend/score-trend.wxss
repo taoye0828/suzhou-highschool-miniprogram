@@ -155,6 +155,29 @@
 .records-title { margin: 24rpx 0 18rpx; }
 .record-heading { align-items: flex-start; }
 .record-date { margin-top: 8rpx; }
+.scheme-heading { margin-top: 18rpx; align-items: center; }
+.scheme-heading .field-label { margin-top: 0; }
+.scheme-note { margin-top: 10rpx; line-height: 1.55; }
+
+.metric-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+  padding: 12rpx;
+}
+
+.metric-button {
+  margin: 0;
+  padding: 16rpx 10rpx;
+  color: #475569;
+  background: transparent;
+  font-size: 25rpx;
+  line-height: 1.2;
+}
+
+.metric-button.active { color: #fff; background: #0f766e; }
+.subject-metric-toggle { display: flex; gap: 12rpx; }
+.active-text { color: #0f766e; font-weight: 700; }
 
 .review-badge {
   flex-shrink: 0;

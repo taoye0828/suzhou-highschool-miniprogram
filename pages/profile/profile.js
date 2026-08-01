@@ -87,6 +87,7 @@ Page({
   openDataInfo() { wx.navigateTo({ url: '/pages/data-info/data-info' }) },
   openPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }) },
   openDataManagement() { wx.navigateTo({ url: '/pages/data-management/data-management' }) },
+  openExamSettings() { wx.navigateTo({ url: '/pages/exam-settings/exam-settings' }) },
 
   openRecentSchool(event) {
     wx.navigateTo({

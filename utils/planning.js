@@ -1,5 +1,6 @@
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
 const { PRODUCT_RULES } = require('./generated/product-rules')
+const { isRecommendationEligibleExam } = require('./v1-domain')
 
 const DEFAULT_LEVEL_RULES = Object.freeze({
   sprint: Object.freeze({ min: PRODUCT_RULES.recommendation.sprint.minInclusive, max: -1 }),
@@ -62,7 +63,10 @@ function selectLatestScoreValue(records) {
 }
 
 function selectCurrentScore(records, draft, options = {}) {
-  const latestRecord = selectLatestScoreRecord(records)
+  const candidates = options.requireRecommendationEligible
+    ? (Array.isArray(records) ? records : []).filter(isRecommendationEligibleExam)
+    : records
+  const latestRecord = selectLatestScoreRecord(candidates)
   const latestScore = scoreValue(latestRecord)
   if (latestScore !== null) {
     return { score: latestScore, record: latestRecord, source: 'record' }
@@ -238,7 +242,9 @@ function selectPlanningContext({
   primaryTargetId = '',
   rules
 } = {}) {
-  const current = selectCurrentScore(scoreRecords, draft)
+  const current = selectCurrentScore(scoreRecords, draft, {
+    requireRecommendationEligible: true
+  })
   const primaryTarget = selectPrimaryTarget(targetRecords, { primaryTargetId })
   const resolvedSchoolId = schoolId || (primaryTarget && primaryTarget.schoolId) || ''
   const reference = selectReferenceForSchool(resolvedSchoolId, targetYear, references)
@@ -253,7 +259,10 @@ function selectPlanningContext({
 }
 
 function selectGapTrajectory(scoreRecords, reference, options = {}) {
-  return sortScoreRecords(scoreRecords).map((record) => ({
+  const records = options.requireRecommendationEligible === false
+    ? scoreRecords
+    : (Array.isArray(scoreRecords) ? scoreRecords : []).filter(isRecommendationEligibleExam)
+  return sortScoreRecords(records).map((record) => ({
     record,
     recordId: record.id,
     examName: record.examName || '',

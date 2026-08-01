@@ -435,7 +435,9 @@ Page({
     const failedResult = [favoriteResult, targetResult, scoreResult, draftResult, yearResult]
       .find((result) => !result.ok)
     notifyStorageReadResult(this, failedResult || favoriteResult)
-    const current = selectCurrentScore(scoreResult.records, draftResult.draft)
+    const current = selectCurrentScore(scoreResult.records, draftResult.draft, {
+      requireRecommendationEligible: true
+    })
     const bounds = this.scoreBounds()
     const sort = SORT_OPTIONS[this.data.sortIndex] || SORT_OPTIONS[0]
     const comparisonIds = getComparisonSchoolIds()

@@ -1,5 +1,6 @@
 const { EXAM_TOTAL_SCORE } = require('../config/app-config')
 const { sortScoreRecords } = require('./planning')
+const { trendValue } = require('./v1-domain')
 
 const DEFAULT_LIMIT = 10
 
@@ -8,13 +9,17 @@ function roundAverage(value) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
 }
 
-function getVisibleTrendRecords(records, limit = DEFAULT_LIMIT) {
+function getVisibleTrendRecords(records, limit = DEFAULT_LIMIT, metric = 'raw') {
   const ordered = sortScoreRecords(records)
-  return ordered.slice(Math.max(0, ordered.length - limit)).map((source, displayIndex) => ({
-    ...source,
-    score: Number.isFinite(source.totalScore) ? source.totalScore : source.score,
-    displayIndex: displayIndex + 1
-  }))
+  return ordered
+    .slice(Math.max(0, ordered.length - limit))
+    .map((source, displayIndex) => ({
+      ...source,
+      score: trendValue(source, metric),
+      trendMetric: metric,
+      displayIndex: displayIndex + 1
+    }))
+    .filter((item) => Number.isFinite(item.score))
 }
 
 function calculateScoreStatistics(records) {
@@ -35,6 +40,8 @@ function calculateScoreStatistics(records) {
   }
 
   const scores = recentRecords.map((record) => record.score)
+  const rateMetric = recentRecords[0] && recentRecords[0].trendMetric === 'rate'
+  const valueText = (value) => rateMetric ? `${Number(value).toFixed(2)}%` : `${roundAverage(value)} 分`
   const lastScore = scores[scores.length - 1]
   const previousScore = scores.length > 1 ? scores[scores.length - 2] : null
   const change = previousScore === null ? null : lastScore - previousScore
@@ -44,18 +51,20 @@ function calculateScoreStatistics(records) {
     lowest: Math.min(...scores),
     average,
     change,
-    highestText: `${Math.max(...scores)} 分`,
-    lowestText: `${Math.min(...scores)} 分`,
-    averageText: `${roundAverage(average)} 分`,
+    highestText: valueText(Math.max(...scores)),
+    lowestText: valueText(Math.min(...scores)),
+    averageText: valueText(average),
     changeText: recentRecords.length === 1
       ? '暂无上次成绩可比较'
-      : `${previousScore} → ${lastScore}`,
+      : rateMetric
+        ? `${valueText(previousScore)} → ${valueText(lastScore)}`
+        : `${previousScore} → ${lastScore}`,
     changeValueText: recentRecords.length === 1
       ? '暂无变化'
       : change > 0
-        ? `提升 +${change} 分`
+        ? rateMetric ? `提升 +${change.toFixed(2)} 个百分点` : `提升 +${change} 分`
         : change < 0
-          ? `下降 ${change} 分`
+          ? rateMetric ? `下降 ${change.toFixed(2)} 个百分点` : `下降 ${change} 分`
           : '持平 0 分',
     changeClass: change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
   }
@@ -71,6 +80,7 @@ function calculateChartPoints(records, width, height, padding = 30) {
   const usableHeight = Math.max(1, safeHeight - padding * 2)
   const spacing = items.length > 1 ? usableWidth / (items.length - 1) : usableWidth
   const labelWidth = Math.max(20, Math.min(76, padding * 2, spacing * 0.92))
+  const scaleMax = items[0] && items[0].trendMetric === 'rate' ? 100 : EXAM_TOTAL_SCORE
 
   return items.map((record, index) => {
     const displayIndex = Number.isInteger(record.displayIndex) ? record.displayIndex : index + 1
@@ -91,15 +101,15 @@ function calculateChartPoints(records, width, height, padding = 30) {
       sourceIndex: record.sourceIndex,
       displayIndex,
       x,
-      y: padding + usableHeight * (EXAM_TOTAL_SCORE - record.score) / EXAM_TOTAL_SCORE,
+      y: padding + usableHeight * (scaleMax - record.score) / scaleMax,
       leftPercent: x / safeWidth * 100,
       labelWidth
     }
   })
 }
 
-function prepareScoreTrendData(records, { limit = DEFAULT_LIMIT, width = 640, height = 280, padding = 38 } = {}) {
-  const visibleRecords = getVisibleTrendRecords(records, limit)
+function prepareScoreTrendData(records, { limit = DEFAULT_LIMIT, width = 640, height = 280, padding = 38, metric = 'raw' } = {}) {
+  const visibleRecords = getVisibleTrendRecords(records, limit, metric)
   const visibleTrendPoints = calculateChartPoints(visibleRecords, width, height, padding)
   return {
     visibleRecords,
@@ -108,8 +118,8 @@ function prepareScoreTrendData(records, { limit = DEFAULT_LIMIT, width = 640, he
   }
 }
 
-function summarizeScoreRecords(records, limit = DEFAULT_LIMIT) {
-  const recentRecords = getVisibleTrendRecords(records, limit)
+function summarizeScoreRecords(records, limit = DEFAULT_LIMIT, metric = 'raw') {
+  const recentRecords = getVisibleTrendRecords(records, limit, metric)
   return { recentRecords, ...calculateScoreStatistics(recentRecords) }
 }
 

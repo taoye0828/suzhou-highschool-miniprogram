@@ -408,7 +408,10 @@ Page({
     ].find((result) => !result.ok)
     notifyStorageReadResult(this, failedResult || targetResult)
 
-    const current = selectCurrentScore(scoreResult.records, draftResult.draft)
+    const current = selectCurrentScore(scoreResult.records, draftResult.draft, {
+      requireRecommendationEligible: true
+    })
+    const learningCurrent = selectCurrentScore(scoreResult.records, draftResult.draft)
     const primarySchoolId = getPrimaryTargetSchoolId()
     const settings = getRecommendationSettings()
     const scenarioSettings = getScenarioSettings()
@@ -474,7 +477,7 @@ Page({
       currentScoreText: current.score === null ? '尚未记录' : `${current.score} 分`,
       learningDraft,
       learningRecords: learningResult.records.map((record) =>
-        presentLearningTarget(record, current.score, scoreResult.records)
+        presentLearningTarget(record, learningCurrent.score, scoreResult.records)
       ),
       learningTasks: learningTasks.map((task) => presentLearningTask(
         task,
@@ -517,7 +520,10 @@ Page({
   },
 
   restoreFormalReferenceScore() {
-    const current = selectCurrentScore(this._scoreRecords || [], {})
+    const current = selectCurrentScore(this._scoreRecords || [], {}, {
+      requireRecommendationEligible: true,
+      allowDraftFallback: false
+    })
     const next = getScenarioSettings()
     const saved = saveScenarioSettings({ ...next, currentScore: null }, operationOptions('save_scenario_settings', 'scenarioSettings'))
     if (!saved.ok) {

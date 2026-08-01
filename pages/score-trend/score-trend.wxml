@@ -38,6 +38,40 @@
         >取消</button>
       </view>
 
+      <block wx:if="{{!editingRecordId}}">
+        <text class="field-label">考试模板（可选）</text>
+        <picker
+          range="{{examTemplateOptions}}"
+          range-key="label"
+          value="{{examTemplateIndex}}"
+          bindchange="onExamTemplateChange"
+        >
+          <view class="input picker-input">{{examTemplateOptions[examTemplateIndex].label}}⌄</view>
+        </picker>
+      </block>
+      <view class="row between scheme-heading">
+        <text class="field-label">分值方案</text>
+        <button class="text-button" bindtap="openExamSettings">管理模板与方案</button>
+      </view>
+      <picker
+        range="{{scoreSchemeOptions}}"
+        range-key="label"
+        value="{{scoreSchemeIndex}}"
+        bindchange="onScoreSchemeChange"
+      >
+        <view class="input picker-input">{{scoreSchemeOptions[scoreSchemeIndex].label}}⌄</view>
+      </picker>
+      <view class="muted small scheme-note">保存后会保留当次方案快照，以后修改方案不会改变历史考试。</view>
+      <text class="field-label">考试类型</text>
+      <picker
+        range="{{examTypeOptions}}"
+        range-key="label"
+        value="{{examTypeIndex}}"
+        bindchange="onExamTypeChange"
+      >
+        <view class="input picker-input">{{examTypeOptions[examTypeIndex].label}}⌄</view>
+      </picker>
+
       <text class="field-label">考试日期</text>
       <picker mode="date" value="{{selectedDate}}" start="2020-01-01" end="2100-12-31" bindchange="onDateChange">
         <view class="input picker-input">{{selectedDate}}⌄</view>
@@ -50,7 +84,7 @@
         placeholder="例如：2026-09 月考"
         bindinput="onExamNameInput"
       />
-      <text class="field-label">总分</text>
+      <text class="field-label">总分（满分 {{scoreMax}}）</text>
       <input
         class="input"
         type="number"
@@ -65,12 +99,13 @@
       </button>
 
       <view wx:if="{{showRecordDetails}}" class="advanced-fields">
-        <view class="subsection-title">本地学科配置</view>
-        <view class="muted small subject-config-help">
-          科目与满分由你在当前学生档案中维护，本页不预设苏州中考科目。
+        <view wx:if="{{formEnableSubjectScores}}" class="subsection-title">档案学科配置</view>
+        <view wx:if="{{formEnableSubjectScores}}" class="muted small subject-config-help">
+          所选分值方案已有学科规则时优先使用方案；档案配置用于无学科规则的自定义考试。
         </view>
         <view
           wx:for="{{subjectConfigs}}"
+          wx:if="{{formEnableSubjectScores}}"
           wx:key="subjectId"
           class="subject-config-row"
         >
@@ -89,10 +124,10 @@
             bindtap="deleteSubjectConfig"
           >删除</button>
         </view>
-        <view wx:if="{{subjectConfigs.length === 0}}" class="muted small subject-empty-note">
+        <view wx:if="{{formEnableSubjectScores && subjectConfigs.length === 0}}" class="muted small subject-empty-note">
           暂无学科配置。可以继续只记录总分，也可以在下方添加自己的科目。
         </view>
-        <view class="subject-config-form">
+        <view wx:if="{{formEnableSubjectScores}}" class="subject-config-form">
           <view class="two-column-fields">
             <view>
               <text class="field-label">学科名称</text>
@@ -140,12 +175,13 @@
           </view>
         </view>
 
-        <view class="subsection-title exam-subject-title">本次考试学科成绩（可选）</view>
-        <view wx:if="{{formSubjectScores.length === 0}}" class="muted small subject-empty-note">
-          当前档案未配置学科，可先只记录总分；本页不会猜测科目或满分。
+        <view wx:if="{{formEnableSubjectScores}}" class="subsection-title exam-subject-title">本次考试学科成绩（可选）</view>
+        <view wx:if="{{formEnableSubjectScores && formSubjectScores.length === 0}}" class="muted small subject-empty-note">
+          当前方案和档案都没有学科规则，可以只记录总分。
         </view>
         <view
           wx:for="{{formSubjectScores}}"
+          wx:if="{{formEnableSubjectScores}}"
           wx:key="subjectId"
           class="subject-input-row"
         >
@@ -164,7 +200,7 @@
           />
         </view>
 
-        <view class="two-column-fields">
+        <view wx:if="{{formEnableRank}}" class="two-column-fields">
           <view>
             <text class="field-label">班级排名（可选）</text>
             <input
@@ -191,8 +227,9 @@
           </view>
         </view>
 
-        <text class="field-label">进步原因（可选）</text>
+        <text wx:if="{{formEnableReview}}" class="field-label">进步原因（可选）</text>
         <textarea
+          wx:if="{{formEnableReview}}"
           class="input textarea review-textarea"
           maxlength="1000"
           value="{{improvementNotes}}"
@@ -200,8 +237,9 @@
           data-field="improvementNotes"
           bindinput="onReviewNoteInput"
         ></textarea>
-        <text class="field-label">失分原因（可选）</text>
+        <text wx:if="{{formEnableReview}}" class="field-label">失分原因（可选）</text>
         <textarea
+          wx:if="{{formEnableReview}}"
           class="input textarea review-textarea"
           maxlength="1000"
           value="{{lossNotes}}"
@@ -209,8 +247,9 @@
           data-field="lossNotes"
           bindinput="onReviewNoteInput"
         ></textarea>
-        <text class="field-label">下次改进重点（可选）</text>
+        <text wx:if="{{formEnableReview}}" class="field-label">下次改进重点（可选）</text>
         <textarea
+          wx:if="{{formEnableReview}}"
           class="input textarea review-textarea"
           maxlength="1000"
           value="{{nextActions}}"
@@ -218,8 +257,9 @@
           data-field="nextActions"
           bindinput="onReviewNoteInput"
         ></textarea>
-        <text class="field-label">备注（可选）</text>
+        <text wx:if="{{formEnableReview}}" class="field-label">备注（可选）</text>
         <textarea
+          wx:if="{{formEnableReview}}"
           class="input textarea review-textarea"
           maxlength="1000"
           value="{{notes}}"
@@ -281,6 +321,7 @@
         <view class="grow">
           <view class="card-title">{{item.examName}} · {{item.score}} 分</view>
           <view class="muted small record-date">{{item.examDate}}</view>
+          <view class="muted small record-date">{{item.examTypeLabel}} · 满分 {{item.totalMaxScore}} · 得分率 {{item.scoreRateText}}</view>
         </view>
         <view wx:if="{{item.hasReview}}" class="review-badge">有复盘</view>
       </view>
@@ -294,6 +335,11 @@
       </view>
 
       <view wx:if="{{item.isExpanded}}" class="record-detail">
+        <view class="review-line">
+          <view class="muted small">历史分值方案</view>
+          <view>{{item.scoreSchemeName}} · {{item.metricType === 'full_total' ? '完整总分' : item.metricType === 'partial_total' ? '部分科目总分' : '单科'}}</view>
+          <view class="muted small">{{item.eligibility.message}}</view>
+        </view>
         <view class="detail-grid">
           <view class="detail-cell">
             <view class="muted small">班级排名</view>
@@ -338,13 +384,25 @@
 
   <block wx:if="{{activeSegment === 'trend'}}">
     <view class="onboarding-score-trend">
+      <view class="metric-toggle card">
+        <button
+          class="metric-button {{trendMetric === 'raw' ? 'active' : ''}}"
+          data-metric="raw"
+          bindtap="onTrendMetricChange"
+        >总分原始分</button>
+        <button
+          class="metric-button {{trendMetric === 'rate' ? 'active' : ''}}"
+          data-metric="rate"
+          bindtap="onTrendMetricChange"
+        >总分得分率</button>
+      </view>
       <view wx:if="{{visibleRecords.length === 0}}" class="card empty">
         <view class="card-title">暂无趋势数据</view>
         <view class="muted small">先在“记录”中保存一场考试，再查看总分和学科变化。</view>
       </view>
 
       <view wx:if="{{visibleRecords.length > 0}}" class="card chart-card">
-        <view class="card-title">最近 {{visibleRecords.length}} 次总分折线</view>
+        <view class="card-title">{{trendTitle}} · 最近 {{visibleRecords.length}} 次</view>
         <view class="muted small trend-count-note">共 {{records.length}} 条记录，图中最多展示最近 10 条。</view>
         <view class="stats-grid">
           <view class="stat-item"><view class="muted small">最高分</view><view class="stat-value">{{highestText}}</view></view>
@@ -370,7 +428,13 @@
       </view>
 
       <view class="card subject-trend-card">
-        <view class="card-title">学科趋势</view>
+        <view class="row between">
+          <view class="card-title">学科趋势</view>
+          <view class="subject-metric-toggle">
+            <button class="text-button {{subjectMetric === 'raw' ? 'active-text' : ''}}" data-metric="raw" bindtap="onSubjectMetricChange">原始分</button>
+            <button class="text-button {{subjectMetric === 'rate' ? 'active-text' : ''}}" data-metric="rate" bindtap="onSubjectMetricChange">得分率</button>
+          </view>
+        </view>
         <view wx:if="{{subjectOptions.length === 0}}" class="muted small subject-empty-state">
           当前记录只有总分，或尚未填写有效学科成绩。总分记录仍然有效；本页不会自动补造科目配置。
         </view>
@@ -450,7 +514,7 @@
         type="number"
         maxlength="3"
         value="{{reviewDraft.totalScore}}"
-        placeholder="0 至 {{scoreMax}}"
+        placeholder="0 至 {{reviewScoreMax}}"
         data-field="totalScore"
         bindinput="onReviewInput"
       />

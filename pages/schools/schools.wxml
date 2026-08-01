@@ -1,4 +1,8 @@
 <view class="page">
+  <view class="card muted small boundary-card">
+    <view>分组仅根据用户选择的历史成绩与学校历史公开分数线计算分差，不考虑招生计划、排名、指标生、批次变化、政策变化和当年试卷难度，不构成录取判断或志愿建议。</view>
+    <view>历史公开数据整理，仅供目标规划参考。</view>
+  </view>
   <input
     class="input search-input onboarding-school-search"
     value="{{keyword}}"

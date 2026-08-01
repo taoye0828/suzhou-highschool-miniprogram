@@ -1,12 +1,12 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "83d62e1a14fec8ef2648f7850b097ece99a2d0a8",
-  "currentPhase": "P3",
-  "currentStepId": "P3-S01",
+  "currentHead": "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
+  "currentPhase": "P4",
+  "currentStepId": "P4-S09",
   "currentStepStatus": "completed",
-  "lastStableCommit": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
-  "lastPushedCommit": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
+  "lastStableCommit": "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
+  "lastPushedCommit": "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -86,7 +86,16 @@
     "P3-FAVORITES-READ-ONLY",
     "P3-HISTORICAL-SUBJECT-MAX",
     "P3-SUBJECT-CONFIG-VERSION",
-    "P3-BACKUP-FILE-SHARE"
+    "P3-BACKUP-FILE-SHARE",
+    "P4-EXAM-TYPES",
+    "P4-BUILT-IN-TEMPLATES",
+    "P4-CUSTOM-TEMPLATES",
+    "P4-SCORE-SCHEMES",
+    "P4-HISTORICAL-SCHEME-SNAPSHOT",
+    "P4-LEGACY-SCORE-MIGRATION",
+    "P4-SCORE-RATE",
+    "P4-RECOMMENDATION-ELIGIBILITY",
+    "P4-RAW-AND-RATE-TRENDS"
   ],
   "completedTestIds": [
     "P0-GIT",
@@ -111,11 +120,18 @@
     "V1-P3-20",
     "RC9-P3-REGRESSION",
     "RC10-P3-REGRESSION",
-    "SMOKE-P3"
+    "SMOKE-P3",
+    "V1-P4-13",
+    "RC11-1-P4-REGRESSION",
+    "RC11-2-P4-REGRESSION",
+    "RC9-P4-REGRESSION",
+    "RC10-P4-REGRESSION",
+    "SMOKE-P4",
+    "UPLOAD-IGNORE-P4",
+    "JS-JSON-P4",
+    "FORMAL-DATA-HASH-P4"
   ],
   "pendingTestIds": [
-    "V1-EXAM",
-    "V1-TREND",
     "V1-LEARNING",
     "V1-SCHOOL",
     "V1-SEARCH",
@@ -149,7 +165,18 @@
     "docs/v1_backup_restore_spec.md",
     "utils/local-date.js",
     "scripts/v1/business-consistency-suite.js",
-    "scripts/verify_v1_p3.js"
+    "scripts/verify_v1_p3.js",
+    "utils/v1-domain.js",
+    "pages/exam-settings/exam-settings.js",
+    "pages/exam-settings/exam-settings.json",
+    "pages/exam-settings/exam-settings.wxml",
+    "pages/exam-settings/exam-settings.wxss",
+    "scripts/v1/exam-suite.js",
+    "scripts/verify_v1_p4.js",
+    "docs/v1_exam_template_spec.md",
+    "docs/v1_score_scheme_spec.md",
+    "docs/v1_score_rate_spec.md",
+    "docs/v1_recommendation_eligibility.md"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -191,21 +218,29 @@
     "utils/school.js",
     "utils/score-analysis.js",
     "utils/subject-analysis.js",
-    "scripts/verify_rc9_target_center.js"
+    "scripts/verify_rc9_target_center.js",
+    "app.json",
+    "pages/profile/profile.wxml",
+    "pages/school-compare/school-compare.wxml",
+    "pages/school-detail/school-detail.wxml",
+    "pages/schools/schools.wxml",
+    "pages/score-trend/score-trend.wxml",
+    "pages/score-trend/score-trend.wxss",
+    "scripts/verify_rc8_chart_vertical_alignment.js",
+    "utils/score-trend.js"
   ],
   "createdCommits": [
     "f181e2689a6e2e566703b05869ea03359761a029",
     "928f4c85f71adc98180ff1507b4ea9f5e7993342",
-    "83d62e1a14fec8ef2648f7850b097ece99a2d0a8"
+    "83d62e1a14fec8ef2648f7850b097ece99a2d0a8",
+    "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb"
   ],
-  "pushPendingCommits": [
-    "83d62e1a14fec8ef2648f7850b097ece99a2d0a8"
-  ],
-  "lastSuccessfulCommand": "V1 P1/P2/P3 51 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON all passed",
+  "pushPendingCommits": [],
+  "lastSuccessfulCommand": "P4 13 TEST-ID; P1-P4 64 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal data hashes all passed",
   "lastFailedCommand": "",
   "lastErrorSummary": "",
-  "nextAction": "Create the P3 logical commit and ordinary-push P2 plus P3; then start P4",
+  "nextAction": "Create and ordinary-push the P4 logical commit, then start P5 learning loop implementation.",
   "safeToResume": true,
   "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T17:55:00+08:00"
+  "updatedAt": "2026-08-01T18:30:28+08:00"
 }

@@ -21,8 +21,14 @@ const {
   normalizeSchoolFilters,
   createEmptyProfileData,
   normalizeProfileData,
-  normalizeSubjectConfig
+  normalizeSubjectConfig,
+  normalizeExamTemplate,
+  normalizeScoreScheme
 } = require('./rc9-models')
+const {
+  builtInExamTemplates,
+  builtInScoreSchemes
+} = require('./v1-domain')
 const {
   MIGRATION_CHAIN,
   migrateStorageSnapshot,
@@ -1586,6 +1592,106 @@ function saveSubjectConfigs(configs) {
   return updateActiveProfileData((data) => ({ ...data, subjectConfigs: normalized }))
 }
 
+function getCustomExamTemplates() {
+  return listFromActiveData('examTemplates')
+}
+
+function getExamTemplates() {
+  const profile = getActiveProfile()
+  return [
+    ...builtInExamTemplates(profile && profile.id || DEFAULT_PROFILE_ID),
+    ...getCustomExamTemplates()
+  ].sort((left, right) => {
+    const order = Number(left.displayOrder || 0) - Number(right.displayOrder || 0)
+    return order !== 0 ? order : String(left.name).localeCompare(String(right.name), 'zh-Hans-CN')
+  })
+}
+
+function saveExamTemplate(record) {
+  const builtInIds = new Set(PRODUCT_RULES.builtInExamTemplates.map((item) => item.id))
+  if (record && builtInIds.has(record.id)) {
+    return { ok: false, code: 'BUILT_IN_IMMUTABLE', message: '内置考试模板不能直接修改，可复制为自定义模板。' }
+  }
+  const current = getCustomExamTemplates()
+  if (record && !current.some((item) => item.id === record.id) &&
+      current.length >= PRODUCT_RULES.limits.maxCustomExamTemplatesPerProfile) {
+    return { ok: false, code: 'ENTITY_LIMIT_EXCEEDED', message: '自定义考试模板已达 30 个上限，原数据未修改。' }
+  }
+  return saveProfileRecord(
+    'examTemplates',
+    record,
+    normalizeExamTemplate,
+    '考试模板',
+    PRODUCT_RULES.limits.maxCustomExamTemplatesPerProfile
+  )
+}
+
+function examTemplateReferenceCount(id) {
+  return getScoreRecords().filter((item) => item.examTemplateId === id).length
+}
+
+function deleteExamTemplate(id) {
+  if (PRODUCT_RULES.builtInExamTemplates.some((item) => item.id === id)) {
+    return { ok: false, code: 'BUILT_IN_IMMUTABLE', message: '内置考试模板不能删除。' }
+  }
+  return deleteProfileRecord('examTemplates', id)
+}
+
+function getCustomScoreSchemes() {
+  return listFromActiveData('scoreSchemes')
+}
+
+function getScoreSchemes() {
+  const profile = getActiveProfile()
+  return [
+    ...builtInScoreSchemes(profile && profile.id || DEFAULT_PROFILE_ID),
+    ...getCustomScoreSchemes()
+  ]
+}
+
+function saveScoreScheme(record) {
+  const builtInIds = new Set(PRODUCT_RULES.builtInScoreSchemes.map((item) => item.id))
+  if (record && builtInIds.has(record.id)) {
+    return { ok: false, code: 'BUILT_IN_IMMUTABLE', message: '内置分值方案不能直接修改，可复制为自定义方案。' }
+  }
+  const current = getCustomScoreSchemes()
+  if (record && !current.some((item) => item.id === record.id) &&
+      current.length >= PRODUCT_RULES.limits.maxCustomScoreSchemesPerProfile) {
+    return { ok: false, code: 'ENTITY_LIMIT_EXCEEDED', message: '自定义分值方案已达 30 个上限，原数据未修改。' }
+  }
+  return saveProfileRecord(
+    'scoreSchemes',
+    record,
+    normalizeScoreScheme,
+    '分值方案',
+    PRODUCT_RULES.limits.maxCustomScoreSchemesPerProfile
+  )
+}
+
+function scoreSchemeReferenceStats(id) {
+  const context = activeContext()
+  if (!context.ok) return { examCount: 0, templateCount: 0 }
+  return {
+    examCount: context.data.scoreRecords.filter((item) => item.scoreSchemeId === id).length,
+    templateCount: context.data.examTemplates.filter((item) => item.scoreSchemeId === id).length
+  }
+}
+
+function deleteScoreScheme(id) {
+  if (PRODUCT_RULES.builtInScoreSchemes.some((item) => item.id === id)) {
+    return { ok: false, code: 'BUILT_IN_IMMUTABLE', message: '内置分值方案不能删除。' }
+  }
+  const references = scoreSchemeReferenceStats(id)
+  if (references.templateCount > 0) {
+    return {
+      ok: false,
+      code: 'SCHEME_IN_USE_BY_TEMPLATE',
+      message: `还有 ${references.templateCount} 个自定义模板使用该方案，请先修改模板。`
+    }
+  }
+  return deleteProfileRecord('scoreSchemes', id)
+}
+
 function operationStates() {
   const result = readStorage(KEYS.restorePointOperationState, {})
   return result.ok && result.value && typeof result.value === 'object' ? result.value : {}
@@ -2618,6 +2724,30 @@ function protectedSaveExamWithReview(examRecord, reviewRecord, options = {}) {
   }, () => saveExamWithReview(examRecord, reviewRecord))
 }
 
+function protectedSaveExamTemplate(record, options = {}) {
+  return protectedCall('save_exam_template', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveExamTemplate(record))
+}
+
+function protectedDeleteExamTemplate(id, options = {}) {
+  return protectedCall('delete_exam_template', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteExamTemplate(id))
+}
+
+function protectedSaveScoreScheme(record, options = {}) {
+  return protectedCall('save_score_scheme', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveScoreScheme(record))
+}
+
+function protectedDeleteScoreScheme(id, options = {}) {
+  return protectedCall('delete_score_scheme', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteScoreScheme(id))
+}
+
 function protectedDeleteScoreRecord(id, options = {}) {
   return protectedCall('delete_score', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: id
@@ -2747,6 +2877,16 @@ module.exports = {
   clearLearningTasks: protectedClearLearningTasks,
   getSubjectConfigs,
   saveSubjectConfigs: protectedSaveSubjectConfigs,
+  getExamTemplates,
+  getCustomExamTemplates,
+  saveExamTemplate: protectedSaveExamTemplate,
+  deleteExamTemplate: protectedDeleteExamTemplate,
+  examTemplateReferenceCount,
+  getScoreSchemes,
+  getCustomScoreSchemes,
+  saveScoreScheme: protectedSaveScoreScheme,
+  deleteScoreScheme: protectedDeleteScoreScheme,
+  scoreSchemeReferenceStats,
   createRestorePoint,
   listRestorePoints,
   getRestorePoint,

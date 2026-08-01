@@ -1,0 +1,55 @@
+<view class="page">
+  <view class="profile-strip">当前档案 · {{activeProfileName}} · 仅保存在本机</view>
+  <view class="segment-control">
+    <view class="segment {{activeSection === 'templates' ? 'active' : ''}}" data-section="templates" bindtap="selectSection">考试模板</view>
+    <view class="segment {{activeSection === 'schemes' ? 'active' : ''}}" data-section="schemes" bindtap="selectSection">分值方案</view>
+  </view>
+
+  <block wx:if="{{activeSection === 'templates'}}">
+    <view class="card form-card">
+      <view class="card-title">{{editingTemplateId ? '编辑自定义模板' : '新建或复制模板'}}</view>
+      <view class="muted small">内置模板只预填表单，不会直接创建考试；内置项不能修改或删除。</view>
+      <text class="field-label">模板名称</text>
+      <input class="input" maxlength="80" value="{{templateNameInput}}" data-field="templateNameInput" bindinput="onTemplateInput" placeholder="例如：数学周测" />
+      <text class="field-label">默认考试名称</text>
+      <input class="input" maxlength="80" value="{{templateExamNameInput}}" data-field="templateExamNameInput" bindinput="onTemplateInput" placeholder="仅预填，保存考试前可修改" />
+      <text class="field-label">考试类型</text>
+      <picker range="{{examTypeOptions}}" range-key="label" value="{{templateExamTypeIndex}}" bindchange="onTemplateExamTypeChange"><view class="input picker-input">{{examTypeOptions[templateExamTypeIndex].label}}⌄</view></picker>
+      <text class="field-label">分值方案</text>
+      <picker range="{{scoreSchemeOptions}}" range-key="label" value="{{templateSchemeIndex}}" bindchange="onTemplateSchemeChange"><view class="input picker-input">{{scoreSchemeOptions[templateSchemeIndex].label}}⌄</view></picker>
+      <view class="switch-row row between"><text>预填学科成绩</text><switch checked="{{templateEnableSubjectScores}}" data-field="templateEnableSubjectScores" bindchange="onTemplateSwitch" color="#0f766e" /></view>
+      <view class="switch-row row between"><text>显示排名</text><switch checked="{{templateEnableRank}}" data-field="templateEnableRank" bindchange="onTemplateSwitch" color="#0f766e" /></view>
+      <view class="switch-row row between"><text>显示复盘</text><switch checked="{{templateEnableReview}}" data-field="templateEnableReview" bindchange="onTemplateSwitch" color="#0f766e" /></view>
+      <view wx:if="{{templateError}}" class="input-error">{{templateError}}</view>
+      <view class="button-row"><button class="button grow" bindtap="saveTemplate">{{templateSaveText}}</button><button wx:if="{{editingTemplateId}}" class="button ghost grow" bindtap="cancelTemplateEdit">取消</button></view>
+    </view>
+    <view class="section-title">可用模板（{{templates.length}}）</view>
+    <view wx:for="{{templates}}" wx:key="id" class="card list-card">
+      <view class="row between"><view class="grow"><view class="card-title">{{item.name}}{{item.isBuiltIn ? ' · 内置' : ''}}</view><view class="muted small">{{item.examTypeLabel}} · 历史引用 {{item.referenceCount}} 次</view></view></view>
+      <view class="muted small">{{item.defaultExamName || '不预填考试名称'}}</view>
+      <view class="button-row"><button class="button secondary grow" data-id="{{item.id}}" bindtap="copyTemplate">复制</button><button wx:if="{{!item.isBuiltIn}}" class="button ghost grow" data-id="{{item.id}}" bindtap="editTemplate">编辑</button><button wx:if="{{!item.isBuiltIn}}" class="button danger grow" data-id="{{item.id}}" bindtap="deleteTemplate">删除</button></view>
+    </view>
+  </block>
+
+  <block wx:if="{{activeSection === 'schemes'}}">
+    <view class="card form-card">
+      <view class="card-title">{{editingSchemeId ? '编辑自定义方案' : '新建或复制分值方案'}}</view>
+      <view class="muted small">历史考试保存不可变方案快照；以后修改或删除方案不会改变旧考试。</view>
+      <text class="field-label">方案名称</text><input class="input" maxlength="80" value="{{schemeNameInput}}" data-field="schemeNameInput" bindinput="onSchemeInput" placeholder="例如：周测 100 分制" />
+      <text class="field-label">指标类型</text><picker range="{{metricOptions}}" range-key="label" value="{{schemeMetricIndex}}" bindchange="onSchemeMetricChange"><view class="input picker-input">{{metricOptions[schemeMetricIndex].label}}⌄</view></picker>
+      <text class="field-label">总满分</text><input class="input" type="number" maxlength="3" value="{{schemeTotalMaxInput}}" data-field="schemeTotalMaxInput" bindinput="onSchemeInput" placeholder="1 至 740" />
+      <text class="field-label">历史公开分数线口径满分（可留空）</text><input class="input" type="number" maxlength="3" value="{{schemeAdmissionMaxInput}}" data-field="schemeAdmissionMaxInput" bindinput="onSchemeInput" placeholder="只有完整 740 分体系填 740" />
+      <text class="field-label">学科规则（可留空）</text><textarea class="input textarea" maxlength="2000" value="{{schemeSubjectRulesInput}}" data-field="schemeSubjectRulesInput" bindinput="onSchemeInput" placeholder="每行：学科名=满分&#10;例如：数学=100"></textarea>
+      <view class="muted small">填写学科时，各学科满分之和必须等于总满分。不符合 740 分完整体系的方案不会被自动换算为 740 分。</view>
+      <view wx:if="{{schemeError}}" class="input-error">{{schemeError}}</view>
+      <view class="button-row"><button class="button grow" bindtap="saveScheme">{{schemeSaveText}}</button><button wx:if="{{editingSchemeId}}" class="button ghost grow" bindtap="cancelSchemeEdit">取消</button></view>
+    </view>
+    <view class="section-title">可用方案（{{scoreSchemes.length}}）</view>
+    <view wx:for="{{scoreSchemes}}" wx:key="id" class="card list-card">
+      <view class="card-title">{{item.name}}{{item.isBuiltIn ? ' · 内置' : ''}}</view>
+      <view class="muted small">{{item.metricLabel}} · 满分 {{item.totalMaxScore}} · 考试 {{item.references.examCount}} · 模板 {{item.references.templateCount}}</view>
+      <view class="muted small">{{item.eligibilityRuleId ? '具备对应资格标识；仍需完整快照与 740 分条件' : '不用于历史分差参考'}}</view>
+      <view class="button-row"><button class="button secondary grow" data-id="{{item.id}}" bindtap="copyScheme">复制</button><button wx:if="{{!item.isBuiltIn}}" class="button ghost grow" data-id="{{item.id}}" bindtap="editScheme">编辑</button><button wx:if="{{!item.isBuiltIn}}" class="button danger grow" data-id="{{item.id}}" bindtap="deleteScheme">删除</button></view>
+    </view>
+  </block>
+</view>

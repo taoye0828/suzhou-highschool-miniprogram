@@ -481,6 +481,22 @@ function testInfoPages() {
   assert.ok(privacyText.includes('不进行后台网络请求或用户行为追踪'))
 }
 
+function testExamSettingsPage() {
+  const definition = loadPage('pages/exam-settings/exam-settings')
+  const page = createPageInstance(definition)
+  page.onShow()
+  assert.strictEqual(page.data.templates.filter((item) => item.isBuiltIn).length, 4)
+  assert.strictEqual(page.data.scoreSchemes.some((item) => item.id === 'suzhou_admission_740_v1'), true)
+  page.copyScheme({ currentTarget: { dataset: { id: 'suzhou_admission_740_v1' } } })
+  page.saveScheme()
+  const customScheme = storage.getCustomScoreSchemes()[0]
+  assert.ok(customScheme)
+  assert.strictEqual(customScheme.totalMaxScore, 740)
+  page.copyTemplate({ currentTarget: { dataset: { id: 'builtin_monthly_exam_v1' } } })
+  page.saveTemplate()
+  assert.strictEqual(storage.getCustomExamTemplates().length, 1)
+}
+
 function testWebViewPage() {
   const definition = loadPage('pages/web-view/web-view')
   const page = createPageInstance(definition)
@@ -505,6 +521,7 @@ async function run() {
   testSchoolComparePage()
   testScoreTrendPage()
   testProfilePage()
+  testExamSettingsPage()
   testInfoPages()
   testWebViewPage()
   console.log('PAGE LOGIC SMOKE PASSED')

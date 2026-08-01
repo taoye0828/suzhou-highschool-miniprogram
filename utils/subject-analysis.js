@@ -1,4 +1,5 @@
 const { compareScoreRecords, scoreDate } = require('./planning')
+const { scoreRateBasisPoints, scoreRatePercent } = require('./v1-domain')
 
 const DEFAULT_RECENT_LIMIT = 10
 const DEFAULT_VOLATILITY_POINTS = 10
@@ -86,7 +87,8 @@ function collectSubjectSeries(records, subjectConfigs = []) {
         examDate: scoreDate(record),
         createdAt: record.createdAt || '',
         score: entry.score,
-        maxScore
+        maxScore,
+        scoreRateBasisPoints: maxScore === null ? null : scoreRateBasisPoints(entry.score, maxScore)
       })
       if (maxScore !== null) series.get(entry.subjectId).maxScore = maxScore
     }
@@ -215,11 +217,22 @@ function buildSubjectConclusions(analysis, options = {}) {
 }
 
 function analyzeSubjectSeries(series, options = {}) {
-  const statistics = calculateSubjectStatistics(series.points, options)
+  const rateMetric = options.metric === 'rate'
+  const points = rateMetric
+    ? series.points
+      .map((point) => ({
+        ...point,
+        rawScore: point.score,
+        score: scoreRatePercent(point.scoreRateBasisPoints)
+      }))
+      .filter((point) => Number.isFinite(point.score))
+    : series.points
+  const statistics = calculateSubjectStatistics(points, options)
   const analysis = {
     subjectId: series.subjectId,
     subjectName: series.subjectName,
-    maxScore: series.maxScore,
+    maxScore: rateMetric ? 100 : series.maxScore,
+    metric: rateMetric ? 'rate' : 'raw',
     displayOrder: series.displayOrder,
     statistics
   }

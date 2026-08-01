@@ -117,7 +117,9 @@ Page({
     const failedResult = [favoriteResult, targetResult, scoreResult, draftResult, yearResult]
       .find((result) => !result.ok)
     notifyStorageReadResult(this, failedResult || favoriteResult)
-    const current = selectCurrentScore(scoreResult.records, draftResult.draft)
+    const current = selectCurrentScore(scoreResult.records, draftResult.draft, {
+      requireRecommendationEligible: true
+    })
     const selectedIds = this.data.selectedIds.filter((id) => schools.some((school) => school.id === id))
     const catalogById = new Map(filterSchoolCatalog({
       favoriteIds: favoriteResult.ids,

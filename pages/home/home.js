@@ -13,6 +13,7 @@ const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboa
 const {
   sortScoreRecords,
   selectLatestScoreRecord,
+  selectCurrentScore,
   selectPrimaryTarget,
   selectReferenceForSchool,
   selectGap,
@@ -78,6 +79,10 @@ Page({
     notifyStorageReadResult(this, failed || scoreResult)
     const scores = sortScoreRecords(scoreResult.records)
     const latest = selectLatestScoreRecord(scores)
+    const recommendationCurrent = selectCurrentScore(scores, {}, {
+      requireRecommendationEligible: true,
+      allowDraftFallback: false
+    })
     const previous = scores.length > 1 ? scores[scores.length - 2] : null
     const change = latest && previous ? latest.score - previous.score : null
     const primary = selectPrimaryTarget(targetResult.records, {
@@ -86,7 +91,7 @@ Page({
     const reference = primary
       ? selectReferenceForSchool(primary.schoolId, yearResult.year, admissionScores)
       : null
-    const gap = selectGap(latest && latest.score, reference)
+    const gap = selectGap(recommendationCurrent.score, reference)
     const stageGoal = importantStageGoal(stageResult.records)
     const targetScore = stageGoal && stageGoal.targetTotalScore
     const targetGap = latest && Number.isInteger(targetScore) ? targetScore - latest.score : null

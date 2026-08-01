@@ -35,7 +35,9 @@ const { operationOptions } = require('../../utils/operation-context')
 
 function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYear, scenarios) {
   if (!school) return null
-  const current = selectCurrentScore(scoreRecords, draft)
+  const current = selectCurrentScore(scoreRecords, draft, {
+    requireRecommendationEligible: true
+  })
   const reference = selectReferenceForSchool(school.id, targetYear, ALL_ADMISSION_SCORES)
   const gap = selectGap(current.score, reference)
   const referenceScore = reference ? reference.minScore : null

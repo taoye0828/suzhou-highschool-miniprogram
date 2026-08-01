@@ -206,6 +206,7 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
     totalScore,
     score: totalScore,
     examType: PRODUCT_RULES.examTypes.includes(value.examType) ? value.examType : 'custom',
+    examTemplateId: text(value.examTemplateId, 120),
     scoreSchemeId,
     scoreSchemeName,
     scoreSchemeSnapshot,
@@ -225,7 +226,7 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
     legacyExtensions: collectLegacyExtensions(value, [
       'id', 'examName', 'examDate', 'date', 'totalScore', 'score', 'createdAt', 'updatedAt',
       'subjectScores', 'classRank', 'gradeRank', 'improvementNotes', 'lossNotes', 'nextActions',
-      'notes', 'profileId', 'version', 'schemaVersion', 'examType', 'scoreSchemeId', 'scoreSchemeName',
+      'notes', 'profileId', 'version', 'schemaVersion', 'examType', 'examTemplateId', 'scoreSchemeId', 'scoreSchemeName',
       'scoreSchemeSnapshot', 'totalMaxScore', 'metricType', 'admissionScaleMax', 'eligibilityRuleId',
       'scoreRateBasisPoints', 'migrationSource'
     ]),
