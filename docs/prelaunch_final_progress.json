@@ -1,12 +1,12 @@
 {
   "task": "PRELAUNCH-FINAL-MP",
   "startHead": "af259e8ecffe96b47457a2f44c3a13e41954943f",
-  "currentHead": "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
-  "currentPhase": "P18",
-  "currentStepId": "P18-FULL-REGRESSION",
-  "currentStepStatus": "completed",
-  "lastStableCommit": "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
-  "lastPushedCommit": "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
+  "currentHead": "b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba",
+  "currentPhase": "P20",
+  "currentStepId": "P20-EVIDENCE",
+  "currentStepStatus": "completed_pending_commit",
+  "lastStableCommit": "b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba",
+  "lastPushedCommit": "b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba",
   "completedCheckIds": [
     "P0-GIT-GATE",
     "P0-CONCURRENCY",
@@ -30,7 +30,9 @@
     "P14-SHARE",
     "P14-DISABLED-CAPABILITIES",
     "P15-UPLOAD-PACKAGE",
-    "P18-FULL-REGRESSION"
+    "P18-FULL-REGRESSION",
+    "P19-DEVTOOLS-RECHECK-BLOCKED-ACCOUNT-AUTHORIZATION",
+    "P20-EVIDENCE"
   ],
   "completedJourneyIds": [
     "JOURNEY-SCHOOL-SEARCH-001..005:AUTOMATED_CONTRACT_ONLY",
@@ -94,7 +96,8 @@
   "createdCommits": [
     "c73ff600cf0b550792221778926811a2f2029fa2",
     "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
-    "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6"
+    "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
+    "b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba"
   ],
   "pushPendingCommits": [],
   "testDataRestorePointId": "",
@@ -104,8 +107,8 @@
   "lastSuccessfulCommand": "V1 FULL VERIFY PASS (103 TEST-ID); ALL VERIFY SCRIPTS PASS (86 scripts); explicit final regression PASS",
   "lastFailedCommand": "WeChat DevTools normal compile",
   "lastErrorSummary": "Current logged-in WeChat user is not a developer of wxc2a2a94f767438dd; simulator creation and DevTools runtime acceptance remain blocked",
-  "nextAction": "Commit the corrected cross-platform privacy gate, then write final evidence and freeze-status documents",
+  "nextAction": "Validate, commit and push final evidence; create and push the final protection branch; run the final Git gate",
   "safeToResume": true,
   "freezeStatus": "V1_CODE_FREEZE_READY",
-  "updatedAt": "2026-08-01T23:20:00+08:00"
+  "updatedAt": "2026-08-01T23:27:00+08:00"
 }

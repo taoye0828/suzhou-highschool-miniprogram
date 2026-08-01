@@ -1,0 +1,137 @@
+{
+  "task": "PRELAUNCH-FINAL-MP",
+  "startHead": "af259e8ecffe96b47457a2f44c3a13e41954943f",
+  "evidenceBaseHead": "b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba",
+  "finalHead": "resolved by the final Git gate after the commit containing this evidence",
+  "originMain": "resolved by the final Git gate after the commit containing this evidence",
+  "aheadBehind": "expected 0/0 after final ordinary push; recorded in final Git gate and handoff",
+  "identity": {
+    "name": "苏程记录",
+    "appid": "wxc2a2a94f767438dd",
+    "projectConfig": "PASS",
+    "privateConfigTracked": false,
+    "privateConfigAppId": null,
+    "privateConfigLocalProjectName": "苏程记录"
+  },
+  "devtools": {
+    "path": "/Applications/wechatwebdevtools.app",
+    "version": "RC 2.02.2607171 (bundle 36.6.0)",
+    "libVersion": "3.7.12 configured; runtime not loaded",
+    "projectPath": "/Users/tom/Dev/suzhou_highschool_miniprogram",
+    "projectPathConfirmed": true,
+    "appidFetchObserved": "wxc2a2a94f767438dd",
+    "compileResult": "BLOCKED_ACCOUNT_NOT_DEVELOPER",
+    "blocker": "登录用户不是该小程序的开发者",
+    "problemsCount": null,
+    "consoleBusinessErrors": null
+  },
+  "journeys": [
+    { "id": "HOME", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "SCHOOL_SEARCH", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "SCHOOL_FILTER", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "SCHOOL_USER_STATE", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "TARGET_AND_PRIMARY", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "SCHOOL_COMPARE", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "EXAM_TEMPLATE_SCHEME", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "SCORE_RATE_AND_TREND", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "RECOMMENDATION_ELIGIBILITY", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "REVIEW_LOSS_MISTAKE_TASK", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "WEEK_STAGE_GOAL_REVIEW", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "HISTORICAL_GAP", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "PROFILE_ISOLATION", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "BACKUP_IMPORT_RESTORE_POINT", "automated": "PASS", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "REPORT_AND_FILE_SHARE", "automated": "PASS_FAKE_ADAPTER", "devtools": "NOT_RUN_ACCOUNT_BLOCKED" },
+    { "id": "STARTUP_RECOVERY_12_STATES", "automated": "PASS_ISOLATED_STORAGE", "devtools": "NOT_RUN_ON_REAL_STORAGE" }
+  ],
+  "deviceSizes": [
+    { "width": 320, "trendContract": "PASS", "fullDevtools": "NOT_RUN" },
+    { "width": 375, "trendContract": "PASS", "fullDevtools": "NOT_RUN" },
+    { "width": 390, "trendContract": "PASS", "fullDevtools": "NOT_RUN" },
+    { "width": 414, "trendContract": "PASS", "fullDevtools": "NOT_RUN" },
+    { "width": 430, "trendContract": "PASS", "fullDevtools": "NOT_RUN" },
+    { "width": "iPad", "trendContract": "NOT_RUN", "fullDevtools": "NOT_RUN" }
+  ],
+  "defects": [
+    {
+      "id": "PRELAUNCH-DEFECT-001",
+      "severity": "P1",
+      "result": "FIXED_AUTOMATED_VERIFIED_DEVTOOLS_PENDING",
+      "commit": "34fc36e46a5744df4921ab141dfee0119cdfb8e8"
+    },
+    {
+      "id": "PRELAUNCH-DEFECT-002",
+      "severity": "P2",
+      "result": "FIXED_FULL_REGRESSION_VERIFIED",
+      "commit": "b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba"
+    }
+  ],
+  "tests": {
+    "v1TestIds": 103,
+    "historicalVerifyScripts": 86,
+    "smoke": "PASS_BOTH",
+    "rc11_1": "PASS",
+    "rc11_2": "PASS",
+    "javascript": "PASS_ALL",
+    "json": "PASS_38_FILES",
+    "uploadPackage": "PASS",
+    "productRules": "PASS",
+    "identity": "PASS",
+    "disabledCapabilities": "PASS",
+    "result": "PASS"
+  },
+  "formalData": {
+    "schools": 55,
+    "scores2025": 103,
+    "scores2026": 43,
+    "totalScores": 146,
+    "scores2027": 0,
+    "maxScore": 740,
+    "rawHashes": {
+      "schools": "c185182c8dd8577b3165278c16014dbff98249585cf76bd1182b6ea1581d62f2",
+      "scores2025": "0d6257cd336dee5afe853d6c4d9ece68e1cefe2bb56a652cb8f8c651a14ccf88",
+      "scores2026": "3091136605728315653049fb4802e83b87d9f86cb568746027ec9ef21417d75c"
+    },
+    "semanticHashes": {
+      "schools": "102c0df402548d46ee5c1b4ea190acdc08b4940f0c525ff0eb75012e6aa273e4",
+      "scores2025": "97be24ee4d042ad631c0183b1feee199c38da330cf8d57aeb3dff7021c654a8a",
+      "scores2026": "6e789117f4a7ec312020a65f7717bcbb48d5b4d5fb29678f088c36822c794a1b"
+    }
+  },
+  "dataSafety": {
+    "userStorageAccessed": false,
+    "userStorageWrites": false,
+    "restorePointId": "",
+    "backupPath": "",
+    "beforeChecksum": "",
+    "afterChecksum": "",
+    "restoredExactly": false,
+    "reason": "Account authorization blocked simulator creation; P5 correctly prevented all temporary acceptance writes"
+  },
+  "uploadPackage": {
+    "fileCount": 127,
+    "totalBytes": 880708,
+    "largestFile": "utils/rc9-storage.js (121661 bytes)",
+    "largestDirectory": "pages (391307 bytes)",
+    "developmentFilesFound": [],
+    "missingRequiredFiles": []
+  },
+  "manualRemaining": [
+    "Authorized developer login for the formal AppID",
+    "DevTools compile, Problems and Console",
+    "Five-tab and full journey acceptance",
+    "Six-size full page acceptance",
+    "Safe simulator pre/post checksum acceptance",
+    "Real-device preview and real WeChat file sharing",
+    "Experience-version upload and review submission"
+  ],
+  "commits": [
+    "c73ff600cf0b550792221778926811a2f2029fa2",
+    "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
+    "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
+    "b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba"
+  ],
+  "freezeStatus": "V1_CODE_FREEZE_READY",
+  "preReleaseUxFreezeConfirmed": false,
+  "firstSubmissionCodeReady": false,
+  "statusReason": "DevTools runtime acceptance is blocked by an unauthorized logged-in account"
+}

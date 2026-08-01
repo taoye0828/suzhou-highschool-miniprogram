@@ -8,7 +8,7 @@
 - 正式 AppID：`wxc2a2a94f767438dd`
 - 正式五个 Tab：首页、学校库、成绩、目标规划、我的
 - 公开版本号：2.0.0（本轮未擅自修改）
-- 当前安全代码/测试 HEAD：`800fd2ef0b2db49cbf139068bbba89ede3dbdc7b`；其后的冻结证据提交只更新文档与进度，最终 HEAD 以 `git rev-parse HEAD` 为准
+- 当前首次上架前证据基线 HEAD：`b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba`；最终证据提交后的 HEAD 以 `git rev-parse HEAD` 和最终 Git 门禁为准
 
 ## V1 included 功能
 
@@ -18,7 +18,7 @@
 - 我的：多学生档案、考试设置、Backup v3 导出/导入/主动分享、Restore Point v2、数据管理、数据检查、启动恢复、纯文本/JSON 报告、数据与隐私说明。
 - 首页：当前进展、最近成绩、参考成绩、主要目标、本周任务、阶段目标、全局搜索和高频入口。
 
-所有用户数据只保存在本机。备份或报告只有在用户主动点击发送并确认数据范围与隐私提示后，才通过微信系统能力交给用户选择的接收方；取消不记录为成功，失败不修改用户数据。
+小程序不会自动把用户数据上传到开发者服务器；不主动分享时，用户数据只保存在本机。备份或报告只有在用户主动点击发送并确认数据范围与隐私提示后，才通过微信系统能力交给用户选择的接收方；取消不记录为成功，失败不修改用户数据。
 
 ## 数据结构与安全
 
@@ -64,11 +64,13 @@ V1 不包含登录/注册/手机号/openid/unionid、后台、云开发、Supaba
 ## 测试与冻结状态
 
 - V1 自动测试：92 个核心 TEST-ID + 11 个冻结 TEST-ID，共 103 个唯一 TEST-ID。
-- 历史回归：85 个已有 `verify_*.js`、两个 smoke、全仓 JavaScript/JSON、上传包、身份/禁用能力、产品规则和正式数据 raw/semantic hash 全部通过。
+- 历史回归：当前 86 个 `verify_*.js`、两个 smoke、全仓 JavaScript/JSON、上传包、身份/禁用能力、产品规则和正式数据 raw/semantic hash 全部通过。
 - 代码状态：`V1_CODE_FREEZE_READY`。
 - 体验状态：`PRE_RELEASE_UX_FREEZE_CONFIRMED = false`。
 
-自动测试不能替代微信开发者工具和人工验收。最终 RC11 提交仍需完成：普通编译、Problems 0、Console 无业务错误、320/375/390/414/430/iPad、多页面真实点击、备份和报告真实发送、恢复点、多档案、手机预览；体验版上传和审核还需要用户授权。
+自动测试不能替代微信开发者工具和人工验收。PRELAUNCH-FINAL-MP 已确认正确项目路径与正式 AppID，但当前登录微信号不是该 AppID 的开发者，模拟器创建失败；普通编译、Problems、Console、320/375/390/414/430/iPad、多页面真实点击、真实数据恢复 checksum、备份和报告真实发送、手机预览均未完成。体验版上传和审核还需要用户授权。
+
+当前状态：`V1_CODE_FREEZE_READY`；`PRE_RELEASE_UX_FREEZE_CONFIRMED = false`；`FIRST_SUBMISSION_CODE_READY = false`。不能把账号阻断写成编译通过，也不能把自动契约写成真机或开发者工具验收。
 
 代码冻结后，上架前只处理布局、视觉、文案、操作步骤、空/加载/错误状态、安全区、多尺寸/iPad、性能、卡顿、崩溃、数据丢失缺陷、审核合规、真机问题、正式官方数据更新和上架材料。新业务建议只记录到 `docs/post_launch_feature_candidates.md`。
 
@@ -84,6 +86,10 @@ V1 不包含登录/注册/手机号/openid/unionid、后台、云开发、Supaba
 - 测试覆盖：`docs/v1_test_coverage_matrix.json`
 - 生命周期：`docs/v1_entity_lifecycle_matrix.json`
 - 功能冻结：`docs/v1_feature_freeze_manifest.json`
+- 首次上架前最终报告：`docs/prelaunch_final_report.md`
+- 首次上架前机器证据：`docs/prelaunch_final_evidence.json`
+- 开发者工具真实结果：`docs/prelaunch_devtools_acceptance.md`
+- 人工剩余事项：`docs/prelaunch_manual_acceptance_remaining.md`
 
 完整验证入口：
 
@@ -97,4 +103,4 @@ git diff --check
 
 ## 回滚
 
-撤销某个逻辑提交使用普通 `git revert <commit-sha>`。单文件可从仓库外备份 `/Users/tom/WorkData/05_Backups/suzhou_highschool_miniprogram/RC11_FINAL_MP_20260801_162207` 恢复后重新验证。不要使用 reset、clean、rebase、stash、amend 或 force push。
+撤销某个逻辑提交使用普通 `git revert <commit-sha>`。单文件可从仓库外备份 `/Users/tom/WorkData/05_Backups/suzhou_highschool_miniprogram/PRELAUNCH_FINAL_MP_20260801_224816` 恢复后重新验证。不要使用 reset、clean、rebase、stash、amend 或 force push。
