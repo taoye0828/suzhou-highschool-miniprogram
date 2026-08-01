@@ -134,7 +134,8 @@ const checks = {
   miniPrivacyLocalOnly: (() => {
     const privacyText = APP_CONFIG.policy.privacySections.flatMap((section) => section.items).join('\n')
     return privacyText.includes('只保存在本机') &&
-      privacyText.includes('不会自动、静默或后台上传') &&
+      privacyText.includes('不会自动把收藏、学习目标记录、成绩记录、目标年份或输入草稿上传到开发者服务器') &&
+      privacyText.includes('不会静默或在后台把收藏、成绩、目标、错题、任务、备份或报告上传到开发者服务器') &&
       privacyText.includes('只有你主动点击发送备份或报告并选择接收方时')
   })(),
   appPrivacyLocalOnly: /只保存在本机|不会上传/.test(appRuntime)

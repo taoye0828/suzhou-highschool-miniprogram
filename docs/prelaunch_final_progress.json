@@ -1,12 +1,12 @@
 {
   "task": "PRELAUNCH-FINAL-MP",
   "startHead": "af259e8ecffe96b47457a2f44c3a13e41954943f",
-  "currentHead": "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
+  "currentHead": "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
   "currentPhase": "P18",
   "currentStepId": "P18-FULL-REGRESSION",
-  "currentStepStatus": "in_progress",
-  "lastStableCommit": "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
-  "lastPushedCommit": "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
+  "currentStepStatus": "completed",
+  "lastStableCommit": "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
+  "lastPushedCommit": "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6",
   "completedCheckIds": [
     "P0-GIT-GATE",
     "P0-CONCURRENCY",
@@ -29,7 +29,8 @@
     "P14-PRIVACY",
     "P14-SHARE",
     "P14-DISABLED-CAPABILITIES",
-    "P15-UPLOAD-PACKAGE"
+    "P15-UPLOAD-PACKAGE",
+    "P18-FULL-REGRESSION"
   ],
   "completedJourneyIds": [
     "JOURNEY-SCHOOL-SEARCH-001..005:AUTOMATED_CONTRACT_ONLY",
@@ -69,7 +70,9 @@
     "PRODUCT_RULES_GENERATED",
     "FORMAL_IDENTITY",
     "FORMAL_DATA_RAW_AND_SEMANTIC_HASHES",
-    "PRELAUNCH_FINAL_STATIC"
+    "PRELAUNCH_FINAL_STATIC",
+    "HISTORICAL_VERIFY_86_FINAL",
+    "V1_FULL_103_FINAL"
   ],
   "pendingManualItems": [
     "Use a WeChat account authorized as developer for wxc2a2a94f767438dd",
@@ -81,25 +84,28 @@
     "Experience-version upload and review submission"
   ],
   "foundDefects": [
-    "PRELAUNCH-DEFECT-001"
+    "PRELAUNCH-DEFECT-001",
+    "PRELAUNCH-DEFECT-002"
   ],
   "fixedDefects": [
-    "PRELAUNCH-DEFECT-001"
+    "PRELAUNCH-DEFECT-001",
+    "PRELAUNCH-DEFECT-002"
   ],
   "createdCommits": [
     "c73ff600cf0b550792221778926811a2f2029fa2",
-    "34fc36e46a5744df4921ab141dfee0119cdfb8e8"
+    "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
+    "40c212f4127aa5ad94bd8ad68e9b73b21242b3b6"
   ],
   "pushPendingCommits": [],
   "testDataRestorePointId": "",
   "testDataBackupPath": "",
   "beforeAcceptanceChecksum": "",
   "afterAcceptanceChecksum": "",
-  "lastSuccessfulCommand": "P4-P15 automated journey, accessibility, privacy and upload-package gates",
+  "lastSuccessfulCommand": "V1 FULL VERIFY PASS (103 TEST-ID); ALL VERIFY SCRIPTS PASS (86 scripts); explicit final regression PASS",
   "lastFailedCommand": "WeChat DevTools normal compile",
-  "lastErrorSummary": "Current logged-in WeChat user is not a developer of wxc2a2a94f767438dd; simulator creation was blocked before business-code runtime acceptance",
-  "nextAction": "Commit the prelaunch-specific static gate, then run the final full automated regression",
+  "lastErrorSummary": "Current logged-in WeChat user is not a developer of wxc2a2a94f767438dd; simulator creation and DevTools runtime acceptance remain blocked",
+  "nextAction": "Commit the corrected cross-platform privacy gate, then write final evidence and freeze-status documents",
   "safeToResume": true,
   "freezeStatus": "V1_CODE_FREEZE_READY",
-  "updatedAt": "2026-08-01T23:15:00+08:00"
+  "updatedAt": "2026-08-01T23:20:00+08:00"
 }
