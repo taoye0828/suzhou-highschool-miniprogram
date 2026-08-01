@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "task": "RC11-FINAL-MP",
+  "product": {
+    "name": "苏程记录",
+    "appId": "wxc2a2a94f767438dd",
+    "tabs": ["首页", "学校库", "成绩", "目标规划", "我的"]
+  },
+  "scope": {
+    "repository": "/Users/tom/Dev/suzhou_highschool_miniprogram",
+    "flutterModified": false,
+    "flutterSyncClaimed": false
+  },
+  "versions": {
+    "storageSchemaVersion": 5,
+    "backupFormatVersion": 3,
+    "restorePointFormatVersion": 2,
+    "featureFreezeVersion": 1
+  },
+  "freezeStatus": {
+    "code": "V1_CODE_FREEZE_READY",
+    "preReleaseUxFreezeConfirmed": false,
+    "reason": "Final code, lifecycle, data and regression gates pass; final WeChat DevTools and manual UX acceptance remain pending."
+  },
+  "defects": {
+    "total": 44,
+    "fixedVerified": 44,
+    "confirmed": 0,
+    "blocked": 0,
+    "d044TestCommit": "1bd7459d29db3a6e03994513371e90ff78a39a18"
+  },
+  "tests": {
+    "coreTestIdCount": 92,
+    "freezeTestIdCount": 11,
+    "v1TestIdCount": 103,
+    "historicalVerifyScriptCount": 85,
+    "smokeLocalLogic": "PASS",
+    "smokePageLogic": "PASS",
+    "javascriptSyntax": "PASS",
+    "jsonParse": "PASS",
+    "uploadPackage": "PASS",
+    "result": "PASS"
+  },
+  "performanceMs": {
+    "searchMedianApprox": 0.53,
+    "searchMaxApprox": 1.11,
+    "reportMedianApprox": 3.13,
+    "reportMaxApprox": 3.67,
+    "backupMedianApprox": 250.84,
+    "backupMaxApprox": 268.42,
+    "healthMedianApprox": 1.52,
+    "healthMaxApprox": 2.70,
+    "setDataPayloadBytes": [169884, 181422, 150020],
+    "setDataLimitBytes": 204800
+  },
+  "formalData": {
+    "schools": 55,
+    "scores2025": 103,
+    "scores2026": 43,
+    "scoresTotal": 146,
+    "scores2027": 0,
+    "maxScore": 740,
+    "rawFileSha256": {
+      "data/schools.js": "c185182c8dd8577b3165278c16014dbff98249585cf76bd1182b6ea1581d62f2",
+      "data/admission-scores.js": "0d6257cd336dee5afe853d6c4d9ece68e1cefe2bb56a652cb8f8c651a14ccf88",
+      "data/admission-scores-2026.js": "3091136605728315653049fb4802e83b87d9f86cb568746027ec9ef21417d75c"
+    },
+    "semanticDataSha256": {
+      "schools": "102c0df402548d46ee5c1b4ea190acdc08b4940f0c525ff0eb75012e6aa273e4",
+      "scores2025": "97be24ee4d042ad631c0183b1feee199c38da330cf8d57aeb3dff7021c654a8a",
+      "scores2026": "6e789117f4a7ec312020a65f7717bcbb48d5b4d5fb29678f088c36822c794a1b"
+    }
+  },
+  "git": {
+    "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
+    "p7StableHead": "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
+    "p8TestCommit": "1bd7459d29db3a6e03994513371e90ff78a39a18",
+    "p8LegacyGateCommit": "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
+    "artifactCommit": "resolved by the commit containing this evidence file",
+    "finalHead": "resolved by final Git gate and recorded in the final chat",
+    "aheadBehindExpected": "0/0",
+    "workingTreeExpected": "clean"
+  },
+  "backup": {
+    "externalPath": "/Users/tom/WorkData/05_Backups/suzhou_highschool_miniprogram/RC11_FINAL_MP_20260801_162207",
+    "startBranch": "backup/rc11-final-start-20260801-217c55a",
+    "finalBranchPattern": "backup/v1-feature-freeze-20260801-<shortSHA>"
+  },
+  "platformAcceptance": {
+    "wechatDevToolsFinalCompile": "NOT_RUN",
+    "problems": "NOT_CHECKED_FOR_FINAL_HEAD",
+    "console": "NOT_CHECKED_FOR_FINAL_HEAD",
+    "multiSize": "NOT_RUN",
+    "realFileShare": "NOT_RUN",
+    "realRestorePoint": "NOT_RUN",
+    "realMultiProfile": "NOT_RUN",
+    "preview": "NOT_RUN",
+    "experienceUpload": "NOT_AUTHORIZED",
+    "reviewSubmission": "NOT_AUTHORIZED"
+  }
+}

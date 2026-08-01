@@ -47,7 +47,7 @@
 | D041 | fixed_verified | critical | `mergeProfileData` | 对象展开会让备份设置直接覆盖本机设置 | 实体逐项合并，设置默认保留本机并支持显式 backup 选择 | V1-BACKUP-041 | P2 | 本机推荐/情景/筛选/年份保持 |
 | D042 | fixed_verified | high | `exportBackupFile`/UI | 文件只在沙盒生成，没有主动带走链路 | FileShareAdapter + 摘要/隐私确认 | V1-BACKUP-042 | P3 checkpoint | 主动发送、取消、失败和重试语义已接入 |
 | D043 | fixed_verified | high | `utils/checksum.js` | 备份 FNV-1a、恢复点 SHA-256 两套 | 新写统一 SHA-256，v2 FNV 只读适配 | V1-BACKUP-043 | P2 | canonical 边界和 v2/v3 摘要通过 |
-| D044 | confirmed | high | `scripts/verify_rc11_2_*` | 历史 PASS 未覆盖生产页面旁路和提交后失败 | V1 分套件覆盖真实 service/page 契约 | V1-FREEZE-044 | pending | pending |
+| D044 | fixed_verified | high | `scripts/verify_rc11_2_*`、`scripts/v1/release-freeze-suite.js` | 历史 PASS 未覆盖生产页面旁路和提交后失败 | V1 分套件覆盖真实 service/page 契约，并由最终冻结套件扫描正式 Service 与页面写入口 | V1-FREEZE-044 | 1bd7459d29db3a6e03994513371e90ff78a39a18 | 生产旁路、operationId、事务提交后失败和正式页面写入口均有最终冻结回归 |
 
 ## 开始验证证据
 

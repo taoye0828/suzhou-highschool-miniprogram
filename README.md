@@ -8,7 +8,7 @@
 - 正式 AppID：`wxc2a2a94f767438dd`
 - 正式五个 Tab：首页、学校库、成绩、目标规划、我的
 - 公开版本号：2.0.0（本轮未擅自修改）
-- 当前安全代码/测试 HEAD：`1bd7459d29db3a6e03994513371e90ff78a39a18`；其后的冻结证据提交只更新文档与进度，最终 HEAD 以 `git rev-parse HEAD` 为准
+- 当前安全代码/测试 HEAD：`800fd2ef0b2db49cbf139068bbba89ede3dbdc7b`；其后的冻结证据提交只更新文档与进度，最终 HEAD 以 `git rev-parse HEAD` 为准
 
 ## V1 included 功能
 

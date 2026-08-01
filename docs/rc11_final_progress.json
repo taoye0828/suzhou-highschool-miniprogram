@@ -1,12 +1,12 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
+  "currentHead": "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
   "currentPhase": "P8",
-  "currentStepId": "P8-FREEZE-TESTS",
-  "currentStepStatus": "in_progress",
-  "lastStableCommit": "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
-  "lastPushedCommit": "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
+  "currentStepId": "P8-EVIDENCE-COMMIT",
+  "currentStepStatus": "completed_pending_push",
+  "lastStableCommit": "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
+  "lastPushedCommit": "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -50,7 +50,8 @@
     "D040",
     "D041",
     "D042",
-    "D043"
+    "D043",
+    "D044"
   ],
   "completedFeatureIds": [
     "P0-GIT-GATE",
@@ -111,7 +112,13 @@
     "P7-DATA-HEALTH-COVERAGE",
     "P7-RESTORE-BEFORE-REPAIR",
     "P7-PERFORMANCE-BUDGETS",
-    "P7-SETDATA-BUDGET"
+    "P7-SETDATA-BUDGET",
+    "P8-TEST-COVERAGE-MATRIX",
+    "P8-ENTITY-LIFECYCLE-MATRIX",
+    "P8-FEATURE-FREEZE-MANIFEST",
+    "P8-MACHINE-EVIDENCE",
+    "P8-HISTORICAL-FULL-REGRESSION",
+    "P8-README-FREEZE"
   ],
   "completedTestIds": [
     "P0-GIT",
@@ -174,11 +181,16 @@
     "UPLOAD-IGNORE-P7",
     "JS-JSON-P7",
     "FORMAL-DATA-HASH-P7",
-    "V1-P8-CORE-92"
+    "V1-P8-CORE-92",
+    "V1-P8-FULL-103",
+    "V1-FREEZE-11",
+    "HISTORICAL-VERIFY-85",
+    "SMOKE-P8-FINAL",
+    "JS-JSON-P8-FINAL",
+    "UPLOAD-IGNORE-P8-FINAL",
+    "FORMAL-DATA-HASH-P8-FINAL"
   ],
-  "pendingTestIds": [
-    "V1-FREEZE"
-  ],
+  "pendingTestIds": [],
   "createdFiles": [
     "docs/rc11_final_execution_plan.md",
     "docs/rc11_final_existing_defects.md",
@@ -238,7 +250,16 @@
     "scripts/v1/performance-suite.js",
     "scripts/verify_v1_p7.js",
     "scripts/v1/release-freeze-suite.js",
-    "scripts/verify_v1_full.js"
+    "scripts/verify_v1_full.js",
+    "docs/v1_test_coverage_matrix.json",
+    "docs/v1_entity_lifecycle_matrix.json",
+    "docs/v1_feature_freeze_manifest.json",
+    "docs/v1_feature_freeze_report.md",
+    "docs/v1_first_release_acceptance.md",
+    "docs/rc11_final_full_report.md",
+    "docs/rc11_final_evidence.json",
+    "docs/rc11_final_evidence_index.md",
+    "docs/post_launch_feature_candidates.md"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -297,7 +318,10 @@
     "pages/school-compare/school-compare.wxml",
     "pages/school-detail/school-detail.wxml",
     "pages/schools/schools.wxml",
-    "scripts/verify_cross_platform_consistency.js"
+    "scripts/verify_cross_platform_consistency.js",
+    "scripts/verify_mp4.js",
+    "scripts/verify_mp6.js",
+    "README.md"
   ],
   "createdCommits": [
     "f181e2689a6e2e566703b05869ea03359761a029",
@@ -307,14 +331,16 @@
     "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
     "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
     "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
-    "3ca5e5d27bdf4c012c7df67233b02394c9b42a67"
+    "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
+    "1bd7459d29db3a6e03994513371e90ff78a39a18",
+    "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b"
   ],
   "pushPendingCommits": [],
-  "lastSuccessfulCommand": "P8 core runner executed all P1-P7 suites: 92 unique TEST-ID passed; release-freeze suite and recursive-safe full runner syntax passed",
-  "lastFailedCommand": "",
-  "lastErrorSummary": "",
-  "nextAction": "Commit and push P8 freeze test infrastructure, then generate final matrices, evidence, README and run the 103 TEST-ID freeze suite plus all historical verifies.",
+  "lastSuccessfulCommand": "V1 103 unique TEST-ID; all 85 existing verify scripts; smoke; full JavaScript and 37 JSON files; upload package; rules; identity; disabled capabilities; raw and semantic formal data hashes all passed",
+  "lastFailedCommand": "Historical verify_mp1/verify_mp5/verify_mp6 gates initially failed and were rerun after focused fixes",
+  "lastErrorSummary": "Resolved: MP4 route inventory learned the three allowed V1 pages; README restored stable data wording; MP6 distinguishes mock_exam from a standalone mock marker and privacy copy was made explicit.",
+  "nextAction": "Commit and ordinary-push the final freeze evidence, then create and push the final backup branch and run the final Git gate.",
   "safeToResume": true,
-  "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T20:12:00+08:00"
+  "freezeStatus": "V1_CODE_FREEZE_READY_PENDING_FINAL_PUSH",
+  "updatedAt": "2026-08-01T21:20:00+08:00"
 }
