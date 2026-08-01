@@ -1,12 +1,12 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
-  "currentPhase": "P7",
-  "currentStepId": "P7-PERFORMANCE",
-  "currentStepStatus": "completed",
-  "lastStableCommit": "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
-  "lastPushedCommit": "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
+  "currentHead": "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
+  "currentPhase": "P8",
+  "currentStepId": "P8-FREEZE-TESTS",
+  "currentStepStatus": "in_progress",
+  "lastStableCommit": "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
+  "lastPushedCommit": "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -173,7 +173,8 @@
     "SMOKE-P7",
     "UPLOAD-IGNORE-P7",
     "JS-JSON-P7",
-    "FORMAL-DATA-HASH-P7"
+    "FORMAL-DATA-HASH-P7",
+    "V1-P8-CORE-92"
   ],
   "pendingTestIds": [
     "V1-FREEZE"
@@ -235,7 +236,9 @@
     "docs/v1_report_export_spec.md",
     "scripts/v1/ui-contract-suite.js",
     "scripts/v1/performance-suite.js",
-    "scripts/verify_v1_p7.js"
+    "scripts/verify_v1_p7.js",
+    "scripts/v1/release-freeze-suite.js",
+    "scripts/verify_v1_full.js"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -303,14 +306,15 @@
     "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
     "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
     "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
-    "ad60f458811ac85350f9e72d1d5c0a0982c28b35"
+    "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
+    "3ca5e5d27bdf4c012c7df67233b02394c9b42a67"
   ],
   "pushPendingCommits": [],
-  "lastSuccessfulCommand": "P7 12 TEST-ID; P1-P7 92 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal raw/semantic data hashes all passed",
+  "lastSuccessfulCommand": "P8 core runner executed all P1-P7 suites: 92 unique TEST-ID passed; release-freeze suite and recursive-safe full runner syntax passed",
   "lastFailedCommand": "",
   "lastErrorSummary": "",
-  "nextAction": "Create and ordinary-push the P7 logical commit, then start P8 full freeze evidence.",
+  "nextAction": "Commit and push P8 freeze test infrastructure, then generate final matrices, evidence, README and run the 103 TEST-ID freeze suite plus all historical verifies.",
   "safeToResume": true,
   "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T19:40:00+08:00"
+  "updatedAt": "2026-08-01T20:12:00+08:00"
 }
