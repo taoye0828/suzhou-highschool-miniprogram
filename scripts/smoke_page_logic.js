@@ -388,7 +388,7 @@ function testProfilePage() {
   removeFailure = false
   assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
   assert.strictEqual(storage.getTargetRecords().length, 1)
-  assert.ok(toastTitles.includes('未能创建安全恢复点，本次操作未执行。'))
+  assert.ok(toastTitles.includes('上一次操作已结束，但临时锁清理失败。'))
 }
 
 function testTargetAnalysisPage() {

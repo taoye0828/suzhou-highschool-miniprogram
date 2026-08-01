@@ -29,6 +29,7 @@ const {
 } = require('./storage-migration')
 const { LEGACY_STORAGE_KEYS } = require('./legacy/migration/storage-keys')
 const { schools } = require('../data/schools')
+const { createOperationContext } = require('./operation-context')
 const {
   MAX_RESTORE_POINTS,
   TRANSACTION_STAGES,
@@ -66,6 +67,10 @@ const KEYS = {
 }
 
 const STORAGE_ERROR_MESSAGE = '本地存储失败，请清理空间后重试。'
+const OPERATION_LOCK_TTL_MS = 5 * 60 * 1000
+const MAX_OPERATION_STATES = 100
+const MAX_OPERATION_STATE_BYTES = 2048
+const OWNER_SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 const ALL_KNOWN_KEYS = [
   ...Object.values(KEYS),
   ...Object.values(LEGACY_STORAGE_KEYS)
@@ -133,31 +138,129 @@ function restoreSnapshot(snapshot, keys) {
   return ok
 }
 
+function committedTransactionResult(transactionId, {
+  warning = null,
+  stage = '',
+  operationType = 'write'
+} = {}) {
+  return {
+    ok: true,
+    status: warning ? 'committed_with_warning' : 'committed',
+    committed: true,
+    recoveryRequired: false,
+    warning,
+    code: null,
+    transactionId,
+    operationType,
+    stage,
+    dataRevision: getDataRevision()
+  }
+}
+
+function abortedTransactionResult(transactionId, {
+  code = ERROR_CODES.STORAGE_WRITE_FAILED,
+  message = '本地操作未提交，原数据已保留。',
+  stage = '',
+  operationType = 'write'
+} = {}) {
+  return {
+    ok: false,
+    status: 'aborted',
+    committed: false,
+    recoveryRequired: false,
+    code,
+    message,
+    transactionId,
+    operationType,
+    stage,
+    dataRevision: getDataRevision()
+  }
+}
+
+function uncertainTransactionResult(transactionId, {
+  code = ERROR_CODES.STARTUP_RECOVERY_REQUIRED,
+  message = '本地操作状态暂时无法确认，请在“我的 → 数据管理 → 未完成数据操作”中处理。',
+  stage = '',
+  operationType = 'write'
+} = {}) {
+  return {
+    ok: false,
+    status: 'uncertain',
+    committed: null,
+    recoveryRequired: true,
+    code,
+    message,
+    transactionId,
+    operationType,
+    stage,
+    dataRevision: getDataRevision()
+  }
+}
+
+function sameSnapshot(left, right) {
+  return canonicalJson(left || {}) === canonicalJson(right || {})
+}
+
+function classifyTransactionOutcome({
+  transactionId,
+  operationType = 'write',
+  keys,
+  expected,
+  before,
+  warning = ERROR_CODES.CLEANUP_FAILED,
+  stage = 'finalReadback'
+}) {
+  const readback = storageSnapshot(keys)
+  if (readback.ok && sameSnapshot(readback.values, expected)) {
+    return committedTransactionResult(transactionId, { warning, stage, operationType })
+  }
+  if (readback.ok && sameSnapshot(readback.values, before)) {
+    return abortedTransactionResult(transactionId, {
+      code: ERROR_CODES.STORAGE_WRITE_FAILED,
+      message: '本地操作未提交，原数据已保留。',
+      stage,
+      operationType
+    })
+  }
+  return uncertainTransactionResult(transactionId, { stage, operationType })
+}
+
 function atomicWrite(values, {
   operationType = 'write',
   operationId,
   faultInjector
 } = {}) {
+  const transactionId = operationId || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   try {
     invokeFault(faultInjector, operationType, 'validate')
   } catch (error) {
-    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'validate' }
+    return abortedTransactionResult(transactionId, {
+      code: error.code || 'TEST_INJECTED_FAILURE', stage: 'validate', operationType
+    })
   }
   const keys = Object.keys(values)
-  if (!keys.length) return { ok: true }
-  const transactionId = operationId || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  if (!keys.length) return committedTransactionResult(transactionId, { operationType })
   try {
     invokeFault(faultInjector, operationType, 'snapshot')
   } catch (error) {
-    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'snapshot' }
+    return abortedTransactionResult(transactionId, {
+      code: error.code || 'TEST_INJECTED_FAILURE', stage: 'snapshot', operationType
+    })
   }
   const before = storageSnapshot(keys)
-  if (!before.ok) return { ok: false, message: before.message }
+  if (!before.ok) return abortedTransactionResult(transactionId, {
+    code: ERROR_CODES.STORAGE_READBACK_FAILED,
+    message: before.message,
+    stage: 'snapshot',
+    operationType
+  })
   try {
     invokeFault(faultInjector, operationType, 'prepare')
     invokeFault(faultInjector, operationType, 'writeTemporary')
   } catch (error) {
-    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: error.stage || 'prepare' }
+    return abortedTransactionResult(transactionId, {
+      code: error.code || 'TEST_INJECTED_FAILURE', stage: error.stage || 'prepare', operationType
+    })
   }
   const journal = writeStorage(KEYS.transactionJournal, {
     transactionId,
@@ -169,7 +272,9 @@ function atomicWrite(values, {
     status: 'prepared'
   })
   if (!journal.ok) {
-    return { ok: false, message: '本地安全写入未开始，原数据已保留。' }
+    return abortedTransactionResult(transactionId, {
+      message: '本地安全写入未开始，原数据已保留。', stage: 'writeTemporary', operationType
+    })
   }
   try {
     invokeFault(faultInjector, operationType, 'verifyTemporary')
@@ -177,36 +282,58 @@ function atomicWrite(values, {
     if (!journalReadback.ok || !journalReadback.exists ||
         canonicalJson(journalReadback.value.expected) !== canonicalJson(values)) {
       removeStorage(KEYS.transactionJournal)
-      return { ok: false, code: ERROR_CODES.STORAGE_READBACK_FAILED, stage: 'verifyTemporary' }
+      return abortedTransactionResult(transactionId, {
+        code: ERROR_CODES.STORAGE_READBACK_FAILED, stage: 'verifyTemporary', operationType
+      })
     }
     invokeFault(faultInjector, operationType, 'commit')
   } catch (error) {
     removeStorage(KEYS.transactionJournal)
-    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'commit' }
+    return abortedTransactionResult(transactionId, {
+      code: error.code || 'TEST_INJECTED_FAILURE', stage: 'commit', operationType
+    })
   }
   for (const key of keys) {
     const result = writeStorage(key, values[key])
     if (!result.ok) {
       const restored = restoreSnapshot(before.values, keys)
-      removeStorage(KEYS.transactionJournal)
-      return {
-        ok: false,
-        message: restored
-          ? '本地写入失败，原数据已保留，请清理空间后重试。'
-          : '本地写入失败，自动恢复未完成，请通过数据检查恢复安全快照。'
-      }
+      if (restored) removeStorage(KEYS.transactionJournal)
+      return restored
+        ? abortedTransactionResult(transactionId, {
+            message: '本地写入失败，原数据已保留，请清理空间后重试。', stage: 'commit', operationType
+          })
+        : uncertainTransactionResult(transactionId, { stage: 'commit', operationType })
     }
     const verify = readStorage(key, undefined)
     if (!verify.ok || JSON.stringify(verify.value) !== JSON.stringify(clone(values[key]))) {
       const restored = restoreSnapshot(before.values, keys)
-      removeStorage(KEYS.transactionJournal)
-      return {
-        ok: false,
-        message: restored
-          ? '本地写入回读校验失败，原数据已保留，请重试。'
-          : '本地写入回读校验失败，请通过数据检查恢复安全快照。'
-      }
+      if (restored) removeStorage(KEYS.transactionJournal)
+      return restored
+        ? abortedTransactionResult(transactionId, {
+            code: ERROR_CODES.STORAGE_READBACK_FAILED,
+            message: '本地写入回读校验失败，原数据已保留，请重试。',
+            stage: 'verifyCommitted',
+            operationType
+          })
+        : uncertainTransactionResult(transactionId, { stage: 'verifyCommitted', operationType })
     }
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'verifyCommitted')
+  } catch (error) {
+    return uncertainTransactionResult(transactionId, {
+      code: error.code || ERROR_CODES.STARTUP_RECOVERY_REQUIRED,
+      stage: 'verifyCommitted',
+      operationType
+    })
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'writeCommittedJournal')
+  } catch (error) {
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return classifyTransactionOutcome({
+      transactionId, operationType, keys, expected: values, before: before.values, stage: 'writeCommittedJournal'
+    })
   }
   const committedJournal = writeStorage(KEYS.transactionJournal, {
     transactionId,
@@ -218,62 +345,186 @@ function atomicWrite(values, {
     status: 'committed'
   })
   if (!committedJournal.ok) {
-    return { ok: false, code: ERROR_CODES.STORAGE_WRITE_FAILED, stage: 'verifyCommitted' }
-  }
-  try {
-    invokeFault(faultInjector, operationType, 'verifyCommitted')
-    const after = storageSnapshot(keys)
-    if (!after.ok || canonicalJson(after.values) !== canonicalJson(values)) {
-      return { ok: false, code: ERROR_CODES.STORAGE_READBACK_FAILED, stage: 'verifyCommitted' }
-    }
-  } catch (error) {
-    return { ok: false, code: error.code || 'TEST_INJECTED_FAILURE', stage: 'verifyCommitted' }
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return classifyTransactionOutcome({
+      transactionId, operationType, keys, expected: values, before: before.values, stage: 'writeCommittedJournal'
+    })
   }
   try {
     invokeFault(faultInjector, operationType, 'cleanup')
   } catch (error) {
     writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
-    return { ok: true, warning: ERROR_CODES.CLEANUP_FAILED, stage: 'cleanup' }
+    return committedTransactionResult(transactionId, {
+      warning: ERROR_CODES.CLEANUP_FAILED, stage: 'cleanup', operationType
+    })
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'finalReadback')
+  } catch (error) {
+    return uncertainTransactionResult(transactionId, {
+      code: error.code || ERROR_CODES.STARTUP_RECOVERY_REQUIRED,
+      stage: 'finalReadback',
+      operationType
+    })
+  }
+  const finalReadback = storageSnapshot(keys)
+  if (!finalReadback.ok || !sameSnapshot(finalReadback.values, values)) {
+    return uncertainTransactionResult(transactionId, { stage: 'finalReadback', operationType })
   }
   const cleaned = removeStorage(KEYS.transactionJournal)
   if (!cleaned.ok) {
-    return { ok: false, message: '数据已保存，但临时事务标记清理失败，请运行数据检查。' }
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return committedTransactionResult(transactionId, {
+      warning: ERROR_CODES.CLEANUP_FAILED, stage: 'cleanup', operationType
+    })
   }
   removeStorage(KEYS.cleanupPending)
-  return { ok: true, transactionId }
+  return committedTransactionResult(transactionId, { operationType })
 }
 
-function atomicRemove(keys, finalWrites = {}) {
+function atomicRemove(keys, finalWrites = {}, {
+  operationType = 'remove',
+  operationId,
+  faultInjector
+} = {}) {
   const removeKeys = keys.filter((key) => key !== KEYS.transactionJournal)
   const touched = [...new Set([...removeKeys, ...Object.keys(finalWrites)])]
+  const transactionId = operationId || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  try {
+    invokeFault(faultInjector, operationType, 'validate')
+    invokeFault(faultInjector, operationType, 'snapshot')
+  } catch (error) {
+    return abortedTransactionResult(transactionId, {
+      code: error.code || 'TEST_INJECTED_FAILURE', stage: 'snapshot', operationType
+    })
+  }
   const before = storageSnapshot(touched)
-  if (!before.ok) return { ok: false, message: before.message }
+  if (!before.ok) return abortedTransactionResult(transactionId, {
+    code: ERROR_CODES.STORAGE_READBACK_FAILED, message: before.message, stage: 'snapshot', operationType
+  })
+  const expectedAfter = clone(finalWrites)
+  try {
+    invokeFault(faultInjector, operationType, 'prepare')
+    invokeFault(faultInjector, operationType, 'writeTemporary')
+  } catch (error) {
+    return abortedTransactionResult(transactionId, {
+      code: error.code || 'TEST_INJECTED_FAILURE', stage: 'prepare', operationType
+    })
+  }
   const journal = writeStorage(KEYS.transactionJournal, {
-    transactionId: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    transactionId,
+    operationType,
     createdAt: new Date().toISOString(),
     keys: touched,
     before: before.values,
+    expectedAfter,
     status: 'removing'
   })
-  if (!journal.ok) return { ok: false, message: '本地安全清除未开始，原数据已保留。' }
+  if (!journal.ok) return abortedTransactionResult(transactionId, {
+    message: '本地安全清除未开始，原数据已保留。', stage: 'writeTemporary', operationType
+  })
+  try {
+    invokeFault(faultInjector, operationType, 'verifyTemporary')
+    const prepared = readStorage(KEYS.transactionJournal, null)
+    if (!prepared.ok || !prepared.exists || prepared.value.transactionId !== transactionId) {
+      removeStorage(KEYS.transactionJournal)
+      return abortedTransactionResult(transactionId, {
+        code: ERROR_CODES.STORAGE_READBACK_FAILED, stage: 'verifyTemporary', operationType
+      })
+    }
+    invokeFault(faultInjector, operationType, 'commit')
+  } catch (error) {
+    removeStorage(KEYS.transactionJournal)
+    return abortedTransactionResult(transactionId, {
+      code: error.code || 'TEST_INJECTED_FAILURE', stage: 'commit', operationType
+    })
+  }
   for (const key of removeKeys) {
     const result = removeStorage(key)
     if (!result.ok) {
-      restoreSnapshot(before.values, touched)
-      removeStorage(KEYS.transactionJournal)
-      return { ok: false, message: '本地数据清除失败，原数据已保留。' }
+      const restored = restoreSnapshot(before.values, touched)
+      if (restored) removeStorage(KEYS.transactionJournal)
+      return restored
+        ? abortedTransactionResult(transactionId, {
+            message: '本地数据清除失败，原数据已保留。', stage: 'commit', operationType
+          })
+        : uncertainTransactionResult(transactionId, { stage: 'commit', operationType })
     }
   }
   for (const [key, value] of Object.entries(finalWrites)) {
     const result = writeStorage(key, value)
     if (!result.ok) {
-      restoreSnapshot(before.values, touched)
-      removeStorage(KEYS.transactionJournal)
-      return { ok: false, message: '本地数据清除失败，原数据已保留。' }
+      const restored = restoreSnapshot(before.values, touched)
+      if (restored) removeStorage(KEYS.transactionJournal)
+      return restored
+        ? abortedTransactionResult(transactionId, {
+            message: '本地数据清除失败，原数据已保留。', stage: 'commit', operationType
+          })
+        : uncertainTransactionResult(transactionId, { stage: 'commit', operationType })
     }
   }
-  removeStorage(KEYS.transactionJournal)
-  return { ok: true }
+  try {
+    invokeFault(faultInjector, operationType, 'verifyCommitted')
+  } catch (error) {
+    return uncertainTransactionResult(transactionId, {
+      code: error.code || ERROR_CODES.STARTUP_RECOVERY_REQUIRED, stage: 'verifyCommitted', operationType
+    })
+  }
+  const after = storageSnapshot(touched)
+  if (!after.ok || !sameSnapshot(after.values, expectedAfter)) {
+    return uncertainTransactionResult(transactionId, { stage: 'verifyCommitted', operationType })
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'writeCommittedJournal')
+  } catch (error) {
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return committedTransactionResult(transactionId, {
+      warning: ERROR_CODES.CLEANUP_FAILED, stage: 'writeCommittedJournal', operationType
+    })
+  }
+  const committedJournal = writeStorage(KEYS.transactionJournal, {
+    transactionId,
+    operationType,
+    createdAt: new Date().toISOString(),
+    keys: touched,
+    before: before.values,
+    expectedAfter,
+    status: 'committed_remove'
+  })
+  if (!committedJournal.ok) {
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return committedTransactionResult(transactionId, {
+      warning: ERROR_CODES.CLEANUP_FAILED, stage: 'writeCommittedJournal', operationType
+    })
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'cleanup')
+  } catch (error) {
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return committedTransactionResult(transactionId, {
+      warning: ERROR_CODES.CLEANUP_FAILED, stage: 'cleanup', operationType
+    })
+  }
+  try {
+    invokeFault(faultInjector, operationType, 'finalReadback')
+  } catch (error) {
+    return uncertainTransactionResult(transactionId, {
+      code: error.code || ERROR_CODES.STARTUP_RECOVERY_REQUIRED, stage: 'finalReadback', operationType
+    })
+  }
+  const finalReadback = storageSnapshot(touched)
+  if (!finalReadback.ok || !sameSnapshot(finalReadback.values, expectedAfter)) {
+    return uncertainTransactionResult(transactionId, { stage: 'finalReadback', operationType })
+  }
+  const cleaned = removeStorage(KEYS.transactionJournal)
+  if (!cleaned.ok) {
+    writeStorage(KEYS.cleanupPending, { transactionId, operationType, createdAt: new Date().toISOString() })
+    return committedTransactionResult(transactionId, {
+      warning: ERROR_CODES.CLEANUP_FAILED, stage: 'cleanup', operationType
+    })
+  }
+  removeStorage(KEYS.cleanupPending)
+  return committedTransactionResult(transactionId, { operationType })
 }
 
 function isVersionedStorageActive() {
@@ -285,16 +536,21 @@ function recoverInterruptedTransaction() {
   if (!journalResult.ok) return journalResult
   if (!journalResult.exists || !journalResult.value) return { ok: true, recovered: false }
   const journal = journalResult.value
-  if (journal.status === 'committed') {
-    const keys = Array.isArray(journal.keys) ? journal.keys : []
-    const current = storageSnapshot(keys)
-    const expected = journal.expected && typeof journal.expected === 'object' ? journal.expected : {}
-    if (current.ok && canonicalJson(current.values) === canonicalJson(expected)) {
+  const keys = Array.isArray(journal.keys) ? journal.keys : []
+  const current = storageSnapshot(keys)
+  const expected = journal.status === 'committed_remove'
+    ? (journal.expectedAfter && typeof journal.expectedAfter === 'object' ? journal.expectedAfter : {})
+    : (journal.expected && typeof journal.expected === 'object' ? journal.expected : {})
+  const removingCommitted = journal.status === 'removing' && journal.expectedAfter &&
+    current.ok && sameSnapshot(current.values, journal.expectedAfter)
+  if (journal.status === 'committed' || journal.status === 'committed_remove' || removingCommitted) {
+    const committedExpected = removingCommitted ? journal.expectedAfter : expected
+    if (current.ok && sameSnapshot(current.values, committedExpected)) {
       const removed = removeStorage(KEYS.transactionJournal)
       if (removed.ok) removeStorage(KEYS.cleanupPending)
       return removed.ok
-        ? { ok: true, recovered: true, state: 'committed_with_temp_residue' }
-        : { ok: true, recovered: true, state: 'committed_with_temp_residue', warning: ERROR_CODES.CLEANUP_FAILED }
+        ? { ok: true, recovered: true, state: 'committed_with_journal', transactionId: journal.transactionId || '' }
+        : { ok: true, recovered: true, state: 'committed_with_journal', warning: ERROR_CODES.CLEANUP_FAILED }
     }
     return {
       ok: false,
@@ -303,7 +559,6 @@ function recoverInterruptedTransaction() {
       message: '检测到未完成写入，请在数据管理中确认保留当前数据。'
     }
   }
-  const keys = Array.isArray(journal.keys) ? journal.keys : []
   const before = journal.before && typeof journal.before === 'object' ? journal.before : {}
   const restored = restoreSnapshot(before, keys)
   if (!restored) {
@@ -429,7 +684,7 @@ function updateVersionedState(nextState, { bump = true } = {}) {
   }
   const result = atomicWrite(writes)
   return result.ok
-    ? { ok: true, state: { ...nextState, profiles: normalizedProfiles, activeProfileId, profileData } }
+    ? { ...result, state: { ...nextState, profiles: normalizedProfiles, activeProfileId, profileData } }
     : result
 }
 
@@ -447,7 +702,7 @@ function updateActiveProfileData(mutator) {
   const normalized = normalizeProfileData(next, context.profile.id)
   const profileData = { ...context.state.profileData, [context.profile.id]: normalized }
   const result = updateVersionedState({ ...context.state, profileData })
-  return result.ok ? { ok: true, data: normalized, profile: context.profile } : result
+  return result.ok ? { ...result, data: normalized, profile: context.profile } : result
 }
 
 function compareScoreRecords(left, right) {
@@ -1213,80 +1468,162 @@ function operationResult(operationId) {
   if (!operationId) return null
   const state = operationStates()[operationId]
   if (!state) return null
-  if (state.status === 'committed') return { ...clone(state.result), idempotent: true }
+  if (state.status === 'committed' || state.status === 'committed_with_warning') {
+    if (state.operationType === 'create_restore_point' && state.restorePointId) {
+      const payloads = readStorage(KEYS.restorePointPayloads, {})
+      if (!payloads.ok || !payloads.value || !payloads.value[state.restorePointId]) return null
+    }
+    return {
+      ok: true,
+      status: state.status,
+      committed: true,
+      recoveryRequired: false,
+      warning: state.status === 'committed_with_warning' ? state.resultCode || ERROR_CODES.CLEANUP_FAILED : null,
+      code: null,
+      operationId,
+      operationType: state.operationType,
+      profileId: state.profileId || '',
+      entityId: state.entityId || '',
+      restorePointId: state.restorePointId || '',
+      resultVersion: state.resultVersion || 0,
+      resultChecksum: state.resultChecksum || '',
+      idempotent: true
+    }
+  }
   if (state.status === 'running') {
     return { ok: false, code: ERROR_CODES.TRANSACTION_ALREADY_RUNNING, message: '操作正在进行，请稍候。' }
   }
   return null
 }
 
-function acquireOperationLock({ operationId, operationType, profileId = '', entityId = '', global = false }) {
-  const now = Date.now()
+function acquireOperationLock({
+  operationId,
+  operationType,
+  profileId = '',
+  entityId = '',
+  global = false,
+  ownerSessionId = OWNER_SESSION_ID,
+  nowMs = Date.now()
+}) {
+  const now = Number(nowMs)
   const existing = readStorage(KEYS.operationLock, null)
-  if (!existing.ok) return { ok: false, code: ERROR_CODES.STORAGE_READBACK_FAILED }
+  if (!existing.ok) return {
+    ok: false,
+    code: ERROR_CODES.STORAGE_READBACK_FAILED,
+    message: '本地操作锁读取失败，原数据已保留。'
+  }
   if (existing.exists && existing.value) {
-    const created = Date.parse(existing.value.createdAt || '')
-    const stale = !Number.isFinite(created) || now - created > 5 * 60 * 1000
-    const ownerState = operationStates()[existing.value.owner]
+    const expiresAt = Date.parse(existing.value.expiresAt || '')
+    const created = Date.parse(existing.value.acquiredAt || existing.value.createdAt || '')
+    const stale = Number.isFinite(expiresAt)
+      ? now >= expiresAt
+      : (!Number.isFinite(created) || now - created > OPERATION_LOCK_TTL_MS)
+    const existingOperationId = existing.value.operationId || existing.value.owner
+    const ownerState = operationStates()[existingOperationId]
     const ownerFinished = ownerState && ownerState.status !== 'running'
     const conflicts = existing.value.global || global ||
       (profileId && existing.value.profileId === profileId) ||
       (entityId && existing.value.entityId === entityId)
-    if (!stale && !ownerFinished && existing.value.owner !== operationId && conflicts) {
+    if (stale && ownerState && ownerState.status === 'running' &&
+        existingOperationId !== operationId && conflicts) {
+      return {
+        ok: false,
+        code: ERROR_CODES.STARTUP_RECOVERY_REQUIRED,
+        message: '检测到过期但仍标记运行中的操作，请先处理启动恢复。'
+      }
+    }
+    if (!stale && !ownerFinished && existingOperationId !== operationId && conflicts) {
       return { ok: false, code: ERROR_CODES.OPERATION_LOCKED, message: '另一项本地数据操作正在进行。' }
     }
-    if (stale || ownerFinished) {
+    if (ownerFinished || (stale && (!ownerState || ownerState.status !== 'running'))) {
       const released = removeStorage(KEYS.operationLock)
       if (!released.ok) return { ok: false, code: ERROR_CODES.CLEANUP_FAILED, message: '上一次操作已结束，但临时锁清理失败。' }
     }
   }
   const lock = {
-    owner: operationId,
+    lockId: `lock_${operationId}`,
+    operationId,
     operationType,
     profileId,
     entityId,
     global,
-    createdAt: new Date(now).toISOString()
+    acquiredAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + OPERATION_LOCK_TTL_MS).toISOString(),
+    ownerSessionId
   }
   const written = writeStorage(KEYS.operationLock, lock)
-  return written.ok ? { ok: true, lock } : { ok: false, code: ERROR_CODES.STORAGE_WRITE_FAILED }
+  return written.ok
+    ? { ok: true, lock }
+    : { ok: false, code: ERROR_CODES.STORAGE_WRITE_FAILED, message: '本地安全操作未开始，原数据已保留。' }
 }
 
-function finishOperation(operationId, status, result) {
-  const states = operationStates()
-  states[operationId] = {
-    operationId,
-    status,
-    finishedAt: new Date().toISOString(),
-    result: clone(result)
+function compactOperationState(operationId, status, result, context = {}) {
+  const restorePointId = String(
+    result && (result.restorePointId || (result.restorePoint && result.restorePoint.id)) || ''
+  ).slice(0, 120)
+  const state = {
+    operationId: String(operationId).slice(0, 160),
+    operationType: String(context.operationType || result && result.operationType || '').slice(0, 80),
+    status: status === 'committed' && result && result.warning ? 'committed_with_warning' : status,
+    profileId: String(context.profileId || '').slice(0, 120),
+    entityId: String(context.entityId || '').slice(0, 120),
+    resultCode: String(result && (result.code || result.warning) || '').slice(0, 120),
+    resultVersion: Number.isInteger(Number(result && result.resultVersion)) ? Number(result.resultVersion) : 0,
+    resultChecksum: String(result && result.resultChecksum || '').slice(0, 128),
+    restorePointId,
+    startedAt: String(context.startedAt || '').slice(0, 40),
+    finishedAt: new Date().toISOString()
   }
+  if (unescape(encodeURIComponent(JSON.stringify(state))).length > MAX_OPERATION_STATE_BYTES) {
+    state.entityId = ''
+    state.resultChecksum = ''
+  }
+  return state
+}
+
+function finishOperation(operationId, status, result, context = {}) {
+  const states = operationStates()
+  const previous = states[operationId] || {}
+  states[operationId] = compactOperationState(operationId, status, result, { ...previous, ...context })
   const ids = Object.keys(states).sort((left, right) =>
     String(states[right].finishedAt || '').localeCompare(String(states[left].finishedAt || ''))
   )
-  for (const id of ids.slice(100)) delete states[id]
+  for (const id of ids.slice(MAX_OPERATION_STATES)) delete states[id]
   writeStorage(KEYS.restorePointOperationState, states)
   const lock = readStorage(KEYS.operationLock, null)
-  if (lock.ok && lock.exists && lock.value && lock.value.owner === operationId) {
+  if (lock.ok && lock.exists && lock.value &&
+      (lock.value.operationId === operationId || lock.value.owner === operationId)) {
     removeStorage(KEYS.operationLock)
   }
 }
 
 function beginOperation(context) {
-  const previous = operationResult(context.operationId)
+  const resolved = createOperationContext(context)
+  const previous = operationResult(resolved.operationId)
   if (previous) return previous
-  const lock = acquireOperationLock(context)
+  const lock = acquireOperationLock({ ...context, ...resolved })
   if (!lock.ok) return lock
   const states = operationStates()
-  states[context.operationId] = {
-    ...context,
+  states[resolved.operationId] = {
+    ...resolved,
+    global: Boolean(context.global),
     status: 'running',
-    startedAt: new Date().toISOString()
+    startedAt: resolved.startedAt
   }
+  const ids = Object.keys(states).sort((left, right) =>
+    String(states[right].startedAt || states[right].finishedAt || '')
+      .localeCompare(String(states[left].startedAt || states[left].finishedAt || ''))
+  )
+  for (const id of ids.slice(MAX_OPERATION_STATES)) delete states[id]
   if (!writeStorage(KEYS.restorePointOperationState, states).ok) {
     removeStorage(KEYS.operationLock)
-    return { ok: false, code: ERROR_CODES.STORAGE_WRITE_FAILED }
+    return {
+      ok: false,
+      code: ERROR_CODES.STORAGE_WRITE_FAILED,
+      message: '本地安全操作未开始，原数据已保留。'
+    }
   }
-  return { ok: true, started: true }
+  return { ok: true, started: true, operationContext: resolved }
 }
 
 function restorePointRecord(point) {
@@ -1488,6 +1825,7 @@ function restoreFromRestorePoint(id, { operationId, faultInjector } = {}) {
   if (!before.ok) return before
   const started = beginOperation({ operationId: resolvedOperationId, operationType: 'restore', global: true })
   if (!started.ok || !started.started) return started
+  let expectedCommittedState = null
   try {
     invokeFault(faultInjector, 'restore', 'validate')
     const current = getVersionedState()
@@ -1507,19 +1845,60 @@ function restoreFromRestorePoint(id, { operationId, faultInjector } = {}) {
     invokeFault(faultInjector, 'restore', 'commit')
     const committed = updateVersionedState(next)
     if (!committed.ok) throw Object.assign(new Error(committed.message), { code: ERROR_CODES.STORAGE_WRITE_FAILED })
+    expectedCommittedState = committed.state
     invokeFault(faultInjector, 'restore', 'verifyCommitted')
     const readback = getVersionedState()
     if (!readback.ok || canonicalJson(readback.state) !== canonicalJson(committed.state)) {
       throw Object.assign(new Error(), { code: ERROR_CODES.STORAGE_READBACK_FAILED })
     }
     invokeFault(faultInjector, 'restore', 'cleanup')
-    removeStorage(KEYS.restoreTemporary)
-    const result = { ok: true, restorePointId: id, safetyRestorePointId: before.restorePoint.id }
+    const cleaned = removeStorage(KEYS.restoreTemporary)
+    const result = {
+      ok: true,
+      status: cleaned.ok ? 'committed' : 'committed_with_warning',
+      committed: true,
+      recoveryRequired: false,
+      warning: cleaned.ok ? null : ERROR_CODES.CLEANUP_FAILED,
+      restorePointId: id,
+      safetyRestorePointId: before.restorePoint.id
+    }
     finishOperation(resolvedOperationId, 'committed', result)
     return result
   } catch (error) {
+    if (expectedCommittedState) {
+      const readback = getVersionedState()
+      if (readback.ok && sameSnapshot(readback.state, expectedCommittedState)) {
+        const result = {
+          ok: true,
+          status: 'committed_with_warning',
+          committed: true,
+          recoveryRequired: false,
+          warning: error.code || ERROR_CODES.CLEANUP_FAILED,
+          code: null,
+          restorePointId: id,
+          safetyRestorePointId: before.restorePoint.id,
+          message: '数据已恢复；临时状态仍需在数据管理中清理。'
+        }
+        finishOperation(resolvedOperationId, 'committed', result)
+        return result
+      }
+      const result = uncertainTransactionResult(resolvedOperationId, {
+        code: error.code || ERROR_CODES.STARTUP_RECOVERY_REQUIRED,
+        stage: error.stage || 'verifyCommitted',
+        operationType: 'restore'
+      })
+      finishOperation(resolvedOperationId, 'uncertain', result)
+      return result
+    }
     removeStorage(KEYS.restoreTemporary)
-    const result = { ok: false, code: error.code || ERROR_CODES.RESTORE_POINT_VERIFY_FAILED, message: '恢复未完成，当前数据已保留。' }
+    const result = {
+      ok: false,
+      status: 'aborted',
+      committed: false,
+      recoveryRequired: false,
+      code: error.code || ERROR_CODES.RESTORE_POINT_VERIFY_FAILED,
+      message: '恢复未提交，当前数据已保留。'
+    }
     finishOperation(resolvedOperationId, 'failed', result)
     return result
   }
@@ -1551,8 +1930,14 @@ function recoverStartupState() {
   }
   const lock = readStorage(KEYS.operationLock, null)
   if (lock.ok && lock.exists && lock.value) {
-    const age = Date.now() - Date.parse(lock.value.createdAt || '')
-    if (!Number.isFinite(age) || age > 5 * 60 * 1000) {
+    const lockOperationId = lock.value.operationId || lock.value.owner
+    const ownerState = operationStates()[lockOperationId]
+    const expiresAt = Date.parse(lock.value.expiresAt || '')
+    const age = Date.now() - Date.parse(lock.value.acquiredAt || lock.value.createdAt || '')
+    const expired = Number.isFinite(expiresAt)
+      ? Date.now() >= expiresAt
+      : (!Number.isFinite(age) || age > OPERATION_LOCK_TTL_MS)
+    if (expired && (!ownerState || ownerState.status !== 'running')) {
       removeStorage(KEYS.operationLock)
       state = state === 'clean' ? 'incomplete_lock' : state
     }
@@ -1560,6 +1945,79 @@ function recoverStartupState() {
   const result = { ok: true, state, startupRecoveryVersion: 1, checkedAt: new Date().toISOString() }
   writeStorage(KEYS.startupRecovery, result)
   return result
+}
+
+function getStartupRecoveryState() {
+  const result = readStorage(KEYS.startupRecovery, null)
+  return result.ok && result.exists && result.value
+    ? clone(result.value)
+    : { ok: true, state: 'clean', startupRecoveryVersion: 1, checkedAt: '' }
+}
+
+function resolveStartupRecovery(action, options = {}) {
+  if (!['retry_auto', 'keep_formal', 'use_temporary'].includes(action)) {
+    return { ok: false, code: 'RECOVERY_ACTION_INVALID', message: '未识别的恢复操作。' }
+  }
+  if (action === 'retry_auto') return recoverStartupState()
+  return protectedCall(
+    `startup_recovery_${action}`,
+    options.operationContext || options.operationId,
+    { global: true, entityId: action },
+    (operationContext) => {
+      if (action === 'keep_formal') {
+        const formal = getVersionedState()
+        if (!formal.ok || !validateRestoreState(formal.state).ok) {
+          return { ok: false, code: ERROR_CODES.FORMAL_DATA_INVALID, message: '当前正式数据不可用，不能直接保留。' }
+        }
+        const journal = readStorage(KEYS.transactionJournal, null)
+        if (journal.ok && journal.exists && journal.value) {
+          const keys = Array.isArray(journal.value.keys) ? journal.value.keys : []
+          const current = storageSnapshot(keys)
+          const expected = journal.value.expectedAfter || journal.value.expected || {}
+          if (current.ok && !sameSnapshot(current.values, expected) && journal.value.status !== 'committed') {
+            return {
+              ok: false,
+              code: ERROR_CODES.STARTUP_RECOVERY_REQUIRED,
+              message: '事务证据与当前数据不一致，不能自动丢弃。'
+            }
+          }
+        }
+        for (const key of [KEYS.transactionJournal, KEYS.restoreTemporary, KEYS.cleanupPending]) {
+          const removed = removeStorage(key)
+          if (!removed.ok) return committedTransactionResult(operationContext.operationId, {
+            warning: ERROR_CODES.CLEANUP_FAILED,
+            stage: 'cleanup',
+            operationType: 'startup_recovery_keep_formal'
+          })
+        }
+      } else {
+        const temporary = readStorage(KEYS.restoreTemporary, null)
+        if (!temporary.ok || !temporary.exists || !validateRestoreState(temporary.value).ok) {
+          return { ok: false, code: ERROR_CODES.TEMPORARY_DATA_INVALID, message: '临时数据不可用，当前数据未修改。' }
+        }
+        const formal = getVersionedState()
+        if (formal.ok) {
+          const safety = createRestorePoint({
+            reason: 'before_restore',
+            profileScope: { type: 'full_user_state' },
+            operationId: `${operationContext.operationId}_safety`
+          })
+          if (!safety.ok) return safety
+        }
+        const restored = updateVersionedState(temporary.value)
+        if (!restored.ok) return restored
+        const removed = removeStorage(KEYS.restoreTemporary)
+        if (!removed.ok) return committedTransactionResult(operationContext.operationId, {
+          warning: ERROR_CODES.CLEANUP_FAILED,
+          stage: 'cleanup',
+          operationType: 'startup_recovery_use_temporary'
+        })
+      }
+      const result = { ok: true, state: 'clean', startupRecoveryVersion: 1, checkedAt: new Date().toISOString() }
+      writeStorage(KEYS.startupRecovery, result)
+      return result
+    }
+  )
 }
 
 function clearCurrentProfileData({ operationId } = {}) {
@@ -1596,16 +2054,29 @@ function clearLocalData({ operationId } = {}) {
       KEYS.operationLock,
       KEYS.startupRecovery
     ].includes(key)),
-    { [KEYS.clearMarker]: marker }
+    { [KEYS.clearMarker]: marker },
+    { operationType: 'clear_all_data', operationId }
   )
   if (!cleared.ok) return cleared
   const initialized = ensureStorageMigrated()
   return initialized.ok
-    ? { ok: true, marker, migration: initialized }
-    : {
-        ok: false,
+    ? {
+        ok: true,
+        status: cleared.status || 'committed',
+        committed: true,
+        recoveryRequired: false,
+        warning: cleared.warning || null,
         marker,
-        message: '本地数据已清除，但空档案初始化失败；重新打开小程序后会再次初始化。'
+        migration: initialized
+      }
+    : {
+        ok: true,
+        status: 'committed_with_warning',
+        committed: true,
+        recoveryRequired: false,
+        warning: 'EMPTY_PROFILE_INITIALIZATION_PENDING',
+        marker,
+        message: '本地数据已清除；空档案将在重新打开小程序后初始化。'
       }
 }
 
@@ -1630,58 +2101,394 @@ function replaceVersionedState(state, { importSnapshot = null } = {}) {
   return result.ok ? { ok: true, state: result.state } : result
 }
 
-function protectedCall(operationType, operationId, context, action) {
-  if (!operationId) return action()
-  const started = beginOperation({ operationId, operationType, ...context })
+function protectedCall(operationType, operationInput, context, action) {
+  const requested = operationInput && typeof operationInput === 'object'
+    ? operationInput
+    : { operationId: operationInput }
+  const operationContext = createOperationContext({ ...context, ...requested, operationType })
+  const started = beginOperation({ ...operationContext, global: Boolean(context.global) })
   if (!started.ok || !started.started) return started
   let result
   try {
-    result = action()
+    result = action(operationContext)
   } catch (error) {
     result = { ok: false, message: '本地操作失败，原数据已保留。' }
   }
-  finishOperation(operationId, result && result.ok ? 'committed' : 'failed', result)
-  return result
+  finishOperation(
+    operationContext.operationId,
+    result && result.committed === true ? 'committed' : result && result.ok ? 'committed' : 'failed',
+    result,
+    operationContext
+  )
+  return result && typeof result === 'object'
+    ? { ...result, operationId: operationContext.operationId }
+    : result
+}
+
+function protectedCreateStudentProfile(profile, options = {}) {
+  return protectedCall('create_profile', options.operationContext || options.operationId, {
+    global: true,
+    entityId: profile && profile.id || ''
+  }, () => createStudentProfile(profile))
+}
+
+function protectedUpdateStudentProfile(id, changes, options = {}) {
+  return protectedCall('update_profile', options.operationContext || options.operationId, {
+    global: true,
+    entityId: id,
+    expectedVersion: changes && (changes.expectedVersion ?? changes.version) || 0
+  }, () => updateStudentProfile(id, changes))
+}
+
+function protectedReplaceFavoriteIds(ids, options = {}) {
+  return protectedCall('replace_favorites', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '',
+    entityId: 'favoriteSchoolIds'
+  }, () => replaceFavoriteIds(ids))
+}
+
+function protectedDeleteTargetRecord(id, options = {}) {
+  return protectedCall('delete_target', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteTargetRecord(id))
+}
+
+function protectedSetPrimaryTargetSchool(schoolId, options = {}) {
+  return protectedCall('set_primary_target', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: schoolId || 'none'
+  }, () => setPrimaryTargetSchool(schoolId))
+}
+
+function protectedSaveTargetDraft(draft, options = {}) {
+  return protectedCall('save_target_draft', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'targetDraft'
+  }, () => saveTargetDraft(draft))
+}
+
+function protectedClearTargetDraft(options = {}) {
+  return protectedCall('clear_target_draft', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'targetDraft'
+  }, () => clearTargetDraft())
+}
+
+function protectedDeleteStageGoalRecord(id, options = {}) {
+  return protectedCall('delete_stage_goal', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteLearningTargetRecord(id))
+}
+
+function protectedSaveExamYear(year, options = {}) {
+  return protectedCall('save_exam_year', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: String(year)
+  }, () => saveExamYear(year))
+}
+
+function protectedSaveOnboardingState(state, options = {}) {
+  return protectedCall('save_onboarding', options.operationContext || options.operationId, {
+    global: true, entityId: 'onboarding'
+  }, () => saveOnboardingState(state))
+}
+
+function protectedSaveRecommendationSettings(settings, options = {}) {
+  return protectedCall('save_recommendation_settings', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'recommendationSettings'
+  }, () => saveRecommendationSettings(settings))
+}
+
+function protectedSaveScenarioSettings(settings, options = {}) {
+  return protectedCall('save_scenario_settings', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'scenarioSettings'
+  }, () => saveScenarioSettings(settings))
+}
+
+function protectedSaveSchoolFilters(filters, options = {}) {
+  return protectedCall('save_school_filters', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'schoolFilters'
+  }, () => saveSchoolFilters(filters))
+}
+
+function protectedSaveComparisonSchoolIds(ids, options = {}) {
+  return protectedCall('save_school_comparison', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'comparisonSchoolIds'
+  }, () => saveComparisonSchoolIds(ids))
+}
+
+function protectedAddRecentViewedSchool(schoolId, options = {}) {
+  return protectedCall('record_recent_school', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: schoolId
+  }, () => addRecentViewedSchool(schoolId))
+}
+
+function protectedRecordRecentHistory(type, entry, options = {}) {
+  return protectedCall('record_recent_history', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: `${type}:${entry && entry.id || ''}`
+  }, () => recordRecentHistory(type, entry))
+}
+
+function protectedClearRecentHistory(type, options = {}) {
+  return protectedCall('clear_recent_history', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: type || 'all'
+  }, () => clearRecentHistory(type))
+}
+
+function protectedSaveScoreReview(record, options = {}) {
+  return protectedCall('save_score_review', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveScoreReview(record))
+}
+
+function protectedDeleteScoreReview(id, options = {}) {
+  return protectedCall('delete_score_review', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteScoreReview(id))
+}
+
+function protectedSaveScoreLossReason(record, options = {}) {
+  return protectedCall('save_loss_reason', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveScoreLossReason(record))
+}
+
+function protectedDeleteScoreLossReason(id, options = {}) {
+  return protectedCall('delete_loss_reason', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteScoreLossReason(id))
+}
+
+function protectedDeleteLearningTask(id, options = {}) {
+  return protectedCall('delete_learning_task', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteLearningTask(id))
+}
+
+function protectedSaveSubjectConfigs(configs, options = {}) {
+  return protectedCall('save_subject_configs', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'subjectConfigs'
+  }, () => saveSubjectConfigs(configs))
+}
+
+function protectedDeleteStudentProfile(id, options = {}) {
+  const context = { global: true, entityId: id }
+  const operationContext = createOperationContext({
+    ...context,
+    ...(options.operationContext || { operationId: options.operationId }),
+    operationType: 'delete_profile'
+  })
+  const previous = operationResult(operationContext.operationId)
+  if (previous) return previous
+  const safety = createRestorePoint({
+    reason: 'before_clear_profile',
+    profileScope: { type: 'full_user_state' },
+    operationId: `${operationContext.operationId}_safety`,
+    note: `删除档案 ${id} 前`
+  })
+  if (!safety.ok) return safety
+  return protectedCall('delete_profile', operationContext, {
+    global: true,
+    entityId: id
+  }, () => deleteStudentProfile(id))
+}
+
+function protectedClearScoreRecords(options = {}) {
+  const profile = getActiveProfile()
+  if (!profile) return { ok: false, code: ERROR_CODES.PROFILE_NOT_FOUND, message: '未找到学生档案。' }
+  const context = { profileId: profile.id, entityId: 'scoreRecords' }
+  const operationContext = createOperationContext({
+    ...context,
+    ...(options.operationContext || { operationId: options.operationId }),
+    operationType: 'clear_scores'
+  })
+  const previous = operationResult(operationContext.operationId)
+  if (previous) return previous
+  const safety = createRestorePoint({
+    reason: 'before_bulk_edit',
+    profileScope: { type: 'single_profile', profileId: profile.id },
+    operationId: `${operationContext.operationId}_safety`,
+    note: '清空成绩前'
+  })
+  return safety.ok
+    ? protectedCall('clear_scores', operationContext, context, () => clearScoreRecords())
+    : safety
+}
+
+function protectedClearTargetRecords(options = {}) {
+  const profile = getActiveProfile()
+  if (!profile) return { ok: false, code: ERROR_CODES.PROFILE_NOT_FOUND, message: '未找到学生档案。' }
+  const context = { profileId: profile.id, entityId: 'targetRecords' }
+  const operationContext = createOperationContext({
+    ...context,
+    ...(options.operationContext || { operationId: options.operationId }),
+    operationType: 'clear_targets'
+  })
+  const previous = operationResult(operationContext.operationId)
+  if (previous) return previous
+  const safety = createRestorePoint({
+    reason: 'before_bulk_edit',
+    profileScope: { type: 'single_profile', profileId: profile.id },
+    operationId: `${operationContext.operationId}_safety`,
+    note: '清空目标学校前'
+  })
+  return safety.ok
+    ? protectedCall('clear_targets', operationContext, context, () => clearTargetRecords())
+    : safety
+}
+
+function protectedClearStageGoalRecords(options = {}) {
+  const profile = getActiveProfile()
+  if (!profile) return { ok: false, code: ERROR_CODES.PROFILE_NOT_FOUND, message: '未找到学生档案。' }
+  const context = { profileId: profile.id, entityId: 'stageGoals' }
+  const operationContext = createOperationContext({
+    ...context,
+    ...(options.operationContext || { operationId: options.operationId }),
+    operationType: 'clear_stage_goals'
+  })
+  const previous = operationResult(operationContext.operationId)
+  if (previous) return previous
+  const safety = createRestorePoint({
+    reason: 'before_bulk_edit',
+    profileScope: { type: 'single_profile', profileId: profile.id },
+    operationId: `${operationContext.operationId}_safety`,
+    note: '清空阶段目标前'
+  })
+  return safety.ok
+    ? protectedCall('clear_stage_goals', operationContext, context, () => clearLearningTargetRecords())
+    : safety
+}
+
+function protectedClearLearningTasks(options = {}) {
+  const profile = getActiveProfile()
+  if (!profile) return { ok: false, code: ERROR_CODES.PROFILE_NOT_FOUND, message: '未找到学生档案。' }
+  const context = { profileId: profile.id, entityId: 'learningTasks' }
+  const operationContext = createOperationContext({
+    ...context,
+    ...(options.operationContext || { operationId: options.operationId }),
+    operationType: 'clear_learning_tasks'
+  })
+  const previous = operationResult(operationContext.operationId)
+  if (previous) return previous
+  const safety = createRestorePoint({
+    reason: 'before_bulk_edit',
+    profileScope: { type: 'single_profile', profileId: profile.id },
+    operationId: `${operationContext.operationId}_safety`,
+    note: '清空学习任务前'
+  })
+  return safety.ok
+    ? protectedCall('clear_learning_tasks', operationContext, context, () =>
+        updateActiveProfileData((data) => ({ ...data, learningTasks: [] })))
+    : safety
+}
+
+function protectedClearCurrentProfileData(options = {}) {
+  const profile = getActiveProfile()
+  if (!profile) return { ok: false, code: ERROR_CODES.PROFILE_NOT_FOUND, message: '未找到学生档案。' }
+  const context = { profileId: profile.id, entityId: 'profileData' }
+  const operationContext = createOperationContext({
+    ...context,
+    ...(options.operationContext || { operationId: options.operationId }),
+    operationType: 'clear_profile_data'
+  })
+  const previous = operationResult(operationContext.operationId)
+  if (previous) return previous
+  const safety = createRestorePoint({
+    reason: 'before_clear_profile',
+    profileScope: { type: 'single_profile', profileId: profile.id },
+    operationId: `${operationContext.operationId}_safety`
+  })
+  if (!safety.ok) return safety
+  return protectedCall('clear_profile_data', operationContext, context, () => {
+    const active = activeContext()
+    if (!active.ok) return active
+    const empty = createEmptyProfileData(active.profile.id)
+    empty.examYear = active.profile.examYear
+    const profileData = { ...active.state.profileData, [active.profile.id]: empty }
+    return updateVersionedState({ ...active.state, profileData })
+  })
+}
+
+function protectedClearLocalData(options = {}) {
+  const context = { global: true, entityId: 'allUserData' }
+  const operationContext = createOperationContext({
+    ...context,
+    ...(options.operationContext || { operationId: options.operationId }),
+    operationType: 'clear_all_data'
+  })
+  const previous = operationResult(operationContext.operationId)
+  if (previous) return previous
+  const safety = createRestorePoint({
+    reason: 'before_clear_all',
+    profileScope: { type: 'full_user_state' },
+    operationId: `${operationContext.operationId}_safety`
+  })
+  if (!safety.ok) return safety
+  return protectedCall('clear_all_data', operationContext, context, () => {
+    const marker = { clearedAt: new Date().toISOString(), schemaVersion: STORAGE_SCHEMA_VERSION }
+    const cleared = atomicRemove(
+      ALL_KNOWN_KEYS.filter((key) => key !== KEYS.clearMarker && ![
+        KEYS.restorePointIndex,
+        KEYS.restorePointPayloads,
+        KEYS.restorePointOperationState,
+        KEYS.operationLock,
+        KEYS.startupRecovery
+      ].includes(key)),
+      { [KEYS.clearMarker]: marker },
+      { operationType: 'clear_all_data', operationId: operationContext.operationId }
+    )
+    if (!cleared.ok) return cleared
+    const initialized = ensureStorageMigrated()
+    return initialized.ok
+      ? { ...cleared, marker, migration: initialized }
+      : {
+          ok: true,
+          status: 'committed_with_warning',
+          committed: true,
+          recoveryRequired: false,
+          warning: 'EMPTY_PROFILE_INITIALIZATION_PENDING',
+          marker,
+          message: '本地数据已清除；空档案将在重新打开小程序后初始化。'
+        }
+  })
 }
 
 function protectedSaveScoreRecord(record, options = {}) {
-  return protectedCall('save_score', options.operationId, {
+  return protectedCall('save_score', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
   }, () => saveScoreRecord(record))
 }
 
 function protectedDeleteScoreRecord(id, options = {}) {
-  return protectedCall('delete_score', options.operationId, {
+  return protectedCall('delete_score', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: id
   }, () => deleteScoreRecord(id))
 }
 
 function protectedSaveTargetRecord(record, options = {}) {
-  return protectedCall('save_target', options.operationId, {
+  return protectedCall('save_target', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: record && (record.id || record.schoolId) || ''
   }, () => saveTargetRecord(record))
 }
 
 function protectedSaveStageGoalRecord(record, options = {}) {
-  return protectedCall('save_stage_goal', options.operationId, {
+  return protectedCall('save_stage_goal', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
   }, () => saveLearningTargetRecord(record))
 }
 
 function protectedSaveLearningTask(record, options = {}) {
-  return protectedCall('save_learning_task', options.operationId, {
+  return protectedCall('save_learning_task', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
   }, () => saveLearningTask(record, options))
 }
 
 function protectedSetFavorite(schoolId, nextValue, options = {}) {
-  return protectedCall('set_favorite', options.operationId, {
+  return protectedCall('set_favorite', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: schoolId
   }, () => setFavorite(schoolId, nextValue))
 }
 
 function protectedSwitchStudentProfile(id, options = {}) {
-  return protectedCall('switch_profile', options.operationId, { global: true, entityId: id }, () => switchStudentProfile(id))
+  return protectedCall('switch_profile', options.operationContext || options.operationId, {
+    global: true, entityId: id
+  }, () => switchStudentProfile(id))
 }
 
 module.exports = {
@@ -1695,8 +2502,11 @@ module.exports = {
   storageSnapshot,
   atomicWrite,
   atomicRemove,
+  classifyTransactionOutcome,
   recoverInterruptedTransaction,
   recoverStartupState,
+  getStartupRecoveryState,
+  resolveStartupRecovery,
   isVersionedStorageActive,
   ensureStorageMigrated,
   getVersionedState,
@@ -1707,70 +2517,71 @@ module.exports = {
   getProfilesResult,
   getProfiles,
   getActiveProfile,
-  createStudentProfile,
-  updateStudentProfile,
+  createStudentProfile: protectedCreateStudentProfile,
+  updateStudentProfile: protectedUpdateStudentProfile,
   switchStudentProfile: protectedSwitchStudentProfile,
-  deleteStudentProfile,
+  deleteStudentProfile: protectedDeleteStudentProfile,
   getFavoriteIdsResult,
   getFavoriteIds,
   isFavorite,
   setFavorite: protectedSetFavorite,
-  replaceFavoriteIds,
+  replaceFavoriteIds: protectedReplaceFavoriteIds,
   getTargetRecordsResult,
   getTargetRecords,
   saveTargetRecord: protectedSaveTargetRecord,
-  deleteTargetRecord,
-  clearTargetRecords,
+  deleteTargetRecord: protectedDeleteTargetRecord,
+  clearTargetRecords: protectedClearTargetRecords,
   getPrimaryTargetSchoolId,
-  setPrimaryTargetSchool,
+  setPrimaryTargetSchool: protectedSetPrimaryTargetSchool,
   getTargetDraftResult,
   getTargetDraft,
-  saveTargetDraft,
-  clearTargetDraft,
+  saveTargetDraft: protectedSaveTargetDraft,
+  clearTargetDraft: protectedClearTargetDraft,
   getLearningTargetRecordsResult,
   getLearningTargetRecords,
   getStageGoalRecordsResult,
   getStageGoalRecords,
   saveLearningTargetRecord: protectedSaveStageGoalRecord,
   saveStageGoalRecord: protectedSaveStageGoalRecord,
-  deleteLearningTargetRecord,
-  deleteStageGoalRecord,
-  clearLearningTargetRecords,
-  clearStageGoalRecords,
+  deleteLearningTargetRecord: protectedDeleteStageGoalRecord,
+  deleteStageGoalRecord: protectedDeleteStageGoalRecord,
+  clearLearningTargetRecords: protectedClearStageGoalRecords,
+  clearStageGoalRecords: protectedClearStageGoalRecords,
   getScoreRecordsResult,
   getScoreRecords,
   saveScoreRecord: protectedSaveScoreRecord,
   deleteScoreRecord: protectedDeleteScoreRecord,
-  clearScoreRecords,
+  clearScoreRecords: protectedClearScoreRecords,
   getExamYearResult,
   getExamYear,
-  saveExamYear,
+  saveExamYear: protectedSaveExamYear,
   getOnboardingState,
-  saveOnboardingState,
+  saveOnboardingState: protectedSaveOnboardingState,
   getRecommendationSettings,
-  saveRecommendationSettings,
+  saveRecommendationSettings: protectedSaveRecommendationSettings,
   getScenarioSettings,
-  saveScenarioSettings,
+  saveScenarioSettings: protectedSaveScenarioSettings,
   getSchoolFilters,
-  saveSchoolFilters,
+  saveSchoolFilters: protectedSaveSchoolFilters,
   getComparisonSchoolIds,
-  saveComparisonSchoolIds,
-  addRecentViewedSchool,
+  saveComparisonSchoolIds: protectedSaveComparisonSchoolIds,
+  addRecentViewedSchool: protectedAddRecentViewedSchool,
   getRecentViewedSchoolIds,
-  recordRecentHistory,
+  recordRecentHistory: protectedRecordRecentHistory,
   getRecentHistory,
-  clearRecentHistory,
+  clearRecentHistory: protectedClearRecentHistory,
   getScoreReviews,
-  saveScoreReview,
-  deleteScoreReview,
+  saveScoreReview: protectedSaveScoreReview,
+  deleteScoreReview: protectedDeleteScoreReview,
   getScoreLossReasons,
-  saveScoreLossReason,
-  deleteScoreLossReason,
+  saveScoreLossReason: protectedSaveScoreLossReason,
+  deleteScoreLossReason: protectedDeleteScoreLossReason,
   getLearningTasks,
   saveLearningTask: protectedSaveLearningTask,
-  deleteLearningTask,
+  deleteLearningTask: protectedDeleteLearningTask,
+  clearLearningTasks: protectedClearLearningTasks,
   getSubjectConfigs,
-  saveSubjectConfigs,
+  saveSubjectConfigs: protectedSaveSubjectConfigs,
   createRestorePoint,
   listRestorePoints,
   getRestorePoint,
@@ -1779,7 +2590,8 @@ module.exports = {
   clearRestorePoints,
   validateRestoreState,
   acquireOperationLock,
-  clearCurrentProfileData,
-  clearLocalData,
-  clearLocalDemoData
+  getOperationStates: operationStates,
+  clearCurrentProfileData: protectedClearCurrentProfileData,
+  clearLocalData: protectedClearLocalData,
+  clearLocalDemoData: protectedClearLocalData
 }

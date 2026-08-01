@@ -20,7 +20,9 @@ const TRANSACTION_STAGES = Object.freeze([
   'verifyTemporary',
   'commit',
   'verifyCommitted',
-  'cleanup'
+  'writeCommittedJournal',
+  'cleanup',
+  'finalReadback'
 ])
 const ERROR_CODES = Object.freeze({
   RESTORE_POINT_CREATE_FAILED: 'RESTORE_POINT_CREATE_FAILED',
@@ -161,7 +163,7 @@ function payloadForScope(state, profileScope) {
       profiles: [clone(profile)],
       activeProfileId: profile.id,
       profileData: { [profile.id]: clone(state.profileData[profile.id]) },
-      sharedFavoriteSchoolIds: profile.favoritesMode === 'shared'
+      sharedFavoriteSchoolIds: profileScope.includeSharedFavorites === true
         ? clone(state.sharedFavoriteSchoolIds || [])
         : []
     }
@@ -240,14 +242,14 @@ function stateAfterRestore(current, point) {
   const payload = clone(point.payload)
   if (point.profileScope.type === 'single_profile') {
     const profile = payload.profiles[0]
-    if (!current.profiles.some((item) => item.id === profile.id)) {
-      throw Object.assign(new Error('当前设备中不存在该档案'), { code: ERROR_CODES.PROFILE_NOT_FOUND })
-    }
+    const exists = current.profiles.some((item) => item.id === profile.id)
     return {
       ...clone(current),
-      profiles: current.profiles.map((item) => item.id === profile.id ? profile : item),
+      profiles: exists
+        ? current.profiles.map((item) => item.id === profile.id ? profile : item)
+        : [...clone(current.profiles), profile],
       profileData: { ...clone(current.profileData), [profile.id]: clone(payload.profileData[profile.id]) },
-      sharedFavoriteSchoolIds: profile.favoritesMode === 'shared'
+      sharedFavoriteSchoolIds: point.profileScope.includeSharedFavorites === true
         ? clone(payload.sharedFavoriteSchoolIds || [])
         : clone(current.sharedFavoriteSchoolIds || [])
     }

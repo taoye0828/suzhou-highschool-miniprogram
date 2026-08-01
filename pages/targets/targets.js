@@ -43,6 +43,7 @@ const {
 const { analyzeScore } = require('../../utils/score-analysis')
 const { scenarioResults, goalProgress } = require('../../utils/rc10-features')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
+const { operationOptions } = require('../../utils/operation-context')
 const { schools } = require('../../data/schools')
 const { admissionScores } = require('../../data/admission-scores')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
@@ -512,14 +513,21 @@ Page({
     const segment = event.currentTarget.dataset.segment
     if (!['recommendation', 'schools', 'learning'].includes(segment)) return
     this.setData({ activeSegment: segment })
-    recordRecentHistory('targetSegments', { id: segment, segment })
+    recordRecentHistory(
+      'targetSegments',
+      { id: segment, segment },
+      operationOptions('record_recent_history', `targetSegments:${segment}`)
+    )
   },
 
   onRecommendationScoreInput(event) {
     const recommendationScoreInput = event.detail.value
     this.setData({ recommendationScoreInput, recommendationError: '' })
     const existing = getTargetDraftResult().draft
-    const result = saveTargetDraft({ ...existing, currentScore: recommendationScoreInput })
+    const result = saveTargetDraft(
+      { ...existing, currentScore: recommendationScoreInput },
+      operationOptions('save_target_draft', 'targetDraft')
+    )
     if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
   },
 
@@ -546,7 +554,10 @@ Page({
       schoolTypes: this.data.recommendationSettings.schoolTypes,
       referenceYears: this.data.recommendationSettings.referenceYears
     }
-    const saved = saveScenarioSettings(settings)
+    const saved = saveScenarioSettings(
+      settings,
+      operationOptions('save_scenario_settings', 'scenarioSettings')
+    )
     if (!saved.ok) {
       if (!options.silent) this.setData({ scenarioError: saved.message })
       return
@@ -569,7 +580,7 @@ Page({
     const index = Number(event.detail.value)
     const year = this.data.targetYears[index]
     if (!Number.isInteger(year)) return
-    const result = saveExamYear(year)
+    const result = saveExamYear(year, operationOptions('save_exam_year', year))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -685,7 +696,10 @@ Page({
 
   resetRecommendationSettings() {
     const settings = cloneDefaultRecommendationSettings()
-    const result = saveRecommendationSettings(settings)
+    const result = saveRecommendationSettings(
+      settings,
+      operationOptions('save_recommendation_settings', 'recommendationSettings')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -695,7 +709,10 @@ Page({
   },
 
   persistRecommendationSettings(settings, extraData = {}) {
-    const result = saveRecommendationSettings(settings)
+    const result = saveRecommendationSettings(
+      settings,
+      operationOptions('save_recommendation_settings', 'recommendationSettings')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -763,7 +780,7 @@ Page({
       referenceYear: item.year,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    })
+    }, operationOptions('save_target', item.schoolId))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -792,7 +809,7 @@ Page({
       referenceYear: item.year,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    })
+    }, operationOptions('save_target', item.schoolId))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -803,7 +820,11 @@ Page({
   toggleScenarioFavorite(event) {
     const schoolId = event.currentTarget.dataset.schoolId
     const nextValue = !this._favoriteIds.includes(schoolId)
-    const result = setFavorite(schoolId, nextValue)
+    const result = setFavorite(
+      schoolId,
+      nextValue,
+      operationOptions('set_favorite', schoolId)
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -812,7 +833,11 @@ Page({
   },
 
   setPrimaryTarget(event) {
-    const result = setPrimaryTargetSchool(event.currentTarget.dataset.schoolId)
+    const schoolId = event.currentTarget.dataset.schoolId
+    const result = setPrimaryTargetSchool(
+      schoolId,
+      operationOptions('set_primary_target', schoolId)
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -830,7 +855,10 @@ Page({
       wx.showToast({ title: '目标等级无效，请重试。', icon: 'none' })
       return
     }
-    const result = saveTargetRecord({ ...record, level: level.value })
+    const result = saveTargetRecord(
+      { ...record, level: level.value },
+      operationOptions('save_target', record.id)
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -848,7 +876,7 @@ Page({
       confirmColor: '#b42318',
       success: (modalResult) => {
         if (!modalResult.confirm) return
-        const result = deleteTargetRecord(id)
+        const result = deleteTargetRecord(id, operationOptions('delete_target', id))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -868,7 +896,7 @@ Page({
       confirmColor: '#b42318',
       success: (modalResult) => {
         if (!modalResult.confirm) return
-        const result = clearTargetRecords()
+        const result = clearTargetRecords(operationOptions('clear_targets', 'targetRecords'))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -972,7 +1000,7 @@ Page({
     const result = saveTargetDraft({
       ...existing,
       learningGoalDraft: this.data.learningDraft
-    })
+    }, operationOptions('save_target_draft', 'learningGoalDraft'))
     if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
   },
 
@@ -983,7 +1011,7 @@ Page({
     const result = saveTargetDraft({
       ...existing,
       learningGoalDraft: learningDraft
-    })
+    }, operationOptions('save_target_draft', 'learningGoalDraft'))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -1055,8 +1083,9 @@ Page({
       })
     }
     const now = new Date().toISOString()
+    const stageGoalId = draft.id || `learning_${Date.now()}`
     const result = saveLearningTargetRecord({
-      id: draft.id || `learning_${Date.now()}`,
+      id: stageGoalId,
       title,
       startDate: draft.startDate,
       endDate: draft.endDate,
@@ -1071,7 +1100,7 @@ Page({
       isDraft: saveAsDraft,
       createdAt: draft.createdAt || now,
       updatedAt: now
-    })
+    }, operationOptions('save_stage_goal', stageGoalId))
     if (!result.ok) {
       this.setData({ learningError: result.message })
       return
@@ -1093,7 +1122,7 @@ Page({
       ...record,
       status: option.value,
       updatedAt: new Date().toISOString()
-    })
+    }, operationOptions('save_stage_goal', record.id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -1111,7 +1140,10 @@ Page({
       confirmColor: '#b42318',
       success: (modalResult) => {
         if (!modalResult.confirm) return
-        const result = deleteLearningTargetRecord(id)
+        const result = deleteLearningTargetRecord(
+          id,
+          operationOptions('delete_stage_goal', id)
+        )
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -1131,7 +1163,9 @@ Page({
       confirmColor: '#b42318',
       success: (modalResult) => {
         if (!modalResult.confirm) return
-        const result = clearLearningTargetRecords()
+        const result = clearLearningTargetRecords(
+          operationOptions('clear_stage_goals', 'stageGoals')
+        )
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -1147,6 +1181,7 @@ Page({
     const option = STATUS_OPTIONS[Number(event.detail.value)]
     if (!task || !option) return
     const result = saveLearningTask({ ...task, status: option.value, updatedAt: new Date().toISOString() }, {
+      ...operationOptions('save_learning_task', task.id),
       allowDuplicateSource: true
     })
     if (!result.ok) {
@@ -1157,7 +1192,8 @@ Page({
   },
 
   deleteLearningTask(event) {
-    const result = removeLearningTask(event.currentTarget.dataset.id)
+    const id = event.currentTarget.dataset.id
+    const result = removeLearningTask(id, operationOptions('delete_learning_task', id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return

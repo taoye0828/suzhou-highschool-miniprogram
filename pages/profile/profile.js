@@ -16,6 +16,7 @@ const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { APP_CONFIG } = require('../../config/app-config')
 const { examYearOptions } = require('../../utils/countdown')
 const { schools } = require('../../data/schools')
+const { operationOptions } = require('../../utils/operation-context')
 
 Page({
   data: {
@@ -101,7 +102,7 @@ Page({
   onExamYearChange(event) {
     const index = Number(event.detail.value)
     const year = this.data.examYears[index]
-    const result = saveExamYear(year)
+    const result = saveExamYear(year, operationOptions('save_exam_year', year))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return

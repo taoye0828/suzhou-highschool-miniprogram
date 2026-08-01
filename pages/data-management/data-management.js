@@ -10,9 +10,12 @@ const {
   clearRecentHistory,
   getActiveProfile,
   getProfiles,
+  getStartupRecoveryState,
+  resolveStartupRecovery,
   clearCurrentProfileData,
   clearLocalData
 } = require('../../utils/storage')
+const { operationOptions } = require('../../utils/operation-context')
 const {
   scanLocalData,
   repairSafeIssues,
@@ -32,7 +35,11 @@ Page({
     activeProfileName: '默认档案',
     recentCount: 0,
     healthReport: null,
-    repairResult: null
+    repairResult: null,
+    startupRecovery: null,
+    hasStartupRecovery: false,
+    canUseTemporaryRecovery: false,
+    operatingRecovery: false
   },
 
   onShow() {
@@ -41,6 +48,8 @@ Page({
 
   refresh() {
     const recentHistory = getRecentHistory()
+    const startupRecovery = getStartupRecoveryState()
+    const manualStates = ['formal_invalid_temp_valid', 'both_valid_different', 'both_invalid', 'uncertain']
     this.setData({
       favoriteCount: getFavoriteIdsResult().ids.length,
       targetCount: getTargetRecordsResult().records.length,
@@ -51,8 +60,40 @@ Page({
       learningTaskCount: getLearningTasks().length,
       profileCount: getProfiles().length,
       activeProfileName: (getActiveProfile() || {}).nickname || '默认档案',
-      recentCount: Object.values(recentHistory).reduce((sum, items) => sum + items.length, 0)
+      recentCount: Object.values(recentHistory).reduce((sum, items) => sum + items.length, 0),
+      startupRecovery,
+      hasStartupRecovery: manualStates.includes(startupRecovery.state),
+      canUseTemporaryRecovery: ['formal_invalid_temp_valid', 'both_valid_different'].includes(startupRecovery.state)
     })
+  },
+
+  runStartupRecovery(action) {
+    if (this.data.operatingRecovery) return
+    this.setData({ operatingRecovery: true })
+    const result = resolveStartupRecovery(action, operationOptions(`startup_recovery_${action}`, action))
+    this.setData({ operatingRecovery: false })
+    if (!result.ok) {
+      wx.showToast({ title: result.message || '未完成数据操作仍需处理', icon: 'none' })
+      this.refresh()
+      return
+    }
+    this.refresh()
+    wx.showToast({
+      title: result.warning ? '数据已确认，临时标记待清理' : '未完成数据操作已处理',
+      icon: result.warning ? 'none' : 'success'
+    })
+  },
+
+  retryStartupRecovery() {
+    this.runStartupRecovery('retry_auto')
+  },
+
+  keepFormalData() {
+    this.runStartupRecovery('keep_formal')
+  },
+
+  useTemporaryData() {
+    this.runStartupRecovery('use_temporary')
   },
 
   runDataCheck() {
@@ -94,7 +135,10 @@ Page({
   },
 
   clearRecentOperations() {
-    const result = clearRecentHistory()
+    const result = clearRecentHistory(
+      undefined,
+      operationOptions('clear_recent_history', 'all')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message || '清除失败，原记录已保留。', icon: 'none' })
       return
@@ -135,7 +179,7 @@ Page({
       content: `将清除“${this.data.activeProfileName}”的收藏、成绩、复盘、目标和设置，其他档案不受影响。`,
       finalContent: '清除后无法撤销。确认只清除当前档案吗？',
       onConfirm: () => {
-        const result = clearCurrentProfileData()
+        const result = clearCurrentProfileData(operationOptions('clear_profile_data', 'profileData'))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -152,7 +196,7 @@ Page({
       content: `将清除 ${this.data.profileCount} 个档案及其收藏、成绩、复盘、目标、设置和教程状态。`,
       finalContent: '全部本地用户数据都将删除，学校正式数据不受影响。确认继续吗？',
       onConfirm: () => {
-        const result = clearLocalData()
+        const result = clearLocalData(operationOptions('clear_all_data', 'allUserData'))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return

@@ -6,6 +6,7 @@ const {
   deleteRestorePoint,
   clearRestorePoints
 } = require('../../utils/storage')
+const { createOperationContext } = require('../../utils/operation-context')
 
 const REASON_LABELS = {
   before_migration: '迁移前',
@@ -55,7 +56,10 @@ Page({
     const result = createRestorePoint({
       reason: 'manual',
       profileScope: { type: 'single_profile', profileId: profile.id },
-      operationId: `manual_restore_point_${Date.now()}`,
+      operationId: createOperationContext({
+        operationType: 'manual_restore_point',
+        entityId: profile.id
+      }).operationId,
       createdBy: 'manual'
     })
     this.setData({ operating: false })
@@ -77,7 +81,9 @@ Page({
       success: (modal) => {
         if (!modal.confirm || this.data.operating) return
         this.setData({ operating: true })
-        const result = restoreFromRestorePoint(id, { operationId: `ui_restore_${id}_${Date.now()}` })
+        const result = restoreFromRestorePoint(id, {
+          operationId: createOperationContext({ operationType: 'restore', entityId: id }).operationId
+        })
         this.setData({ operating: false })
         if (!result.ok) {
           wx.showToast({ title: result.message || '恢复未完成，当前数据已保留', icon: 'none' })
@@ -99,7 +105,12 @@ Page({
       success: (modal) => {
         if (!modal.confirm || this.data.operating) return
         this.setData({ operating: true })
-        const result = deleteRestorePoint(id, { operationId: `ui_delete_restore_${id}_${Date.now()}` })
+        const result = deleteRestorePoint(id, {
+          operationId: createOperationContext({
+            operationType: 'delete_restore_point',
+            entityId: id
+          }).operationId
+        })
         this.setData({ operating: false })
         if (!result.ok) wx.showToast({ title: result.message || '删除失败', icon: 'none' })
         else { this.refresh(); wx.showToast({ title: '已删除', icon: 'success' }) }
@@ -122,7 +133,12 @@ Page({
           success: (second) => {
             if (!second.confirm || this.data.operating) return
             this.setData({ operating: true })
-            const result = clearRestorePoints({ operationId: `ui_clear_restore_points_${Date.now()}` })
+            const result = clearRestorePoints({
+              operationId: createOperationContext({
+                operationType: 'clear_restore_points',
+                entityId: 'all'
+              }).operationId
+            })
             this.setData({ operating: false })
             if (!result.ok) wx.showToast({ title: '清除失败，请重试', icon: 'none' })
             else { this.refresh(); wx.showToast({ title: '已清除', icon: 'success' }) }

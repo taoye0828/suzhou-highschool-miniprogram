@@ -21,6 +21,7 @@ const { scoreSummaryForSchool } = require('../../utils/score-analysis')
 const { APP_CONFIG } = require('../../config/app-config')
 const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 const { selectCurrentScore, formatDifference } = require('../../utils/planning')
+const { operationOptions } = require('../../utils/operation-context')
 
 const MAX_COMPARE_SCHOOLS = 3
 const LEVEL_OPTIONS = APP_CONFIG.targetScore.levels.map((item) => ({ ...item }))
@@ -184,7 +185,10 @@ Page({
   },
 
   saveSelection(ids, { clearKeyword = false } = {}) {
-    const result = saveComparisonSchoolIds(ids.slice(0, MAX_COMPARE_SCHOOLS))
+    const result = saveComparisonSchoolIds(
+      ids.slice(0, MAX_COMPARE_SCHOOLS),
+      operationOptions('save_school_comparison', 'comparisonSchoolIds')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message || '对比选择保存失败。', icon: 'none' })
       return
@@ -199,7 +203,11 @@ Page({
     const id = event.currentTarget.dataset.id
     const school = this.data.selectedSchools.find((item) => item.id === id)
     if (!school) return
-    const result = setFavorite(id, !school.isFavorite)
+    const result = setFavorite(
+      id,
+      !school.isFavorite,
+      operationOptions('set_favorite', id)
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message || '收藏状态保存失败。', icon: 'none' })
       return
@@ -231,7 +239,7 @@ Page({
       referenceYear: school.referenceYear,
       createdAt: school.targetRecord && school.targetRecord.createdAt || now,
       updatedAt: now
-    })
+    }, operationOptions('save_target', school.id))
     if (!result.ok) {
       wx.showToast({ title: result.message || '目标学校保存失败。', icon: 'none' })
       return
@@ -245,7 +253,10 @@ Page({
 
   openDetail(event) {
     const id = event.currentTarget.dataset.id
-    const recentResult = addRecentViewedSchool(id)
+    const recentResult = addRecentViewedSchool(
+      id,
+      operationOptions('record_recent_school', id)
+    )
     if (recentResult && !recentResult.ok) {
       wx.showToast({ title: recentResult.message || '最近浏览保存失败。', icon: 'none' })
     }

@@ -6,6 +6,7 @@ const {
   switchStudentProfile,
   deleteStudentProfile
 } = require('../../utils/storage')
+const { operationOptions } = require('../../utils/operation-context')
 
 const FAVORITES_MODES = [
   { value: 'independent', label: '收藏独立' },
@@ -57,7 +58,10 @@ Page({
           wx.showToast({ title: '请填写档案昵称', icon: 'none' })
           return
         }
-        const result = createStudentProfile({ nickname })
+        const result = createStudentProfile(
+          { nickname },
+          operationOptions('create_profile', nickname)
+        )
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -69,7 +73,8 @@ Page({
   },
 
   switchProfile(event) {
-    const result = switchStudentProfile(event.currentTarget.dataset.id)
+    const id = event.currentTarget.dataset.id
+    const result = switchStudentProfile(id, operationOptions('switch_profile', id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -94,7 +99,11 @@ Page({
           wx.showToast({ title: '档案昵称不能为空', icon: 'none' })
           return
         }
-        const result = updateStudentProfile(profile.id, { nickname })
+        const result = updateStudentProfile(
+          profile.id,
+          { nickname },
+          operationOptions('update_profile', profile.id)
+        )
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -108,7 +117,11 @@ Page({
     const profileId = event.currentTarget.dataset.id
     const mode = FAVORITES_MODES[Number(event.detail.value)]
     if (!mode) return
-    const result = updateStudentProfile(profileId, { favoritesMode: mode.value })
+    const result = updateStudentProfile(
+      profileId,
+      { favoritesMode: mode.value },
+      operationOptions('update_profile', profileId)
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -127,7 +140,10 @@ Page({
       confirmColor: '#b42318',
       success: (modal) => {
         if (!modal.confirm) return
-        const result = deleteStudentProfile(profile.id)
+        const result = deleteStudentProfile(
+          profile.id,
+          operationOptions('delete_profile', profile.id)
+        )
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return

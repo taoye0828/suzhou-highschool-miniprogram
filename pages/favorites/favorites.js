@@ -2,6 +2,7 @@ const { schools, withFavoriteState, splitFavoriteIdsByValidity } = require('../.
 const { getFavoriteIdsResult, setFavorite, replaceFavoriteIds } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
+const { operationOptions } = require('../../utils/operation-context')
 
 Page({
   data: {
@@ -48,7 +49,8 @@ Page({
   },
 
   removeFavorite(event) {
-    const result = setFavorite(event.currentTarget.dataset.id, false)
+    const id = event.currentTarget.dataset.id
+    const result = setFavorite(id, false, operationOptions('set_favorite', id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -61,7 +63,7 @@ Page({
     const favoriteResult = getFavoriteIdsResult()
     notifyStorageReadResult(this, favoriteResult)
     const { valid } = splitFavoriteIdsByValidity(favoriteResult.ids)
-    const result = replaceFavoriteIds(valid)
+    const result = replaceFavoriteIds(valid, operationOptions('replace_favorites', 'favoriteSchoolIds'))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return

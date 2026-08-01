@@ -22,6 +22,7 @@ const { LOSS_REASON_TYPES } = require('../../utils/rc9-models')
 const { lossReasonStatistics } = require('../../utils/rc10-features')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
+const { operationOptions } = require('../../utils/operation-context')
 const {
   summarizeScoreRecords,
   calculateChartPoints,
@@ -614,7 +615,11 @@ Page({
     const segment = event.currentTarget.dataset.segment
     if (!SCORE_SEGMENTS.includes(segment) || segment === this.data.activeSegment) return
     this.rememberSegment(segment)
-    recordRecentHistory('scoreSegments', { id: segment, segment })
+    recordRecentHistory(
+      'scoreSegments',
+      { id: segment, segment },
+      operationOptions('record_recent_history', `scoreSegments:${segment}`)
+    )
     this.setData({ activeSegment: segment }, () => {
       if (segment === 'trend') this.scheduleTrendChartDraw()
     })
@@ -969,7 +974,10 @@ Page({
           item.subjectId === original.subjectId ? savedConfig : item
         ))
       : this.data.subjectConfigs.concat(savedConfig)
-    const result = saveSubjectConfigs(configs)
+    const result = saveSubjectConfigs(
+      configs,
+      operationOptions('save_subject_configs', 'subjectConfigs')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -995,7 +1003,7 @@ Page({
         if (!modalResult.confirm) return
         const result = saveSubjectConfigs(
           this.data.subjectConfigs.filter((item) => item.subjectId !== subjectId)
-        )
+        , operationOptions('save_subject_configs', 'subjectConfigs'))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -1139,7 +1147,7 @@ Page({
       createdAt: original && original.createdAt || now,
       updatedAt: now
     }
-    const result = saveScoreRecord(payload)
+    const result = saveScoreRecord(payload, operationOptions('save_score', payload.id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -1247,7 +1255,7 @@ Page({
       confirmColor: '#b42318',
       success: (modalResult) => {
         if (!modalResult.confirm) return
-        const result = deleteScoreRecord(id)
+        const result = deleteScoreRecord(id, operationOptions('delete_score', id))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -1272,7 +1280,7 @@ Page({
       confirmColor: '#b42318',
       success: (modalResult) => {
         if (!modalResult.confirm) return
-        const result = clearScoreRecords()
+        const result = clearScoreRecords(operationOptions('clear_scores', 'scoreRecords'))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return
@@ -1377,7 +1385,7 @@ Page({
       nextActions: values.nextActions,
       notes: values.notes,
       updatedAt: new Date().toISOString()
-    })
+    }, operationOptions('save_score', record.id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -1390,7 +1398,7 @@ Page({
       nextActions: values.nextActions,
       createdAt: record.createdAt,
       updatedAt: new Date().toISOString()
-    })
+    }, operationOptions('save_score_review', `review_${record.id}`))
     if (!reviewResult.ok) {
       wx.showToast({ title: reviewResult.message, icon: 'none' })
       return
@@ -1426,8 +1434,9 @@ Page({
     const subject = this.data.lossSubjectOptions[this.data.lossSubjectIndex]
     const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
     if (!record || !subject || !reasonType) return
+    const lossReasonId = createLossReasonId()
     const result = saveScoreLossReason({
-      id: createLossReasonId(),
+      id: lossReasonId,
       examRecordId: record.id,
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
@@ -1436,7 +1445,7 @@ Page({
       improvementAction: this.data.lossImprovementAction,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    })
+    }, operationOptions('save_loss_reason', lossReasonId))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -1446,7 +1455,8 @@ Page({
   },
 
   deleteLossReason(event) {
-    const result = deleteScoreLossReason(event.currentTarget.dataset.id)
+    const id = event.currentTarget.dataset.id
+    const result = deleteScoreLossReason(id, operationOptions('delete_loss_reason', id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -1472,8 +1482,9 @@ Page({
       confirmText: '保存任务',
       success: (modal) => {
         if (!modal.confirm) return
+        const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
         const result = saveLearningTask({
-          id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          id: taskId,
           title: String(modal.content || defaultTitle).trim(),
           subjectId: reason.subjectId,
           subjectName: reason.subjectName,
@@ -1489,7 +1500,7 @@ Page({
           notes: reason.improvementAction,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
-        })
+        }, operationOptions('save_learning_task', taskId))
         if (!result.ok) {
           wx.showToast({ title: result.message, icon: 'none' })
           return

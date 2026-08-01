@@ -22,6 +22,7 @@ const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { APP_CONFIG } = require('../../config/app-config')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 const { selectCurrentScore, formatDifference } = require('../../utils/planning')
+const { operationOptions } = require('../../utils/operation-context')
 
 const MAX_COMPARE_SCHOOLS = 3
 const FILTER_OPTIONS = buildSchoolFilterOptions()
@@ -415,7 +416,10 @@ Page({
       this.refresh()
       return
     }
-    const result = saveSchoolFilters(filtersForStorage(this.data, bounds))
+    const result = saveSchoolFilters(
+      filtersForStorage(this.data, bounds),
+      operationOptions('save_school_filters', 'schoolFilters')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message || '筛选保存失败，请重试。', icon: 'none' })
     }
@@ -495,7 +499,11 @@ Page({
     const { id } = event.currentTarget.dataset
     const item = this.data.results.find((school) => school.id === id)
     if (!item) return
-    const result = setFavorite(id, !item.isFavorite)
+    const result = setFavorite(
+      id,
+      !item.isFavorite,
+      operationOptions('set_favorite', id)
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -527,7 +535,7 @@ Page({
       referenceYear: school.referenceYear,
       createdAt: school.targetRecord && school.targetRecord.createdAt || now,
       updatedAt: now
-    })
+    }, operationOptions('save_target', school.id))
     if (!result.ok) {
       wx.showToast({ title: result.message || '目标学校保存失败。', icon: 'none' })
       return
@@ -551,7 +559,10 @@ Page({
       }
       selected.add(id)
     }
-    const result = saveComparisonSchoolIds([...selected])
+    const result = saveComparisonSchoolIds(
+      [...selected],
+      operationOptions('save_school_comparison', 'comparisonSchoolIds')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message || '对比选择保存失败。', icon: 'none' })
       return
@@ -560,7 +571,10 @@ Page({
   },
 
   clearComparison() {
-    const result = saveComparisonSchoolIds([])
+    const result = saveComparisonSchoolIds(
+      [],
+      operationOptions('save_school_comparison', 'comparisonSchoolIds')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message || '清空对比选择失败。', icon: 'none' })
       return
@@ -575,7 +589,10 @@ Page({
 
   openDetail(event) {
     const id = event.currentTarget.dataset.id
-    const recentResult = addRecentViewedSchool(id)
+    const recentResult = addRecentViewedSchool(
+      id,
+      operationOptions('record_recent_school', id)
+    )
     if (recentResult && !recentResult.ok) {
       wx.showToast({ title: recentResult.message || '最近浏览保存失败。', icon: 'none' })
     }

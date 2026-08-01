@@ -47,7 +47,7 @@ function testArchitecture() {
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../pages/restore-points/restore-points.js'), 'utf8'), /getStorageSync|setStorageSync/)
   const { storage } = setup()
   assert.strictEqual(typeof storage.createRestorePoint, 'function')
-  assert.strictEqual(storage.TRANSACTION_STAGES.length, 8)
+  assert.strictEqual(storage.TRANSACTION_STAGES.length, 10)
 }
 
 function testModel() {
@@ -135,9 +135,13 @@ function testFaultInjection() {
       operationId: `fault-${stage}`,
       faultInjector: new FakeFaultInjector('fault_test', stage)
     })
-    if (stage === 'cleanup') assert.strictEqual(result.ok, true)
+    if (['writeCommittedJournal', 'cleanup'].includes(stage)) {
+      assert.strictEqual(result.ok, true)
+      assert.strictEqual(result.committed, true)
+      assert.strictEqual(result.status, 'committed_with_warning')
+    }
     else assert.strictEqual(result.ok, false, stage)
-    if (!['verifyCommitted', 'cleanup'].includes(stage)) {
+    if (!['verifyCommitted', 'writeCommittedJournal', 'cleanup', 'finalReadback'].includes(stage)) {
       assert.strictEqual(JSON.stringify(storage.getVersionedState().state), before)
     }
   }

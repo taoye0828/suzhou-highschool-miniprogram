@@ -31,6 +31,7 @@ const {
   ALL_ADMISSION_SCORES,
   schoolScoreTrend
 } = require('../../utils/rc10-features')
+const { operationOptions } = require('../../utils/operation-context')
 
 function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYear, scenarios) {
   if (!school) return null
@@ -75,7 +76,12 @@ Page({
 
   onLoad(options) {
     this.setData({ schoolId: options.id || '' })
-    if (getSchoolById(options.id || '')) addRecentViewedSchool(options.id)
+    if (getSchoolById(options.id || '')) {
+      addRecentViewedSchool(
+        options.id,
+        operationOptions('record_recent_school', options.id)
+      )
+    }
     this.refresh()
   },
 
@@ -128,7 +134,11 @@ Page({
   toggleFavorite() {
     if (!this.data.school) return
     const nextValue = !this.data.isFavorite
-    const result = setFavorite(this.data.school.id, nextValue)
+    const result = setFavorite(
+      this.data.school.id,
+      nextValue,
+      operationOptions('set_favorite', this.data.school.id)
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -155,7 +165,7 @@ Page({
       schoolName: this.data.school.name,
       level: level.value,
       createdAt: new Date().toISOString()
-    })
+    }, operationOptions('save_target', this.data.school.id))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return
@@ -177,7 +187,10 @@ Page({
       wx.showToast({ title: '最多对比 3 所学校', icon: 'none' })
       return
     }
-    const result = saveComparisonSchoolIds(next)
+    const result = saveComparisonSchoolIds(
+      next,
+      operationOptions('save_school_comparison', 'comparisonSchoolIds')
+    )
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return

@@ -20,6 +20,7 @@ const {
 } = require('../../utils/planning')
 const { admissionScores } = require('../../data/admission-scores')
 const { summarizeScoreRecords } = require('../../utils/score-trend')
+const { operationOptions } = require('../../utils/operation-context')
 
 function importantStageGoal(records) {
   const rank = { in_progress: 0, not_started: 1, paused: 2, completed: 3 }
@@ -140,7 +141,7 @@ Page({
   onExamYearChange(event) {
     const index = Number(event.detail.value)
     const year = this.data.examYears[index]
-    const result = saveExamYear(year)
+    const result = saveExamYear(year, operationOptions('save_exam_year', year))
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
       return

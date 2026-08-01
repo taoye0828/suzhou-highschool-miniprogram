@@ -12,6 +12,14 @@
     <view class="info-row"><text class="info-label">最近操作</text><text class="info-value">{{recentCount}} 条</text></view>
   </view>
 
+  <view wx:if="{{hasStartupRecovery}}" class="card management-card">
+    <view class="card-title">未完成数据操作</view>
+    <view class="muted small management-note">检测状态：{{startupRecovery.state}}。请先重试自动判断；只有确认当前正式数据正确时才选择保留当前数据。</view>
+    <button class="button secondary" disabled="{{operatingRecovery}}" bindtap="retryStartupRecovery">重新检查</button>
+    <button class="button secondary" disabled="{{operatingRecovery}}" bindtap="keepFormalData">保留当前正式数据</button>
+    <button wx:if="{{canUseTemporaryRecovery}}" class="button" disabled="{{operatingRecovery}}" bindtap="useTemporaryData">使用已校验的临时数据</button>
+  </view>
+
   <view class="card">
     <view class="card-title">数据检查</view>
     <view class="muted small">只检查用户本地数据，不读取或修改正式学校与分数线文件。</view>
