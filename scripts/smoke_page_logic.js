@@ -477,7 +477,8 @@ function testInfoPages() {
   const privacyPage = createPageInstance(privacyDefinition)
   assert.ok(privacyPage.data.sections.length > 0)
   const privacyText = JSON.stringify(privacyPage.data.sections)
-  assert.ok(privacyText.includes('不上传收藏、学习目标记录、成绩记录、目标年份或输入草稿'))
+  assert.ok(privacyText.includes('不会自动、静默或后台上传收藏、成绩、目标、错题、任务、备份或报告'))
+  assert.ok(privacyText.includes('只有你主动点击发送备份或报告并选择接收方时'))
   assert.ok(privacyText.includes('不进行后台网络请求或用户行为追踪'))
 }
 
@@ -495,6 +496,20 @@ function testExamSettingsPage() {
   page.copyTemplate({ currentTarget: { dataset: { id: 'builtin_monthly_exam_v1' } } })
   page.saveTemplate()
   assert.strictEqual(storage.getCustomExamTemplates().length, 1)
+}
+
+function testP6Pages() {
+  const searchDefinition = loadPage('pages/global-search/global-search')
+  const searchPage = createPageInstance(searchDefinition)
+  searchPage.onShow()
+  searchPage.onKeywordInput({ detail: { value: '苏州中学' } })
+  assert.ok(searchPage.data.results.some((item) => item.type === 'school'))
+
+  const reportsDefinition = loadPage('pages/reports/reports')
+  const reportsPage = createPageInstance(reportsDefinition)
+  reportsPage.onShow()
+  assert.strictEqual(reportsPage.data.reportType, 'score_stage')
+  assert.strictEqual(reportsPage.data.reportFormat, 'text')
 }
 
 function testWebViewPage() {
@@ -522,6 +537,7 @@ async function run() {
   testScoreTrendPage()
   testProfilePage()
   testExamSettingsPage()
+  testP6Pages()
   testInfoPages()
   testWebViewPage()
   console.log('PAGE LOGIC SMOKE PASSED')

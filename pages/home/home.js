@@ -193,6 +193,10 @@ Page({
     wx.switchTab({ url: '/pages/targets/targets' })
   },
 
+  openGlobalSearch() {
+    wx.navigateTo({ url: '/pages/global-search/global-search' })
+  },
+
   syncOnboarding() {
     this.setData({
       onboarding: onboardingForPage('/pages/home/home', { autoStart: true })

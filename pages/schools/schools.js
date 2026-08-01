@@ -16,13 +16,22 @@ const {
   saveComparisonSchoolIds,
   setFavorite,
   saveTargetRecord,
-  addRecentViewedSchool
+  addRecentViewedSchool,
+  getSchoolUserStates,
+  getPrimaryTargetSchoolId,
+  getRecentViewedSchoolIds,
+  getRecentHistory
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { APP_CONFIG } = require('../../config/app-config')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 const { selectCurrentScore, formatDifference } = require('../../utils/planning')
 const { operationOptions } = require('../../utils/operation-context')
+const {
+  CANDIDATE_STATUS_LABELS,
+  enrichSchoolUserData,
+  filterByUserPlanning
+} = require('../../utils/school-planning')
 
 const MAX_COMPARE_SCHOOLS = 3
 const FILTER_OPTIONS = buildSchoolFilterOptions()
@@ -34,6 +43,7 @@ const SORT_OPTIONS = [
   { value: 'reference_asc', catalogValue: 'referenceScoreAsc', label: '参考分从低到高' },
   { value: 'difference', catalogValue: 'closest', label: '与当前成绩最接近' }
 ]
+const CANDIDATE_STATUS_OPTIONS = Object.entries(CANDIDATE_STATUS_LABELS).map(([value, label]) => ({ value, label }))
 
 function uniqueStrings(values) {
   return [...new Set((Array.isArray(values) ? values : [])
@@ -87,6 +97,12 @@ function normalizedStoredFilters(value) {
     maxScoreInput: scoreInput(source.maxReferenceScore),
     favoritesOnly: Boolean(source.favoritesOnly),
     targetsOnly: Boolean(source.targetsOnly),
+    selectedCandidateStatuses: uniqueStrings(source.candidateStatuses),
+    selectedUserTags: uniqueStrings(source.userTags),
+    hasNoteOnly: Boolean(source.hasNoteOnly),
+    recentViewedOnly: Boolean(source.recentViewedOnly),
+    recentComparedOnly: Boolean(source.recentComparedOnly),
+    primaryOnly: Boolean(source.primaryOnly),
     sortIndex
   }
 }
@@ -106,6 +122,12 @@ function filtersForStorage(data, bounds) {
     maxReferenceScore: bounds.max,
     favoritesOnly: Boolean(data.favoritesOnly),
     targetsOnly: Boolean(data.targetsOnly),
+    candidateStatuses: uniqueStrings(data.selectedCandidateStatuses),
+    userTags: uniqueStrings(data.selectedUserTags),
+    hasNoteOnly: Boolean(data.hasNoteOnly),
+    recentViewedOnly: Boolean(data.recentViewedOnly),
+    recentComparedOnly: Boolean(data.recentComparedOnly),
+    primaryOnly: Boolean(data.primaryOnly),
     sortBy: SORT_OPTIONS[data.sortIndex] ? SORT_OPTIONS[data.sortIndex].value : 'name'
   }
 }
@@ -187,6 +209,12 @@ function buildActiveFilters(data) {
   }
   if (data.favoritesOnly) active.push({ kind: 'favoritesOnly', value: '', label: '只看收藏' })
   if (data.targetsOnly) active.push({ kind: 'targetsOnly', value: '', label: '只看目标学校' })
+  uniqueStrings(data.selectedCandidateStatuses).forEach((value) => active.push({ kind: 'candidateStatus', value, label: `候选：${CANDIDATE_STATUS_LABELS[value] || value}` }))
+  addArray('userTag', data.selectedUserTags, '标签：')
+  if (data.hasNoteOnly) active.push({ kind: 'hasNoteOnly', value: '', label: '有个人备注' })
+  if (data.recentViewedOnly) active.push({ kind: 'recentViewedOnly', value: '', label: '最近浏览' })
+  if (data.recentComparedOnly) active.push({ kind: 'recentComparedOnly', value: '', label: '最近对比' })
+  if (data.primaryOnly) active.push({ kind: 'primaryOnly', value: '', label: '主要目标' })
   uniqueStrings(data.selectedTargetLevels).forEach((value) => active.push({
     kind: 'targetLevel',
     value,
@@ -226,6 +254,12 @@ function buildFilterSummary(data, resultCount, currentScore) {
   }
   if (data.favoritesOnly) parts.push('只看收藏')
   if (data.targetsOnly) parts.push('只看目标学校')
+  if (data.selectedCandidateStatuses.length) parts.push(data.selectedCandidateStatuses.map((value) => CANDIDATE_STATUS_LABELS[value] || value).join('或'))
+  if (data.selectedUserTags.length) parts.push(`标签 ${data.selectedUserTags.join('或')}`)
+  if (data.hasNoteOnly) parts.push('有个人备注')
+  if (data.recentViewedOnly) parts.push('最近浏览')
+  if (data.recentComparedOnly) parts.push('最近对比')
+  if (data.primaryOnly) parts.push('主要目标')
   if (data.selectedTargetLevels.length) {
     parts.push(`${data.selectedTargetLevels.map((value) => LEVEL_LABELS[value] || value).join('或')}目标`)
   }
@@ -250,6 +284,14 @@ Page({
     maxScoreInput: '',
     favoritesOnly: false,
     targetsOnly: false,
+    candidateStatusOptions: checkedOptions(CANDIDATE_STATUS_OPTIONS, []),
+    userTagOptions: [],
+    selectedCandidateStatuses: [],
+    selectedUserTags: [],
+    hasNoteOnly: false,
+    recentViewedOnly: false,
+    recentComparedOnly: false,
+    primaryOnly: false,
     sortOptions: SORT_OPTIONS,
     sortIndex: 0,
     moreFiltersVisible: false,
@@ -352,6 +394,20 @@ Page({
     this.setData({ targetsOnly: Boolean(event.detail.value) }, () => this.persistFilters())
   },
 
+  onCandidateStatusesChange(event) {
+    this.setData({ selectedCandidateStatuses: event.detail.value }, () => this.persistFilters())
+  },
+
+  onUserTagsChange(event) {
+    this.setData({ selectedUserTags: event.detail.value }, () => this.persistFilters())
+  },
+
+  onUserPlanningSwitch(event) {
+    const field = event.currentTarget.dataset.field
+    if (!['hasNoteOnly', 'recentViewedOnly', 'recentComparedOnly', 'primaryOnly'].includes(field)) return
+    this.setData({ [field]: Boolean(event.detail.value) }, () => this.persistFilters())
+  },
+
   onSortChange(event) {
     this.setData({ sortIndex: Number(event.detail.value) }, () => this.persistFilters())
   },
@@ -381,6 +437,12 @@ Page({
     if (kind === 'maxScore') changes.maxScoreInput = ''
     if (kind === 'favoritesOnly') changes.favoritesOnly = false
     if (kind === 'targetsOnly') changes.targetsOnly = false
+    if (kind === 'candidateStatus') changes.selectedCandidateStatuses = removeValue(this.data.selectedCandidateStatuses)
+    if (kind === 'userTag') changes.selectedUserTags = removeValue(this.data.selectedUserTags)
+    if (kind === 'hasNoteOnly') changes.hasNoteOnly = false
+    if (kind === 'recentViewedOnly') changes.recentViewedOnly = false
+    if (kind === 'recentComparedOnly') changes.recentComparedOnly = false
+    if (kind === 'primaryOnly') changes.primaryOnly = false
     if (kind === 'targetLevel') changes.selectedTargetLevels = removeValue(this.data.selectedTargetLevels)
     if (kind === 'sort') changes.sortIndex = 0
     this.setData(changes, () => this.persistFilters())
@@ -432,6 +494,8 @@ Page({
     const scoreResult = getScoreRecordsResult()
     const draftResult = getTargetDraftResult()
     const yearResult = getExamYearResult()
+    const schoolUserStates = getSchoolUserStates()
+    const primarySchoolId = getPrimaryTargetSchoolId()
     const failedResult = [favoriteResult, targetResult, scoreResult, draftResult, yearResult]
       .find((result) => !result.ok)
     notifyStorageReadResult(this, failedResult || favoriteResult)
@@ -460,8 +524,21 @@ Page({
       targetYear: yearResult.year,
       sortBy: sort.catalogValue
     }
+    const recentComparedIds = [...new Set(getRecentHistory().schoolComparisons.flatMap((item) => item.schoolIds || []))]
+    const enriched = bounds.valid
+      ? filterSchoolCatalog(query).map((school) => enrichSchoolUserData(school, schoolUserStates, targetResult.records, primarySchoolId))
+      : []
     const results = bounds.valid
-      ? filterSchoolCatalog(query).map((school) => presentSchool(school, comparisonIds))
+      ? filterByUserPlanning(enriched, {
+          candidateStatuses: this.data.selectedCandidateStatuses,
+          tags: this.data.selectedUserTags,
+          hasNoteOnly: this.data.hasNoteOnly,
+          recentViewedOnly: this.data.recentViewedOnly,
+          recentComparedOnly: this.data.recentComparedOnly,
+          primaryOnly: this.data.primaryOnly,
+          recentViewedSchoolIds: getRecentViewedSchoolIds(),
+          recentComparedSchoolIds: recentComparedIds
+        }).map((school) => presentSchool(school, comparisonIds))
       : []
     const activeFilters = buildActiveFilters(this.data)
     const comparisonNames = comparisonIds
@@ -483,6 +560,8 @@ Page({
       })),
       matchLevelOptions: checkedOptions(FILTER_OPTIONS.matchLevels, this.data.selectedMatchLevels),
       targetLevelOptions: checkedOptions(FILTER_OPTIONS.targetLevels, this.data.selectedTargetLevels),
+      candidateStatusOptions: checkedOptions(CANDIDATE_STATUS_OPTIONS, this.data.selectedCandidateStatuses),
+      userTagOptions: checkedOptions([...new Set(schoolUserStates.flatMap((item) => item.tags))].sort(), this.data.selectedUserTags),
       filterError: bounds.message,
       currentScore: current.score,
       currentScoreText: current.score === null ? '尚未记录成绩' : `当前成绩 ${current.score} 分`,

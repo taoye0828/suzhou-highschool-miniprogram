@@ -41,6 +41,7 @@
   <view class="section-title">数据</view>
   <view class="card menu-card" bindtap="openBackupRestore"><view class="grow"><view class="card-title">备份与恢复</view><view class="muted small menu-note">本地 JSON、校验、合并或覆盖</view></view><view class="list-arrow">›</view></view>
   <view class="card menu-card" bindtap="openDataManagement"><view class="grow"><view class="card-title">数据管理</view><view class="muted small menu-note">清除当前档案或全部本地数据</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu-card" bindtap="openReports"><view class="grow"><view class="card-title">文本和 JSON 报告</view><view class="muted small menu-note">当前档案成绩阶段与目标学校报告</view></view><view class="list-arrow">›</view></view>
 
   <view class="section-title">考试设置</view>
   <view class="card menu-card" bindtap="openExamSettings"><view class="grow"><view class="card-title">考试模板与分值方案</view><view class="muted small menu-note">内置模板、自定义满分与历史方案快照</view></view><view class="list-arrow">›</view></view>

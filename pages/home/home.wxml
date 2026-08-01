@@ -64,6 +64,7 @@
 
   <view class="section-title">快捷操作</view>
   <view class="shortcut-grid">
+    <button class="button secondary shortcut-button wide" bindtap="openGlobalSearch">全局搜索</button>
     <button class="button shortcut-button" bindtap="openScoreCenter">记录成绩</button>
     <button class="button secondary shortcut-button" bindtap="openRecommendations">历史分差参考</button>
     <button class="button secondary shortcut-button wide" bindtap="openTargetPlanning">目标规划</button>

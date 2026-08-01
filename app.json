@@ -14,6 +14,8 @@
     "pages/data-management/data-management",
     "pages/restore-points/restore-points",
     "pages/exam-settings/exam-settings",
+    "pages/global-search/global-search",
+    "pages/reports/reports",
     "pages/profile-management/profile-management",
     "pages/backup-restore/backup-restore",
     "pages/help/help",

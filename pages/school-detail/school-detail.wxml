@@ -48,6 +48,15 @@
       <button class="button target-save-button" bindtap="saveSchoolTarget">{{isTargetSchool ? '更新目标等级' : '加入目标'}}</button>
     </view>
 
+    <view class="card">
+      <view class="section-heading">我的学校状态</view>
+      <view class="muted small">候选状态、标签和备注只属于当前档案，不参与历史分差计算。</view>
+      <text class="field-label">候选状态</text><picker range="{{candidateStatusOptions}}" range-key="label" value="{{candidateStatusIndex}}" bindchange="onCandidateStatusChange"><view class="input picker-input">{{candidateStatusOptions[candidateStatusIndex].label}}⌄</view></picker>
+      <text class="field-label">个人标签</text><input class="input" maxlength="400" value="{{schoolTagsInput}}" data-field="schoolTagsInput" bindinput="onSchoolUserInput" placeholder="用逗号或顿号分隔，最多 20 个" />
+      <text class="field-label">个人备注</text><textarea class="input textarea" maxlength="1000" value="{{schoolNoteInput}}" data-field="schoolNoteInput" bindinput="onSchoolUserInput" placeholder="仅保存在当前本机档案"></textarea>
+      <button class="button" bindtap="saveSchoolUserState">保存学校状态</button>
+    </view>
+
     <view wx:if="{{school.intro}}" class="card">
       <view class="section-heading">学校简介</view>
       <view class="notice">{{school.intro}}</view>

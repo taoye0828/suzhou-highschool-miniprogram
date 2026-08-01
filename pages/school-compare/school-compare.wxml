@@ -98,6 +98,10 @@
           <view class="info-label">目标状态</view>
           <view class="info-value">{{item.targetStatusText}}</view>
         </view>
+        <view class="compare-cell"><view class="info-label">候选状态</view><view class="info-value">{{item.candidateStatusLabel}}</view></view>
+        <view class="compare-cell"><view class="info-label">主要目标</view><view class="info-value">{{item.isPrimaryTarget ? '是' : '否'}}</view></view>
+        <view class="compare-cell"><view class="info-label">个人标签</view><view class="info-value">{{item.userTags.length ? item.userTags.join('、') : '无'}}</view></view>
+        <view class="compare-cell"><view class="info-label">个人备注</view><view class="info-value">{{item.userNote || '无'}}</view></view>
         <view class="compare-cell">
           <view class="info-label">收藏状态</view>
           <view class="info-value">{{item.isFavorite ? '已收藏' : '未收藏'}}</view>

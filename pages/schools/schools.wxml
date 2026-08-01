@@ -133,6 +133,13 @@
         </checkbox-group>
       </view>
 
+      <view class="filter-section"><view class="filter-heading">候选状态</view><checkbox-group class="choice-wrap" bindchange="onCandidateStatusesChange"><label wx:for="{{candidateStatusOptions}}" wx:key="value" class="choice-chip {{item.checked ? 'selected' : ''}}"><checkbox class="choice-checkbox" value="{{item.value}}" checked="{{item.checked}}" /><text>{{item.label}}</text></label></checkbox-group></view>
+      <view wx:if="{{userTagOptions.length}}" class="filter-section"><view class="filter-heading">个人标签</view><checkbox-group class="choice-wrap" bindchange="onUserTagsChange"><label wx:for="{{userTagOptions}}" wx:key="value" class="choice-chip {{item.checked ? 'selected' : ''}}"><checkbox class="choice-checkbox" value="{{item.value}}" checked="{{item.checked}}" /><text>{{item.label}}</text></label></checkbox-group></view>
+      <view class="toggle-row"><view><view class="filter-heading">有个人备注</view></view><switch checked="{{hasNoteOnly}}" data-field="hasNoteOnly" color="#0f766e" bindchange="onUserPlanningSwitch" /></view>
+      <view class="toggle-row"><view><view class="filter-heading">最近浏览</view></view><switch checked="{{recentViewedOnly}}" data-field="recentViewedOnly" color="#0f766e" bindchange="onUserPlanningSwitch" /></view>
+      <view class="toggle-row"><view><view class="filter-heading">最近对比</view></view><switch checked="{{recentComparedOnly}}" data-field="recentComparedOnly" color="#0f766e" bindchange="onUserPlanningSwitch" /></view>
+      <view class="toggle-row"><view><view class="filter-heading">主要目标</view></view><switch checked="{{primaryOnly}}" data-field="primaryOnly" color="#0f766e" bindchange="onUserPlanningSwitch" /></view>
+
       <view class="filter-section">
         <view class="filter-heading">排序方式</view>
         <picker range="{{sortOptions}}" range-key="label" value="{{sortIndex}}" bindchange="onSortChange">
@@ -189,6 +196,8 @@
       <text wx:if="{{item.hasOwnership}}" class="badge">{{item.ownership}}</text>
       <text wx:if="{{item.hasCampus}}" class="badge">{{item.campus}}</text>
       <text wx:if="{{item.isTargetSchool}}" class="badge target-badge">{{item.targetLevelText}}目标</text>
+      <text wx:if="{{item.candidateStatus !== 'none'}}" class="badge">{{item.candidateStatusLabel}}</text>
+      <text wx:for="{{item.userTags}}" wx:key="*this" class="badge">{{item}}</text>
     </view>
     <view class="school-metrics">
       <view class="metric-item">

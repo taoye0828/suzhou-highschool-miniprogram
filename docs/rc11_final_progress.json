@@ -1,12 +1,12 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
-  "currentPhase": "P5",
-  "currentStepId": "P5-S05",
+  "currentHead": "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
+  "currentPhase": "P6",
+  "currentStepId": "P6-S05",
   "currentStepStatus": "completed",
-  "lastStableCommit": "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
-  "lastPushedCommit": "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
+  "lastStableCommit": "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
+  "lastPushedCommit": "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -100,7 +100,13 @@
     "P5-BIDIRECTIONAL-TASK-LINKS",
     "P5-WEEKLY-PLANS",
     "P5-MULTI-METRIC-STAGE-GOALS",
-    "P5-STAGE-REVIEWS"
+    "P5-STAGE-REVIEWS",
+    "P6-SCHOOL-USER-STATES",
+    "P6-FINAL-SCHOOL-FILTERS",
+    "P6-FINAL-SCHOOL-COMPARE",
+    "P6-GLOBAL-SEARCH",
+    "P6-TEXT-JSON-REPORTS",
+    "P6-USER-ACTIVE-REPORT-SHARE"
   ],
   "completedTestIds": [
     "P0-GIT",
@@ -143,12 +149,18 @@
     "SMOKE-P5",
     "UPLOAD-IGNORE-P5",
     "JS-JSON-P5",
-    "FORMAL-DATA-HASH-P5"
+    "FORMAL-DATA-HASH-P5",
+    "V1-P6-8",
+    "RC11-1-P6-REGRESSION",
+    "RC11-2-P6-REGRESSION",
+    "RC9-P6-REGRESSION",
+    "RC10-P6-REGRESSION",
+    "SMOKE-P6",
+    "UPLOAD-IGNORE-P6",
+    "JS-JSON-P6",
+    "FORMAL-DATA-HASH-P6"
   ],
   "pendingTestIds": [
-    "V1-SCHOOL",
-    "V1-SEARCH",
-    "V1-REPORT",
     "V1-DATA",
     "V1-PERF",
     "V1-FREEZE"
@@ -193,7 +205,21 @@
     "utils/learning-loop.js",
     "scripts/v1/learning-loop-suite.js",
     "scripts/verify_v1_p5.js",
-    "docs/v1_learning_loop_spec.md"
+    "docs/v1_learning_loop_spec.md",
+    "utils/school-planning.js",
+    "utils/report-export.js",
+    "pages/global-search/global-search.js",
+    "pages/global-search/global-search.json",
+    "pages/global-search/global-search.wxml",
+    "pages/global-search/global-search.wxss",
+    "pages/reports/reports.js",
+    "pages/reports/reports.json",
+    "pages/reports/reports.wxml",
+    "pages/reports/reports.wxss",
+    "scripts/v1/school-planning-suite.js",
+    "scripts/verify_v1_p6.js",
+    "docs/v1_school_user_state_spec.md",
+    "docs/v1_report_export_spec.md"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -245,21 +271,29 @@
     "pages/score-trend/score-trend.wxss",
     "scripts/verify_rc8_chart_vertical_alignment.js",
     "utils/score-trend.js",
-    "pages/home/home.wxml"
+    "pages/home/home.wxml",
+    "config/app-config.js",
+    "pages/help/help.js",
+    "pages/profile/profile.wxml",
+    "pages/school-compare/school-compare.wxml",
+    "pages/school-detail/school-detail.wxml",
+    "pages/schools/schools.wxml",
+    "scripts/verify_cross_platform_consistency.js"
   ],
   "createdCommits": [
     "f181e2689a6e2e566703b05869ea03359761a029",
     "928f4c85f71adc98180ff1507b4ea9f5e7993342",
     "83d62e1a14fec8ef2648f7850b097ece99a2d0a8",
     "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
-    "87c2f6cce7e85c953b109e8be2ecc362c4a98890"
+    "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
+    "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628"
   ],
   "pushPendingCommits": [],
-  "lastSuccessfulCommand": "P5 8 TEST-ID; P1-P5 72 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal data hashes all passed",
+  "lastSuccessfulCommand": "P6 8 TEST-ID; P1-P6 80 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal data hashes all passed",
   "lastFailedCommand": "",
   "lastErrorSummary": "",
-  "nextAction": "Create and ordinary-push the P5 logical commit, then start P6 school planning, search and reports.",
+  "nextAction": "Create and ordinary-push the P6 logical commit, then start P7 UI contracts, data health and performance.",
   "safeToResume": true,
   "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T18:55:00+08:00"
+  "updatedAt": "2026-08-01T19:30:00+08:00"
 }

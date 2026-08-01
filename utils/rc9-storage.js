@@ -26,7 +26,8 @@ const {
   normalizeScoreScheme,
   normalizeMistakeRecord,
   normalizeWeeklyPlan,
-  normalizeStageReview
+  normalizeStageReview,
+  normalizeSchoolUserState
 } = require('./rc9-models')
 const {
   builtInExamTemplates,
@@ -1669,6 +1670,24 @@ function deleteStageReview(id) {
   return deleteProfileRecord('stageReviews', id)
 }
 
+function getSchoolUserStates() {
+  return listFromActiveData('schoolUserStates')
+}
+
+function getSchoolUserState(schoolId) {
+  return getSchoolUserStates().find((item) => item.schoolId === schoolId) || null
+}
+
+function saveSchoolUserState(record) {
+  return saveProfileRecord(
+    'schoolUserStates', record, normalizeSchoolUserState, '学校个人状态', PRODUCT_RULES.limits.maxSchoolUserStatesPerProfile
+  )
+}
+
+function deleteSchoolUserState(id) {
+  return deleteProfileRecord('schoolUserStates', id)
+}
+
 function getSubjectConfigs() {
   const context = activeContext()
   return context.ok ? context.data.subjectConfigs : []
@@ -2664,6 +2683,18 @@ function protectedDeleteStageReview(id, options = {}) {
   }, () => deleteStageReview(id))
 }
 
+function protectedSaveSchoolUserState(record, options = {}) {
+  return protectedCall('save_school_user_state', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && (record.id || record.schoolId) || ''
+  }, () => saveSchoolUserState(record))
+}
+
+function protectedDeleteSchoolUserState(id, options = {}) {
+  return protectedCall('delete_school_user_state', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteSchoolUserState(id))
+}
+
 function protectedSaveSubjectConfigs(configs, options = {}) {
   return protectedCall('save_subject_configs', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: 'subjectConfigs'
@@ -3025,6 +3056,10 @@ module.exports = {
   getStageReviews,
   saveStageReview: protectedSaveStageReview,
   deleteStageReview: protectedDeleteStageReview,
+  getSchoolUserStates,
+  getSchoolUserState,
+  saveSchoolUserState: protectedSaveSchoolUserState,
+  deleteSchoolUserState: protectedDeleteSchoolUserState,
   getSubjectConfigs,
   saveSubjectConfigs: protectedSaveSubjectConfigs,
   getExamTemplates,

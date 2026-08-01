@@ -11,6 +11,9 @@ const {
   addRecentViewedSchool,
   getComparisonSchoolIds,
   saveComparisonSchoolIds
+  ,
+  getSchoolUserState,
+  saveSchoolUserState
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { mapSearchKeyword, copyText } = require('../../utils/map')
@@ -32,6 +35,9 @@ const {
   schoolScoreTrend
 } = require('../../utils/rc10-features')
 const { operationOptions } = require('../../utils/operation-context')
+const { CANDIDATE_STATUS_LABELS } = require('../../utils/school-planning')
+
+const CANDIDATE_STATUS_OPTIONS = Object.entries(CANDIDATE_STATUS_LABELS).map(([value, label]) => ({ value, label }))
 
 function buildTargetAnalysis(school, targetRecord, scoreRecords, draft, targetYear, scenarios) {
   if (!school) return null
@@ -74,6 +80,13 @@ Page({
     emptyScoreText: EMPTY_SCORE_TEXT,
     scoreSafetyNotice: SCORE_SAFETY_NOTICE,
     detailNotice: APP_CONFIG.policy.schoolDetailNotice
+    ,
+    candidateStatusOptions: CANDIDATE_STATUS_OPTIONS,
+    candidateStatusIndex: 0,
+    schoolUserStateId: '',
+    schoolUserStateVersion: null,
+    schoolTagsInput: '',
+    schoolNoteInput: ''
   },
 
   onLoad(options) {
@@ -99,6 +112,7 @@ Page({
     const draftResult = getTargetDraftResult()
     const yearResult = getExamYearResult()
     const scenarioSettings = getScenarioSettings()
+    const userState = school ? getSchoolUserState(school.id) : null
     const targetRecord = school
       ? targetResult.records.find((record) => record.schoolId === school.id)
       : null
@@ -130,6 +144,12 @@ Page({
       scoreGroups: school ? groupScoresByYear(school.id) : [],
       scoreTrend: school ? schoolScoreTrend(school.id) : [],
       mapKeyword: school ? mapSearchKeyword(school.name) : ''
+      ,
+      candidateStatusIndex: Math.max(0, CANDIDATE_STATUS_OPTIONS.findIndex((item) => item.value === (userState && userState.candidateStatus || 'none'))),
+      schoolUserStateId: userState && userState.id || '',
+      schoolUserStateVersion: userState && userState.version || null,
+      schoolTagsInput: userState && userState.tags.join('、') || '',
+      schoolNoteInput: userState && userState.note || ''
     })
   },
 
@@ -151,6 +171,38 @@ Page({
 
   onTargetLevelChange(event) {
     this.setData({ targetLevelIndex: Number(event.detail.value) })
+  },
+
+  onCandidateStatusChange(event) {
+    this.setData({ candidateStatusIndex: Number(event.detail.value) })
+  },
+
+  onSchoolUserInput(event) {
+    const field = event.currentTarget.dataset.field
+    if (!['schoolTagsInput', 'schoolNoteInput'].includes(field)) return
+    this.setData({ [field]: event.detail.value })
+  },
+
+  saveSchoolUserState() {
+    if (!this.data.school) return
+    const status = CANDIDATE_STATUS_OPTIONS[this.data.candidateStatusIndex] || CANDIDATE_STATUS_OPTIONS[0]
+    const tags = [...new Set(String(this.data.schoolTagsInput || '').split(/[、,，\n]/u).map((item) => item.trim()).filter(Boolean))].slice(0, 20)
+    const now = new Date().toISOString()
+    const id = this.data.schoolUserStateId || `school_state_${this.data.school.id}`
+    const result = saveSchoolUserState({
+      id,
+      schoolId: this.data.school.id,
+      candidateStatus: status.value,
+      tags,
+      note: this.data.schoolNoteInput,
+      customOrder: 0,
+      createdAt: now,
+      updatedAt: now,
+      expectedVersion: this.data.schoolUserStateVersion
+    }, operationOptions('save_school_user_state', id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    wx.showToast({ title: '学校个人状态已保存', icon: 'success' })
+    this.refresh()
   },
 
   saveSchoolTarget() {

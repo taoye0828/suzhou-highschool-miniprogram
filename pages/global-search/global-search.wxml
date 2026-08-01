@@ -1,0 +1,7 @@
+<view class="page">
+  <view class="profile-strip">当前档案 · {{activeProfileName}} · 不搜索其他档案私有内容</view>
+  <input class="input search-input" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" placeholder="搜索学校、考试、目标、任务、标签或备注" />
+  <view wx:if="{{!hasSearched}}" class="card empty"><view class="muted small">搜索在本机即时完成，不建立持久索引，也不会上传关键词。</view></view>
+  <view wx:if="{{hasSearched && results.length === 0}}" class="card empty"><view class="card-title">当前档案没有匹配结果</view></view>
+  <view wx:for="{{results}}" wx:key="id" class="card menu-card" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="openResult"><view class="grow"><view class="card-title">{{item.title}}</view><view class="muted small">{{item.subtitle}}</view></view><view class="list-arrow">›</view></view>
+</view>

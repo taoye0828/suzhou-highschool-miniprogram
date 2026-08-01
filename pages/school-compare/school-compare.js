@@ -14,7 +14,9 @@ const {
   saveComparisonSchoolIds,
   setFavorite,
   saveTargetRecord,
-  addRecentViewedSchool
+  addRecentViewedSchool,
+  getSchoolUserStates,
+  getPrimaryTargetSchoolId
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { scoreSummaryForSchool } = require('../../utils/score-analysis')
@@ -22,6 +24,7 @@ const { APP_CONFIG } = require('../../config/app-config')
 const { searchSchools, normalizeSearchText } = require('../../utils/school-search')
 const { selectCurrentScore, formatDifference } = require('../../utils/planning')
 const { operationOptions } = require('../../utils/operation-context')
+const { enrichSchoolUserData } = require('../../utils/school-planning')
 
 const MAX_COMPARE_SCHOOLS = 3
 const LEVEL_OPTIONS = APP_CONFIG.targetScore.levels.map((item) => ({ ...item }))
@@ -114,6 +117,8 @@ Page({
     const scoreResult = getScoreRecordsResult()
     const draftResult = getTargetDraftResult()
     const yearResult = getExamYearResult()
+    const schoolUserStates = getSchoolUserStates()
+    const primarySchoolId = getPrimaryTargetSchoolId()
     const failedResult = [favoriteResult, targetResult, scoreResult, draftResult, yearResult]
       .find((result) => !result.ok)
     notifyStorageReadResult(this, failedResult || favoriteResult)
@@ -132,7 +137,10 @@ Page({
     const selectedSchools = selectedIds
       .map((id) => catalogById.get(id))
       .filter(Boolean)
-      .map((school) => presentSchool(school, getScenarioSettings()))
+      .map((school) => presentSchool(
+        enrichSchoolUserData(school, schoolUserStates, targetResult.records, primarySchoolId),
+        getScenarioSettings()
+      ))
     const schoolSearchActive = Boolean(normalizeSearchText(this.data.schoolKeyword))
     const availableSchools = searchSchools({
       schools: schools.filter((school) => !selectedIds.includes(school.id)),
