@@ -73,6 +73,7 @@ Page({
     isTargetSchool: false,
     targetLevels: APP_CONFIG.targetScore.levels,
     targetLevelIndex: APP_CONFIG.targetScore.levels.findIndex((item) => item.value === 'target'),
+    targetRecordVersion: null,
     targetAnalysis: null,
     scoreTrend: [],
     isCompared: false,
@@ -87,6 +88,10 @@ Page({
     schoolUserStateVersion: null,
     schoolTagsInput: '',
     schoolNoteInput: ''
+    ,
+    loading: true,
+    saving: false,
+    pageError: ''
   },
 
   onLoad(options) {
@@ -133,6 +138,7 @@ Page({
       isTargetSchool: Boolean(targetRecord),
       isCompared: school ? getComparisonSchoolIds().includes(school.id) : false,
       targetLevelIndex: Math.max(0, targetLevelIndex),
+      targetRecordVersion: targetRecord && targetRecord.version || null,
       targetAnalysis: buildTargetAnalysis(
         school,
         targetRecord,
@@ -149,12 +155,35 @@ Page({
       schoolUserStateId: userState && userState.id || '',
       schoolUserStateVersion: userState && userState.version || null,
       schoolTagsInput: userState && userState.tags.join('、') || '',
-      schoolNoteInput: userState && userState.note || ''
+      schoolNoteInput: userState && userState.note || '',
+      loading: false,
+      pageError: failedResult ? failedResult.message || '本地数据读取失败。' : ''
     })
+  },
+
+  beginSaving() {
+    if (this.data.saving) return false
+    this.setData({ saving: true, pageError: '' })
+    return true
+  },
+
+  finishSaving() {
+    this.setData({ saving: false })
+  },
+
+  showMutationError(result) {
+    const conflict = result && result.code === 'VERSION_CONFLICT'
+    if (conflict) this.refresh()
+    const message = conflict
+      ? '学校数据已在其他页面更新，请确认最新内容后重新保存。'
+      : result && result.message || '保存失败，原数据未修改。'
+    this.setData({ saving: false, pageError: message })
+    wx.showToast({ title: message, icon: 'none' })
   },
 
   toggleFavorite() {
     if (!this.data.school) return
+    if (!this.beginSaving()) return
     const nextValue = !this.data.isFavorite
     const result = setFavorite(
       this.data.school.id,
@@ -162,9 +191,10 @@ Page({
       operationOptions('set_favorite', this.data.school.id)
     )
     if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
+      this.showMutationError(result)
       return
     }
+    this.finishSaving()
     this.setData({ isFavorite: nextValue })
     wx.showToast({ title: nextValue ? '已收藏' : '已取消收藏', icon: 'success' })
   },
@@ -185,6 +215,7 @@ Page({
 
   saveSchoolUserState() {
     if (!this.data.school) return
+    if (!this.beginSaving()) return
     const status = CANDIDATE_STATUS_OPTIONS[this.data.candidateStatusIndex] || CANDIDATE_STATUS_OPTIONS[0]
     const tags = [...new Set(String(this.data.schoolTagsInput || '').split(/[、,，\n]/u).map((item) => item.trim()).filter(Boolean))].slice(0, 20)
     const now = new Date().toISOString()
@@ -200,7 +231,8 @@ Page({
       updatedAt: now,
       expectedVersion: this.data.schoolUserStateVersion
     }, operationOptions('save_school_user_state', id))
-    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    if (!result.ok) return this.showMutationError(result)
+    this.finishSaving()
     wx.showToast({ title: '学校个人状态已保存', icon: 'success' })
     this.refresh()
   },
@@ -212,18 +244,21 @@ Page({
       wx.showToast({ title: '目标等级无效，请重新选择。', icon: 'none' })
       return
     }
+    if (!this.beginSaving()) return
     const wasTargetSchool = this.data.isTargetSchool
     const result = saveTargetRecord({
       id: `target_${this.data.school.id}`,
       schoolId: this.data.school.id,
       schoolName: this.data.school.name,
       level: level.value,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      expectedVersion: this.data.targetRecordVersion
     }, operationOptions('save_target', this.data.school.id))
     if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
+      this.showMutationError(result)
       return
     }
+    this.finishSaving()
     this.setData({ isTargetSchool: true }, () => this.refresh())
     wx.showToast({
       title: wasTargetSchool ? '目标等级已更新' : '已加入目标',
@@ -241,14 +276,16 @@ Page({
       wx.showToast({ title: '最多对比 3 所学校', icon: 'none' })
       return
     }
+    if (!this.beginSaving()) return
     const result = saveComparisonSchoolIds(
       next,
       operationOptions('save_school_comparison', 'comparisonSchoolIds')
     )
     if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
+      this.showMutationError(result)
       return
     }
+    this.finishSaving()
     this.setData({ isCompared: !this.data.isCompared })
   },
 

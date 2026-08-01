@@ -570,10 +570,16 @@ function presentRecords(records, options = {}) {
   const expandedRecordId = descending.some((record) => record.id === options.expandedRecordId)
     ? options.expandedRecordId
     : ''
+  const recordCards = presentRecordCards(descending, keyword, dateFilter, expandedRecordId)
   return {
-    records: descending,
-    filteredRecords: presentRecordCards(descending, keyword, dateFilter, expandedRecordId),
-    filteredRecordCount: presentRecordCards(descending, keyword, dateFilter, expandedRecordId).length,
+    records: descending.map((record) => ({
+      id: record.id,
+      examName: record.examName,
+      examDate: examDate(record),
+      version: record.version
+    })),
+    filteredRecords: recordCards.slice(0, 10),
+    filteredRecordCount: recordCards.length,
     expandedRecordId,
     visibleRecords: summary.recentRecords,
     visibleTrendPoints: [],
@@ -709,7 +715,10 @@ Page({
     mistakeNotes: '',
     mistakeCorrected: false,
     mistakeRepeatedConfirmed: false,
-    onboarding: { visible: false, step: null }
+    onboarding: { visible: false, step: null },
+    loading: true,
+    saving: false,
+    pageError: ''
   },
 
   onLoad() {
@@ -815,6 +824,7 @@ Page({
     const activeProfileId = activeProfile && activeProfile.id || ''
     const allLossReasons = getScoreLossReasons()
     const allMistakes = getMistakeRecords()
+    this._scoreRecords = result.records
     const selectedReviewRecordId = options.selectedReviewRecordId === undefined
       ? this.data.selectedReviewRecordId
       : options.selectedReviewRecordId
@@ -871,7 +881,9 @@ Page({
       trendTitle: this.data.trendMetric === 'rate' ? '总分得分率趋势' : '总分原始分趋势',
       activeProfileId,
       activeProfileName: activeProfile && activeProfile.nickname || '默认档案',
-      dataRevision: getDataRevision()
+      dataRevision: getDataRevision(),
+      loading: false,
+      pageError: result.ok ? '' : result.message || '本地成绩数据读取失败。'
       ,
       savedLossReasons: allLossReasons.filter((item) => item.examRecordId === effectiveReviewRecordId),
       savedMistakes: allMistakes.filter((item) => item.examRecordId === effectiveReviewRecordId),
@@ -891,6 +903,26 @@ Page({
       )
     }
     this.setData(nextData, () => this.scheduleTrendChartDraw())
+  },
+
+  beginSaving() {
+    if (this.data.saving) return false
+    this.setData({ saving: true, pageError: '' })
+    return true
+  },
+
+  finishSaving() {
+    this.setData({ saving: false })
+  },
+
+  showMutationError(result, field = 'inputError') {
+    const conflict = result && result.code === 'VERSION_CONFLICT'
+    if (conflict) this.loadRecords()
+    const message = conflict
+      ? '成绩数据已在其他页面更新，请确认最新内容后重新保存。'
+      : result && result.message || '保存失败，原数据未修改。'
+    this.setData({ saving: false, pageError: message, [field]: message })
+    wx.showToast({ title: message, icon: 'none' })
   },
 
   scheduleTrendChartDraw() {
@@ -1187,7 +1219,7 @@ Page({
       return
     }
     const recordedHighest = editingId
-      ? this.data.records.reduce((highest, record) => {
+      ? (this._scoreRecords || []).reduce((highest, record) => {
           const score = (Array.isArray(record.subjectScores) ? record.subjectScores : [])
             .filter((item) => item.subjectId === editingId && Number.isFinite(item.score))
             .reduce((value, item) => Math.max(value, item.score), -1)
@@ -1380,7 +1412,7 @@ Page({
       this.setData({ inputError: values.message })
       return
     }
-    const original = this.data.records.find((record) => record.id === this.data.editingRecordId)
+    const original = (this._scoreRecords || []).find((record) => record.id === this.data.editingRecordId)
     const selectedScheme = this.data.scoreSchemes.find((item) => item.id === this.data.selectedScoreSchemeId) ||
       defaultScoreScheme(this.data.scoreSchemes)
     const schemeSnapshot = resolveExamScoreSchemeSnapshot({
@@ -1393,6 +1425,7 @@ Page({
       this.setData({ inputError: '分值方案无效，请重新选择。' })
       return
     }
+    if (!this.beginSaving()) return
     const examType = EXAM_TYPE_OPTIONS[this.data.examTypeIndex] || EXAM_TYPE_OPTIONS[EXAM_TYPE_OPTIONS.length - 1]
     const now = new Date().toISOString()
     const payload = {
@@ -1426,9 +1459,10 @@ Page({
     }
     const result = saveScoreRecord(payload, operationOptions('save_score', payload.id))
     if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
+      this.showMutationError(result)
       return
     }
+    this.finishSaving()
     const message = original ? '考试记录已更新' : '成绩记录已保存在本机'
     this.loadRecords({
       resetRecordForm: true,
@@ -1439,7 +1473,7 @@ Page({
 
   editRecord(event) {
     const id = event.currentTarget.dataset.id
-    const record = this.data.records.find((item) => item.id === id)
+    const record = (this._scoreRecords || []).find((item) => item.id === id)
     if (!record) return
     this.rememberSegment('records')
     this.setData({
@@ -1450,7 +1484,7 @@ Page({
 
   copyRecordTemplate(event) {
     const id = event.currentTarget.dataset.id
-    const record = this.data.records.find((item) => item.id === id)
+    const record = (this._scoreRecords || []).find((item) => item.id === id)
     if (!record) return
     this.rememberSegment('records')
     this.setData({
@@ -1470,25 +1504,25 @@ Page({
     this.setData({
       expandedRecordId,
       filteredRecords: presentRecordCards(
-        this.data.records,
+        this._scoreRecords || [],
         this.data.recordKeyword,
         this.data.recordDateFilter,
         expandedRecordId
-      )
+      ).slice(0, 10)
     })
   },
 
   onRecordKeywordInput(event) {
     const recordKeyword = event.detail.value
     const filteredRecords = presentRecordCards(
-      this.data.records,
+      this._scoreRecords || [],
       recordKeyword,
       this.data.recordDateFilter,
       this.data.expandedRecordId
     )
     this.setData({
       recordKeyword,
-      filteredRecords,
+      filteredRecords: filteredRecords.slice(0, 10),
       filteredRecordCount: filteredRecords.length
     })
   },
@@ -1496,21 +1530,21 @@ Page({
   onFilterDateChange(event) {
     const recordDateFilter = event.detail.value
     const filteredRecords = presentRecordCards(
-      this.data.records,
+      this._scoreRecords || [],
       this.data.recordKeyword,
       recordDateFilter,
       this.data.expandedRecordId
     )
     this.setData({
       recordDateFilter,
-      filteredRecords,
+      filteredRecords: filteredRecords.slice(0, 10),
       filteredRecordCount: filteredRecords.length
     })
   },
 
   clearRecordFilters() {
     const filteredRecords = presentRecordCards(
-      this.data.records,
+      this._scoreRecords || [],
       '',
       '',
       this.data.expandedRecordId
@@ -1518,7 +1552,7 @@ Page({
     this.setData({
       recordKeyword: '',
       recordDateFilter: '',
-      filteredRecords,
+      filteredRecords: filteredRecords.slice(0, 10),
       filteredRecordCount: filteredRecords.length
     })
   },
@@ -1549,7 +1583,7 @@ Page({
   },
 
   clearAllRecords() {
-    if (!this.data.records.length) return
+    if (!(this._scoreRecords || []).length) return
     wx.showModal({
       title: '清空全部成绩记录',
       content: '此操作会清空当前学生档案的考试记录，仅可通过此前导出的本地备份恢复。',
@@ -1575,7 +1609,7 @@ Page({
     this.setData({
       selectedSubjectIndex,
       ...selectedSubjectPresentation(
-        this.data.records,
+        this._scoreRecords || [],
         this.data.subjectConfigs,
         selected.subjectId,
         this.data.subjectMetric
@@ -1588,7 +1622,7 @@ Page({
     const selected = this.data.reviewOptions[selectedReviewIndex]
     if (!selected) return
     const state = reviewState(
-      this.data.records,
+      this._scoreRecords || [],
       this.data.subjectConfigs,
       selected.id
     )
@@ -1631,7 +1665,7 @@ Page({
   },
 
   saveReview() {
-    const record = this.data.records.find(
+    const record = (this._scoreRecords || []).find(
       (item) => item.id === this.data.selectedReviewRecordId
     )
     if (!record) {
@@ -1655,6 +1689,8 @@ Page({
       this.setData({ reviewError: values.message })
       return
     }
+    if (!this.beginSaving()) return
+    const currentReview = getScoreReviews().find((item) => item.examRecordId === record.id)
     const examPayload = {
       ...record,
       schemaVersion: STORAGE_SCHEMA_VERSION,
@@ -1676,7 +1712,8 @@ Page({
       improvementNotes: values.improvementNotes,
       nextActions: values.nextActions,
       createdAt: record.createdAt,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      expectedVersion: currentReview && currentReview.version
     }
     const result = saveExamWithReview(
       examPayload,
@@ -1684,9 +1721,10 @@ Page({
       operationOptions('save_exam_with_review', record.id)
     )
     if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
+      this.showMutationError(result, 'reviewError')
       return
     }
+    this.finishSaving()
     this.loadRecords({ selectedReviewRecordId: record.id })
     wx.showToast({ title: '考试复盘已保存', icon: 'success' })
   },
@@ -1714,7 +1752,7 @@ Page({
   },
 
   addLossReason() {
-    const record = this.data.records.find((item) => item.id === this.data.selectedReviewRecordId)
+    const record = (this._scoreRecords || []).find((item) => item.id === this.data.selectedReviewRecordId)
     const subject = this.data.lossSubjectOptions[this.data.lossSubjectIndex]
     const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
     if (!record || !subject || !reasonType) return
@@ -1821,7 +1859,7 @@ Page({
   },
 
   saveMistake() {
-    const record = this.data.records.find((item) => item.id === this.data.selectedReviewRecordId)
+    const record = (this._scoreRecords || []).find((item) => item.id === this.data.selectedReviewRecordId)
     const subject = this.data.lossSubjectOptions[this.data.lossSubjectIndex]
     const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
     const rawLostScore = String(this.data.mistakeLostScore || '').trim()
@@ -1830,6 +1868,7 @@ Page({
       wx.showToast({ title: '请检查考试、学科和失分分值', icon: 'none' })
       return
     }
+    if (!this.beginSaving()) return
     const existing = this.data.savedMistakes.find((item) => item.id === this.data.editingMistakeId)
     const now = new Date().toISOString()
     const id = existing && existing.id || createMistakeId()
@@ -1855,7 +1894,8 @@ Page({
       updatedAt: now,
       expectedVersion: this.data.editingMistakeVersion
     }, operationOptions('save_mistake_record', id))
-    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    if (!result.ok) return this.showMutationError(result, 'reviewError')
+    this.finishSaving()
     this.resetMistakeForm()
     this.loadRecords({ selectedReviewRecordId: record.id })
   },

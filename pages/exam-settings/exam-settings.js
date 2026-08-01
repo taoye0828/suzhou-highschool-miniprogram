@@ -99,11 +99,17 @@ Page({
     templates: [],
     scoreSchemes: [],
     scoreSchemeOptions: [],
+    loading: true,
+    saving: false,
+    pageError: '',
     ...emptyTemplateForm(),
     ...emptySchemeForm()
   },
 
-  onShow() { this.refresh() },
+  onShow() {
+    this.setData({ loading: true })
+    this.refresh()
+  },
 
   refresh() {
     const scoreSchemes = getScoreSchemes()
@@ -128,8 +134,29 @@ Page({
         label: `${item.name} · ${item.totalMaxScore} 分${item.isBuiltIn ? ' · 内置' : ''}`
       })),
       templateSchemeIndex,
-      templateScoreSchemeId: scoreSchemes[templateSchemeIndex] && scoreSchemes[templateSchemeIndex].id || ''
+      templateScoreSchemeId: scoreSchemes[templateSchemeIndex] && scoreSchemes[templateSchemeIndex].id || '',
+      loading: false,
+      pageError: ''
     })
+  },
+
+  beginSaving() {
+    if (this.data.saving) return false
+    this.setData({ saving: true, pageError: '' })
+    return true
+  },
+
+  finishSaving() {
+    this.setData({ saving: false })
+  },
+
+  showMutationError(result, field) {
+    const conflict = result && result.code === 'VERSION_CONFLICT'
+    if (conflict) this.refresh()
+    const message = conflict
+      ? '数据已在其他页面更新，请确认最新内容后重新保存。'
+      : result && result.message || '保存失败，原数据未修改。'
+    this.setData({ saving: false, pageError: message, [field]: message })
   },
 
   selectSection(event) {
@@ -168,6 +195,7 @@ Page({
       this.setData({ templateError: '请填写有效模板名称、考试类型和分值方案。' })
       return
     }
+    if (!this.beginSaving()) return
     const now = new Date().toISOString()
     const id = this.data.editingTemplateId || createId('exam_template')
     const result = saveExamTemplate({
@@ -185,9 +213,10 @@ Page({
       expectedVersion: this.data.editingTemplateVersion
     }, operationOptions('save_exam_template', id))
     if (!result.ok) {
-      this.setData({ templateError: result.message })
+      this.showMutationError(result, 'templateError')
       return
     }
+    this.finishSaving()
     this.setData(emptyTemplateForm(this.data.scoreSchemes[0] && this.data.scoreSchemes[0].id))
     this.refresh()
     wx.showToast({ title: editing ? '模板已更新' : '模板已保存', icon: 'success' })
@@ -249,8 +278,13 @@ Page({
       confirmColor: '#b42318',
       success: (modal) => {
         if (!modal.confirm) return
+        if (!this.beginSaving()) return
         const result = deleteExamTemplate(id, operationOptions('delete_exam_template', id))
-        if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+        if (!result.ok) {
+          this.showMutationError(result, 'templateError')
+          return wx.showToast({ title: result.message, icon: 'none' })
+        }
+        this.finishSaving()
         this.cancelTemplateEdit()
         wx.showToast({ title: '模板已删除', icon: 'success' })
       }
@@ -288,6 +322,7 @@ Page({
       this.setData({ schemeError: `学科满分合计 ${subjectTotal}，需与方案总满分 ${totalMaxScore} 一致。` })
       return
     }
+    if (!this.beginSaving()) return
     const now = new Date().toISOString()
     const id = this.data.editingSchemeId || createId('score_scheme')
     const eligibilityRuleId = metric.value === 'full_total' && totalMaxScore === 740 && admissionScaleMax === 740
@@ -306,9 +341,10 @@ Page({
       expectedVersion: this.data.editingSchemeVersion
     }, operationOptions('save_score_scheme', id))
     if (!result.ok) {
-      this.setData({ schemeError: result.message })
+      this.showMutationError(result, 'schemeError')
       return
     }
+    this.finishSaving()
     const editing = Boolean(this.data.editingSchemeId)
     this.setData(emptySchemeForm())
     this.refresh()
@@ -362,8 +398,13 @@ Page({
       confirmColor: '#b42318',
       success: (modal) => {
         if (!modal.confirm) return
+        if (!this.beginSaving()) return
         const result = deleteScoreScheme(id, operationOptions('delete_score_scheme', id))
-        if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+        if (!result.ok) {
+          this.showMutationError(result, 'schemeError')
+          return wx.showToast({ title: result.message, icon: 'none' })
+        }
+        this.finishSaving()
         this.cancelSchemeEdit()
         this.refresh()
         wx.showToast({ title: '方案已删除', icon: 'success' })

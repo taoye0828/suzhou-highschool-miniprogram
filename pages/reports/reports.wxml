@@ -1,16 +1,17 @@
 <view class="page">
+  <view wx:if="{{loading}}" class="card muted">正在读取当前档案…</view>
   <view class="profile-strip">当前档案 · {{activeProfileName}} · 报告只读取本机当前档案</view>
   <view class="card">
     <view class="card-title">选择报告</view>
     <view class="segment-control"><view class="segment {{reportType === 'score_stage' ? 'active' : ''}}" data-type="score_stage" bindtap="selectReportType">成绩阶段</view><view class="segment {{reportType === 'target_school' ? 'active' : ''}}" data-type="target_school" bindtap="selectReportType">目标学校</view></view>
     <view class="segment-control"><view class="segment {{reportFormat === 'text' ? 'active' : ''}}" data-format="text" bindtap="selectReportFormat">纯文本</view><view class="segment {{reportFormat === 'json' ? 'active' : ''}}" data-format="json" bindtap="selectReportFormat">JSON</view></view>
-    <button class="button" bindtap="generateReport">生成本地报告文件</button>
+    <button class="button" disabled="{{saving || sharing}}" loading="{{saving}}" bindtap="generateReport">生成本地报告文件</button>
     <view wx:if="{{reportError}}" class="input-error">{{reportError}}</view>
   </view>
   <view wx:if="{{reportPath}}" class="card">
     <view class="card-title">报告已生成</view><view class="muted small">{{reportDataRange}}</view>
     <view class="preview-box"><text selectable>{{reportPreview}}</text></view>
     <view class="muted small">只有你主动点击发送并选择接收方时，微信系统才会处理该本地文件。</view>
-    <button class="button secondary" bindtap="sendReportFile">发送报告文件</button>
+    <button class="button secondary" disabled="{{sharing || saving}}" loading="{{sharing}}" bindtap="sendReportFile">发送报告文件</button>
   </view>
 </view>

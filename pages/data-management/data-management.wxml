@@ -1,4 +1,5 @@
 <view class="page">
+  <view wx:if="{{pageError}}" class="input-error">{{pageError}}</view>
   <view class="card">
     <view class="card-title">本机数据</view>
     <view class="info-row"><text class="info-label">当前档案</text><text class="info-value">{{activeProfileName}}</text></view>
@@ -23,12 +24,12 @@
   <view class="card">
     <view class="card-title">数据检查</view>
     <view class="muted small">只检查用户本地数据，不读取或修改正式学校与分数线文件。</view>
-    <button class="button secondary" bindtap="runDataCheck">只读扫描</button>
+    <button class="button secondary" disabled="{{checkingData || repairingData}}" loading="{{checkingData}}" bindtap="runDataCheck">只读扫描</button>
     <view wx:if="{{healthReport}}" class="preview-box">
       <view>共 {{healthReport.total}} 项 · 可安全修复 {{healthReport.autoFixableCount}} 项 · 需人工处理 {{healthReport.manualCount}} 项</view>
       <view wx:for="{{healthReport.issues}}" wx:key="index" class="muted small">{{item.label}}：{{item.detail}}</view>
-      <button wx:if="{{healthReport.autoFixableCount}}" class="button" bindtap="repairSafeData">创建快照并修复安全项</button>
-      <button wx:if="{{repairResult}}" class="button secondary" bindtap="restoreBeforeRepair">恢复修复前快照</button>
+      <button wx:if="{{healthReport.autoFixableCount}}" class="button" disabled="{{checkingData || repairingData}}" loading="{{repairingData}}" bindtap="repairSafeData">创建恢复点并修复安全项</button>
+      <button wx:if="{{repairResult}}" class="button secondary" disabled="{{checkingData || repairingData}}" bindtap="restoreBeforeRepair">恢复修复前快照</button>
     </view>
   </view>
 

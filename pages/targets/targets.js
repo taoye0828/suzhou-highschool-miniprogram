@@ -137,6 +137,7 @@ function emptyLearningDraft() {
     status: 'not_started',
     notes: '',
     createdAt: '',
+    version: null,
     isDraft: false
   }
 }
@@ -181,6 +182,7 @@ function normalizeLearningDraft(value) {
       : 'not_started',
     notes: String(source.notes === undefined ? source.note || '' : source.notes),
     createdAt: String(source.createdAt || ''),
+    version: Number.isInteger(Number(source.version)) ? Number(source.version) : null,
     isDraft: Boolean(source.isDraft)
   }
 }
@@ -409,20 +411,27 @@ Page({
     currentScoreText: '尚未记录',
     learningDraft: emptyLearningDraft(),
     learningRecords: [],
+    learningRecordCount: 0,
     learningTasks: [],
+    learningTaskCount: 0,
     goalProgressSummary: null,
     learningError: '',
     statusOptions: STATUS_OPTIONS,
     goalMetricOptions: GOAL_METRIC_OPTIONS,
     goalMetricIndex: 0,
     weeklyPlans: [],
+    weeklyPlanCount: 0,
     weeklyTaskOptions: [],
     weeklySelectedTaskIds: [],
     weeklyPlanTitle: '',
     weeklyPlanStartDate: weekRange(todayLabel()).weekStartDate,
     weeklyPlanNotes: '',
     stageReviews: [],
-    onboarding: { visible: false, step: null }
+    stageReviewCount: 0,
+    onboarding: { visible: false, step: null },
+    loading: true,
+    saving: false,
+    pageError: ''
   },
 
   onLoad(options = {}) {
@@ -439,6 +448,7 @@ Page({
       this.setData({ activeSegment: requested })
       app.globalData.targetCenterSegment = ''
     }
+    this.setData({ loading: true })
     this.loadAll()
     this.syncOnboarding()
   },
@@ -489,6 +499,8 @@ Page({
     this._learningRecords = learningResult.records
     this._favoriteIds = favoriteResult.ids
     this._learningTasks = learningTasks
+    this._weeklyPlans = weeklyPlans
+    this._stageReviews = stageReviews
     this._subjectConfigs = getSubjectConfigs()
     this._targetYear = yearResult.year
 
@@ -534,32 +546,76 @@ Page({
       currentScoreText: current.score === null ? '尚未记录' : `${current.score} 分`,
       learningDraft,
       goalMetricIndex: Math.max(0, GOAL_METRIC_OPTIONS.findIndex((item) => item.value === learningDraft.metricType)),
-      learningRecords: learningResult.records.map((record) =>
+      learningRecords: learningResult.records.slice(0, 10).map((record) =>
         presentLearningTarget(record, learningCurrent.score, scoreResult.records, learningTasks, stageReviews)
       ),
-      learningTasks: learningTasks.map((task) => presentLearningTask(
+      learningRecordCount: learningResult.records.length,
+      learningTasks: learningTasks.slice(0, 10).map((task) => presentLearningTask(
         task,
         scoreResult.records,
         scoreReviews,
         lossReasons
       )),
+      learningTaskCount: learningTasks.length,
       goalProgressSummary: goalProgress(
         learningResult.records,
         learningTasks,
         scoreResult.records
       ),
-      weeklyPlans: weeklyPlans.slice().sort((left, right) => right.weekStartDate.localeCompare(left.weekStartDate)),
+      weeklyPlans: weeklyPlans.slice().sort((left, right) => right.weekStartDate.localeCompare(left.weekStartDate)).slice(0, 10)
+        .map((item) => ({
+          id: item.id,
+          weekStartDate: item.weekStartDate,
+          weekEndDate: item.weekEndDate,
+          title: item.title,
+          taskItems: Array.isArray(item.taskItems) ? item.taskItems : [],
+          version: item.version
+        })),
+      weeklyPlanCount: weeklyPlans.length,
       weeklyTaskOptions: learningTasks.map((task) => ({
         id: task.id,
         label: task.title,
         checked: this.data.weeklySelectedTaskIds.includes(task.id)
       })),
-      stageReviews: stageReviews.slice().sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
-      learningError: ''
+      stageReviews: stageReviews.slice().sort((left, right) => right.createdAt.localeCompare(left.createdAt)).slice(0, 10)
+        .map((item) => ({
+          id: item.id,
+          stageGoalId: item.stageGoalId,
+          stageGoalSnapshot: { title: item.stageGoalSnapshot && item.stageGoalSnapshot.title || '阶段复盘' },
+          taskSummarySnapshot: { total: item.taskSummarySnapshot && item.taskSummarySnapshot.total || 0 },
+          examSummarySnapshot: { total: item.examSummarySnapshot && item.examSummarySnapshot.total || 0 },
+          summary: item.summary,
+          createdAt: item.createdAt,
+          version: item.version
+        })),
+      stageReviewCount: stageReviews.length,
+      learningError: '',
+      loading: false,
+      pageError: failedResult ? failedResult.message || '本地数据读取失败。' : ''
     }, () => {
       this.analyzeRecommendations({ silent: true })
       this.analyzeScenarios({ silent: true })
     })
+  },
+
+  beginSaving() {
+    if (this.data.saving) return false
+    this.setData({ saving: true, pageError: '' })
+    return true
+  },
+
+  finishSaving() {
+    this.setData({ saving: false })
+  },
+
+  showMutationError(result, field = 'learningError') {
+    const conflict = result && result.code === 'VERSION_CONFLICT'
+    if (conflict) this.loadAll()
+    const message = conflict
+      ? '数据已在其他页面更新，请确认最新内容后重新保存。'
+      : result && result.message || '保存失败，原数据未修改。'
+    this.setData({ saving: false, pageError: message, [field]: message })
+    wx.showToast({ title: message, icon: 'none' })
   },
 
   selectSegment(event) {
@@ -1117,6 +1173,7 @@ Page({
         targetScore: parsed.value
       })
     }
+    if (!this.beginSaving()) return
     const now = new Date().toISOString()
     const stageGoalId = draft.id || `learning_${Date.now()}`
     const result = saveLearningTargetRecord({
@@ -1141,12 +1198,14 @@ Page({
       notes: draft.notes,
       isDraft: saveAsDraft,
       createdAt: draft.createdAt || now,
-      updatedAt: now
+      updatedAt: now,
+      expectedVersion: draft.version
     }, operationOptions('save_stage_goal', stageGoalId))
     if (!result.ok) {
-      this.setData({ learningError: result.message })
+      this.showMutationError(result)
       return
     }
+    this.finishSaving()
     wx.showToast({
       title: saveAsDraft ? '学习目标草稿已保存' : '学习目标已保存',
       icon: 'success'
@@ -1197,7 +1256,8 @@ Page({
     const range = weekRange(this.data.weeklyPlanStartDate)
     const now = new Date().toISOString()
     const id = `weekly_${range.weekStartDate}`
-    const existing = this.data.weeklyPlans.find((item) => item.id === id)
+    const existing = (this._weeklyPlans || []).find((item) => item.id === id)
+    if (!this.beginSaving()) return
     const result = saveWeeklyPlan({
       ...(existing || {}), id, ...range, title,
       taskItems: this.data.weeklySelectedTaskIds,
@@ -1206,13 +1266,14 @@ Page({
       updatedAt: now,
       expectedVersion: existing && existing.version
     }, operationOptions('save_weekly_plan', id))
-    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    if (!result.ok) return this.showMutationError(result)
+    this.finishSaving()
     this.setData({ weeklyPlanTitle: '', weeklyPlanNotes: '', weeklySelectedTaskIds: [] })
     this.loadAll()
   },
 
   copyWeeklyPlan(event) {
-    const plan = this.data.weeklyPlans.find((item) => item.id === event.currentTarget.dataset.id)
+    const plan = (this._weeklyPlans || []).find((item) => item.id === event.currentTarget.dataset.id)
     if (!plan) return
     const now = new Date().toISOString()
     const nextStart = weekRange(new Date(Date.parse(`${plan.weekEndDate}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)).weekStartDate
@@ -1277,7 +1338,7 @@ Page({
   },
 
   clearLearningTargets() {
-    if (!this.data.learningRecords.length) return
+    if (!(this._learningRecords || []).length) return
     wx.showModal({
       title: '清空学习目标',
       content: '将删除当前档案的全部学习目标，不影响目标学校；未保存表单草稿仍会保留。',

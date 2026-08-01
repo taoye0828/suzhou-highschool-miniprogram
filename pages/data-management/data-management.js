@@ -39,7 +39,10 @@ Page({
     startupRecovery: null,
     hasStartupRecovery: false,
     canUseTemporaryRecovery: false,
-    operatingRecovery: false
+    operatingRecovery: false,
+    checkingData: false,
+    repairingData: false,
+    pageError: ''
   },
 
   onShow() {
@@ -97,8 +100,12 @@ Page({
   },
 
   runDataCheck() {
+    if (this.data.checkingData || this.data.repairingData) return
+    this.setData({ checkingData: true, pageError: '' })
     const report = scanLocalData()
+    this.setData({ checkingData: false })
     if (!report.ok) {
+      this.setData({ pageError: report.message || '数据检查失败，原数据未修改。' })
       wx.showToast({ title: report.message || '数据检查失败，原数据未修改。', icon: 'none' })
       return
     }
@@ -106,14 +113,18 @@ Page({
   },
 
   repairSafeData() {
+    if (this.data.repairingData || this.data.checkingData) return
     wx.showModal({
       title: '安全修复本地数据',
       content: '只处理可明确判断的重复收藏、旧 Schema 标记、无效最近引用和事务临时标记。修复前会创建快照；无法判断的成绩、学校和档案归属不会自动修改。',
       confirmText: '创建快照并修复',
       success: (modal) => {
         if (!modal.confirm) return
-        const result = repairSafeIssues()
+        this.setData({ repairingData: true, pageError: '' })
+        const result = repairSafeIssues(operationOptions('repair_data', 'allUserData'))
+        this.setData({ repairingData: false })
         if (!result.ok) {
+          this.setData({ pageError: result.message || '修复失败，原数据已保留。' })
           wx.showToast({ title: result.message || '修复失败，原数据已保留。', icon: 'none' })
           return
         }
@@ -124,8 +135,12 @@ Page({
   },
 
   restoreBeforeRepair() {
+    if (this.data.repairingData || this.data.checkingData) return
+    this.setData({ repairingData: true, pageError: '' })
     const result = restoreRepairSnapshot()
+    this.setData({ repairingData: false })
     if (!result.ok) {
+      this.setData({ pageError: result.message || '恢复失败，原数据已保留。' })
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }

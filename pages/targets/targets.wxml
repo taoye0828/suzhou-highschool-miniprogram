@@ -1,4 +1,6 @@
 <view class="page target-center-page">
+  <view wx:if="{{loading}}" class="card muted">正在读取当前档案的目标规划…</view>
+  <view wx:if="{{pageError}}" class="input-error">{{pageError}}</view>
   <view class="segment-control onboarding-target-planning">
     <view
       wx:for="{{segments}}"
@@ -234,7 +236,7 @@
         <view wx:if="{{result.isTargetSchool}}" class="target-badge">已是{{result.targetLevel === 'sprint' ? '冲刺' : result.targetLevel === 'safe' ? '保底' : '目标'}}学校</view>
         <view class="row card-actions">
           <button class="button secondary grow" data-school-id="{{result.schoolId}}" bindtap="openSchool">查看学校</button>
-          <button class="button grow" data-school-id="{{result.schoolId}}" bindtap="addRecommendationTarget">{{result.actionText}}</button>
+          <button class="button grow" disabled="{{saving}}" data-school-id="{{result.schoolId}}" bindtap="addRecommendationTarget">{{result.actionText}}</button>
         </view>
       </view>
     </view>
@@ -385,7 +387,7 @@
         <label wx:for="{{weeklyTaskOptions}}" wx:key="id" class="switch-row row"><checkbox value="{{item.id}}" checked="{{item.checked}}" color="#0f766e" /><text>{{item.label}}</text></label>
       </checkbox-group>
       <textarea class="input textarea" maxlength="1000" value="{{weeklyPlanNotes}}" data-field="weeklyPlanNotes" bindinput="onWeeklyPlanInput" placeholder="本周说明（可选）"></textarea>
-      <button class="button" bindtap="saveWeeklyPlan">保存本周计划</button>
+      <button class="button" disabled="{{saving}}" loading="{{saving}}" bindtap="saveWeeklyPlan">保存本周计划</button>
     </view>
     <view wx:for="{{weeklyPlans}}" wx:key="id" class="card">
       <view class="card-title">{{item.title}}</view><view class="muted small">{{item.weekStartDate}} 至 {{item.weekEndDate}} · {{item.taskItems.length}} 项任务</view>
@@ -452,8 +454,8 @@
 
       <view wx:if="{{learningError}}" class="input-error">{{learningError}}</view>
       <view class="row action-row">
-        <button class="button secondary grow" data-draft="true" bindtap="saveLearningTarget">保存草稿</button>
-        <button class="button grow" data-draft="false" bindtap="saveLearningTarget">{{learningDraft.id ? '保存修改' : '创建目标'}}</button>
+        <button class="button secondary grow" disabled="{{saving}}" data-draft="true" bindtap="saveLearningTarget">保存草稿</button>
+        <button class="button grow" disabled="{{saving}}" loading="{{saving}}" data-draft="false" bindtap="saveLearningTarget">{{learningDraft.id ? '保存修改' : '创建目标'}}</button>
       </view>
       <view class="muted tiny draft-note">未点击保存时，当前表单也会作为本机草稿保留。</view>
     </view>

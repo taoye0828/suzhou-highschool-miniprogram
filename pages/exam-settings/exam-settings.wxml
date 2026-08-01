@@ -1,5 +1,7 @@
 <view class="page">
   <view class="profile-strip">当前档案 · {{activeProfileName}} · 仅保存在本机</view>
+  <view wx:if="{{loading}}" class="card muted">正在读取当前档案设置…</view>
+  <view wx:if="{{pageError}}" class="input-error">{{pageError}}</view>
   <view class="segment-control">
     <view class="segment {{activeSection === 'templates' ? 'active' : ''}}" data-section="templates" bindtap="selectSection">考试模板</view>
     <view class="segment {{activeSection === 'schemes' ? 'active' : ''}}" data-section="schemes" bindtap="selectSection">分值方案</view>
@@ -21,7 +23,7 @@
       <view class="switch-row row between"><text>显示排名</text><switch checked="{{templateEnableRank}}" data-field="templateEnableRank" bindchange="onTemplateSwitch" color="#0f766e" /></view>
       <view class="switch-row row between"><text>显示复盘</text><switch checked="{{templateEnableReview}}" data-field="templateEnableReview" bindchange="onTemplateSwitch" color="#0f766e" /></view>
       <view wx:if="{{templateError}}" class="input-error">{{templateError}}</view>
-      <view class="button-row"><button class="button grow" bindtap="saveTemplate">{{templateSaveText}}</button><button wx:if="{{editingTemplateId}}" class="button ghost grow" bindtap="cancelTemplateEdit">取消</button></view>
+      <view class="button-row"><button class="button grow" disabled="{{saving}}" loading="{{saving}}" bindtap="saveTemplate">{{templateSaveText}}</button><button wx:if="{{editingTemplateId}}" class="button ghost grow" disabled="{{saving}}" bindtap="cancelTemplateEdit">取消</button></view>
     </view>
     <view class="section-title">可用模板（{{templates.length}}）</view>
     <view wx:for="{{templates}}" wx:key="id" class="card list-card">
@@ -42,7 +44,7 @@
       <text class="field-label">学科规则（可留空）</text><textarea class="input textarea" maxlength="2000" value="{{schemeSubjectRulesInput}}" data-field="schemeSubjectRulesInput" bindinput="onSchemeInput" placeholder="每行：学科名=满分&#10;例如：数学=100"></textarea>
       <view class="muted small">填写学科时，各学科满分之和必须等于总满分。不符合 740 分完整体系的方案不会被自动换算为 740 分。</view>
       <view wx:if="{{schemeError}}" class="input-error">{{schemeError}}</view>
-      <view class="button-row"><button class="button grow" bindtap="saveScheme">{{schemeSaveText}}</button><button wx:if="{{editingSchemeId}}" class="button ghost grow" bindtap="cancelSchemeEdit">取消</button></view>
+      <view class="button-row"><button class="button grow" disabled="{{saving}}" loading="{{saving}}" bindtap="saveScheme">{{schemeSaveText}}</button><button wx:if="{{editingSchemeId}}" class="button ghost grow" disabled="{{saving}}" bindtap="cancelSchemeEdit">取消</button></view>
     </view>
     <view class="section-title">可用方案（{{scoreSchemes.length}}）</view>
     <view wx:for="{{scoreSchemes}}" wx:key="id" class="card list-card">

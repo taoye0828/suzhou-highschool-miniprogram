@@ -1,12 +1,12 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
-  "currentPhase": "P6",
-  "currentStepId": "P6-S05",
+  "currentHead": "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
+  "currentPhase": "P7",
+  "currentStepId": "P7-PERFORMANCE",
   "currentStepStatus": "completed",
-  "lastStableCommit": "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
-  "lastPushedCommit": "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
+  "lastStableCommit": "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
+  "lastPushedCommit": "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -106,7 +106,12 @@
     "P6-FINAL-SCHOOL-COMPARE",
     "P6-GLOBAL-SEARCH",
     "P6-TEXT-JSON-REPORTS",
-    "P6-USER-ACTIVE-REPORT-SHARE"
+    "P6-USER-ACTIVE-REPORT-SHARE",
+    "P7-PAGE-STATE-CONTRACTS",
+    "P7-DATA-HEALTH-COVERAGE",
+    "P7-RESTORE-BEFORE-REPAIR",
+    "P7-PERFORMANCE-BUDGETS",
+    "P7-SETDATA-BUDGET"
   ],
   "completedTestIds": [
     "P0-GIT",
@@ -158,11 +163,19 @@
     "SMOKE-P6",
     "UPLOAD-IGNORE-P6",
     "JS-JSON-P6",
-    "FORMAL-DATA-HASH-P6"
+    "FORMAL-DATA-HASH-P6",
+    "V1-P7-12",
+    "V1-P1-P7-92",
+    "RC11-1-P7-REGRESSION",
+    "RC11-2-P7-REGRESSION",
+    "RC9-P7-REGRESSION",
+    "RC10-P7-REGRESSION",
+    "SMOKE-P7",
+    "UPLOAD-IGNORE-P7",
+    "JS-JSON-P7",
+    "FORMAL-DATA-HASH-P7"
   ],
   "pendingTestIds": [
-    "V1-DATA",
-    "V1-PERF",
     "V1-FREEZE"
   ],
   "createdFiles": [
@@ -219,7 +232,10 @@
     "scripts/v1/school-planning-suite.js",
     "scripts/verify_v1_p6.js",
     "docs/v1_school_user_state_spec.md",
-    "docs/v1_report_export_spec.md"
+    "docs/v1_report_export_spec.md",
+    "scripts/v1/ui-contract-suite.js",
+    "scripts/v1/performance-suite.js",
+    "scripts/verify_v1_p7.js"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -286,14 +302,15 @@
     "83d62e1a14fec8ef2648f7850b097ece99a2d0a8",
     "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
     "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
-    "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628"
+    "e4664ad27cb0c1cceb0e3ab2ffcad33b7c004628",
+    "ad60f458811ac85350f9e72d1d5c0a0982c28b35"
   ],
   "pushPendingCommits": [],
-  "lastSuccessfulCommand": "P6 8 TEST-ID; P1-P6 80 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal data hashes all passed",
+  "lastSuccessfulCommand": "P7 12 TEST-ID; P1-P7 92 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal raw/semantic data hashes all passed",
   "lastFailedCommand": "",
   "lastErrorSummary": "",
-  "nextAction": "Create and ordinary-push the P6 logical commit, then start P7 UI contracts, data health and performance.",
+  "nextAction": "Create and ordinary-push the P7 logical commit, then start P8 full freeze evidence.",
   "safeToResume": true,
   "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T19:30:00+08:00"
+  "updatedAt": "2026-08-01T19:40:00+08:00"
 }

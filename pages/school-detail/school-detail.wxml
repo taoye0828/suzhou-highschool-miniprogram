@@ -1,4 +1,6 @@
 <view class="page">
+  <view wx:if="{{loading}}" class="card muted">正在读取学校与当前档案数据…</view>
+  <view wx:if="{{pageError}}" class="input-error">{{pageError}}</view>
   <view class="card muted small boundary-card">
     <view>分组仅根据用户选择的历史成绩与学校历史公开分数线计算分差，不考虑招生计划、排名、指标生、批次变化、政策变化和当年试卷难度，不构成录取判断或志愿建议。</view>
     <view>历史公开数据整理，仅供目标规划参考。</view>
@@ -45,7 +47,7 @@
       <picker range="{{targetLevels}}" range-key="label" value="{{targetLevelIndex}}" bindchange="onTargetLevelChange">
         <view class="input picker-input">{{targetLevels[targetLevelIndex].label}}⌄</view>
       </picker>
-      <button class="button target-save-button" bindtap="saveSchoolTarget">{{isTargetSchool ? '更新目标等级' : '加入目标'}}</button>
+      <button class="button target-save-button" disabled="{{saving}}" loading="{{saving}}" bindtap="saveSchoolTarget">{{isTargetSchool ? '更新目标等级' : '加入目标'}}</button>
     </view>
 
     <view class="card">
@@ -54,7 +56,7 @@
       <text class="field-label">候选状态</text><picker range="{{candidateStatusOptions}}" range-key="label" value="{{candidateStatusIndex}}" bindchange="onCandidateStatusChange"><view class="input picker-input">{{candidateStatusOptions[candidateStatusIndex].label}}⌄</view></picker>
       <text class="field-label">个人标签</text><input class="input" maxlength="400" value="{{schoolTagsInput}}" data-field="schoolTagsInput" bindinput="onSchoolUserInput" placeholder="用逗号或顿号分隔，最多 20 个" />
       <text class="field-label">个人备注</text><textarea class="input textarea" maxlength="1000" value="{{schoolNoteInput}}" data-field="schoolNoteInput" bindinput="onSchoolUserInput" placeholder="仅保存在当前本机档案"></textarea>
-      <button class="button" bindtap="saveSchoolUserState">保存学校状态</button>
+      <button class="button" disabled="{{saving}}" bindtap="saveSchoolUserState">保存学校状态</button>
     </view>
 
     <view wx:if="{{school.intro}}" class="card">
@@ -112,8 +114,8 @@
     <view class="card">
       <view class="section-heading">操作</view>
       <view class="button-row">
-        <button class="button" bindtap="toggleFavorite">{{isFavorite ? '取消收藏' : '收藏学校'}}</button>
-        <button class="button secondary" bindtap="toggleCompare">{{isCompared ? '取消对比' : '加入对比'}}</button>
+        <button class="button" disabled="{{saving}}" bindtap="toggleFavorite">{{isFavorite ? '取消收藏' : '收藏学校'}}</button>
+        <button class="button secondary" disabled="{{saving}}" bindtap="toggleCompare">{{isCompared ? '取消对比' : '加入对比'}}</button>
         <button class="button secondary" bindtap="copySchoolName">复制学校名称</button>
         <button class="button secondary" bindtap="copyMapKeyword">复制地图搜索词</button>
         <button wx:if="{{school.address}}" class="button secondary" bindtap="copyAddress">复制地址</button>
