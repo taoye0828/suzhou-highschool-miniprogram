@@ -53,7 +53,7 @@ Page({
     })
     wx.showModal({
       title: '本地备份已生成',
-      content: '文件已在本机生成。你可以主动发送给自己选择的微信接收方；小程序不会自动上传服务器。',
+      content: '文件已在本机生成。小程序不会自动上传到开发者服务器；不主动分享时，文件只保存在本机。你可以主动发送给自己选择的微信接收方。',
       showCancel: false
     })
   },
@@ -63,7 +63,7 @@ Page({
     const preview = this.data.exportPreview || {}
     wx.showModal({
       title: '发送备份文件',
-      content: `文件包含 ${preview.profileCount || 0} 个档案、${preview.scoreCount || 0} 条成绩、${preview.targetCount || 0} 所目标学校及其他本机用户数据。请只发送给可信接收方。小程序不会自动上传。`,
+      content: `文件包含 ${preview.profileCount || 0} 个档案、${preview.scoreCount || 0} 条成绩、${preview.targetCount || 0} 所目标学校及其他本机用户数据。小程序不会自动上传到开发者服务器；确认后文件会通过微信系统能力交给你选择的接收方，请只发送给可信接收方。`,
       confirmText: '选择接收方',
       success: (modal) => {
         if (!modal.confirm) return

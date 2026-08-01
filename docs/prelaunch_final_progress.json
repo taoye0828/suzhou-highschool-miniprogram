@@ -1,12 +1,12 @@
 {
   "task": "PRELAUNCH-FINAL-MP",
   "startHead": "af259e8ecffe96b47457a2f44c3a13e41954943f",
-  "currentHead": "af259e8ecffe96b47457a2f44c3a13e41954943f",
-  "currentPhase": "P2",
-  "currentStepId": "P2-DATA-BASELINE",
-  "currentStepStatus": "completed",
-  "lastStableCommit": "af259e8ecffe96b47457a2f44c3a13e41954943f",
-  "lastPushedCommit": "af259e8ecffe96b47457a2f44c3a13e41954943f",
+  "currentHead": "c73ff600cf0b550792221778926811a2f2029fa2",
+  "currentPhase": "P16",
+  "currentStepId": "PRELAUNCH-DEFECT-001",
+  "currentStepStatus": "fixed_pending_commit",
+  "lastStableCommit": "c73ff600cf0b550792221778926811a2f2029fa2",
+  "lastPushedCommit": "c73ff600cf0b550792221778926811a2f2029fa2",
   "completedCheckIds": [
     "P0-GIT-GATE",
     "P0-CONCURRENCY",
@@ -18,10 +18,44 @@
     "P2-IDENTITY",
     "P2-V1-BASELINE",
     "P2-HISTORICAL-BASELINE",
-    "P2-DATA-BASELINE"
+    "P2-DATA-BASELINE",
+    "P3-DEVTOOLS-IDENTITY",
+    "P3-COMPILE-BLOCKED-ACCOUNT-AUTHORIZATION",
+    "P4-P12-AUTOMATED-JOURNEY-CONTRACTS",
+    "P5-USER-STATE-GATE-READ-ONLY",
+    "P13-STATIC-ACCESSIBILITY",
+    "P13-TREND-WIDTH-CONTRACTS",
+    "P14-COPY",
+    "P14-PRIVACY",
+    "P14-SHARE",
+    "P14-DISABLED-CAPABILITIES",
+    "P15-UPLOAD-PACKAGE"
   ],
-  "completedJourneyIds": [],
-  "completedDeviceSizes": [],
+  "completedJourneyIds": [
+    "JOURNEY-SCHOOL-SEARCH-001..005:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-SCHOOL-FILTER-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-SCHOOL-STATE-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-TARGET-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-COMPARE-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-EXAM-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-TEMPLATE-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-SCHEME-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-RATE-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-TREND-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-ELIGIBILITY-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-LEARNING-LOOP-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-HISTORICAL-GAP-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-PROFILE-ISOLATION-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-BACKUP-RESTORE-REPORT-001:AUTOMATED_CONTRACT_ONLY",
+    "JOURNEY-STARTUP-RECOVERY-001:AUTOMATED-CONTRACT-ONLY"
+  ],
+  "completedDeviceSizes": [
+    "320:trend-coordinate-contract-only",
+    "375:trend-coordinate-contract-only",
+    "390:trend-coordinate-contract-only",
+    "414:trend-coordinate-contract-only",
+    "430:trend-coordinate-contract-only"
+  ],
   "completedTestIds": [
     "V1_FULL_103",
     "HISTORICAL_VERIFY_85",
@@ -36,20 +70,34 @@
     "FORMAL_IDENTITY",
     "FORMAL_DATA_RAW_AND_SEMANTIC_HASHES"
   ],
-  "pendingManualItems": [],
-  "foundDefects": [],
-  "fixedDefects": [],
-  "createdCommits": [],
+  "pendingManualItems": [
+    "Use a WeChat account authorized as developer for wxc2a2a94f767438dd",
+    "Final DevTools normal compile, Problems=0 and Console business errors=0",
+    "Five-tab and full user-journey simulator acceptance",
+    "320/375/390/414/430/iPad visual acceptance",
+    "Safe pre/post simulator user-state checksum after account access is restored",
+    "Real-device preview and WeChat file sharing",
+    "Experience-version upload and review submission"
+  ],
+  "foundDefects": [
+    "PRELAUNCH-DEFECT-001"
+  ],
+  "fixedDefects": [
+    "PRELAUNCH-DEFECT-001"
+  ],
+  "createdCommits": [
+    "c73ff600cf0b550792221778926811a2f2029fa2"
+  ],
   "pushPendingCommits": [],
   "testDataRestorePointId": "",
   "testDataBackupPath": "",
   "beforeAcceptanceChecksum": "",
   "afterAcceptanceChecksum": "",
-  "lastSuccessfulCommand": "node scripts/verify_v1_full.js --all-verify and explicit P2 release baseline",
-  "lastFailedCommand": "",
-  "lastErrorSummary": "",
-  "nextAction": "Commit and push the stable P0-P2 acceptance start checkpoint, then run P3 DevTools discovery and compile",
+  "lastSuccessfulCommand": "P4-P15 automated journey, accessibility, privacy and upload-package gates",
+  "lastFailedCommand": "WeChat DevTools normal compile",
+  "lastErrorSummary": "Current logged-in WeChat user is not a developer of wxc2a2a94f767438dd; simulator creation was blocked before business-code runtime acceptance",
+  "nextAction": "Commit the privacy wording fix and focused regression assertions, then run the final full automated regression",
   "safeToResume": true,
   "freezeStatus": "V1_CODE_FREEZE_READY",
-  "updatedAt": "2026-08-01T22:54:30+08:00"
+  "updatedAt": "2026-08-01T23:12:00+08:00"
 }

@@ -11,7 +11,7 @@
   <view wx:if="{{reportPath}}" class="card">
     <view class="card-title">报告已生成</view><view class="muted small">{{reportDataRange}}</view>
     <view class="preview-box"><text selectable>{{reportPreview}}</text></view>
-    <view class="muted small">只有你主动点击发送并选择接收方时，微信系统才会处理该本地文件。</view>
+    <view class="muted small">不主动发送时文件只保存在本机，小程序不会自动上传到开发者服务器；只有你主动点击发送并选择接收方时，微信系统才会处理该本地文件。</view>
     <button class="button secondary" disabled="{{sharing || saving}}" loading="{{sharing}}" bindtap="sendReportFile">发送报告文件</button>
   </view>
 </view>

@@ -14,7 +14,7 @@
     </view>
     <view wx:if="{{exportPath}}" class="muted small path-text">本地路径：{{exportPath}}</view>
     <button wx:if="{{exportPath}}" class="button send-backup" bindtap="sendBackupFile">发送备份文件</button>
-    <view wx:if="{{exportPath}}" class="muted tiny">发送会通过微信系统能力交给你选择的接收方；取消或失败不会修改本机数据，也不会记录为成功。</view>
+    <view wx:if="{{exportPath}}" class="muted tiny">不主动发送时文件只保存在本机，小程序不会自动上传到开发者服务器；主动发送会通过微信系统能力交给你选择的接收方。取消或失败不会修改本机数据，也不会记录为成功。</view>
   </view>
 
   <view class="card import-card">

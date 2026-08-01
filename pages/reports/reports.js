@@ -82,7 +82,7 @@ Page({
     if (!this.data.reportPath || !this._reportSnapshot || this.data.sharing) return
     wx.showModal({
       title: '发送报告文件',
-      content: `文件包含${this.data.reportDataRange}。报告可能含成绩、目标学校、个人标签或备注，请只发送给可信接收方。小程序不会自动上传。`,
+      content: `文件包含${this.data.reportDataRange}。报告可能含成绩、目标学校、个人标签或备注。小程序不会自动上传到开发者服务器；确认后文件会通过微信系统能力交给你选择的接收方，请只发送给可信接收方。`,
       confirmText: '选择接收方',
       success: (modal) => {
         if (!modal.confirm) return

@@ -170,7 +170,13 @@ for (const score of Array.isArray(admissionScores) ? admissionScores : []) {
 const { APP_CONFIG } = require('../config/app-config')
 if (!['1.4.0', '1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.9.0', '2.0.0'].includes(APP_CONFIG.version)) fail('config/app-config.js version 必须为已支持的正式版本')
 const privacyText = JSON.stringify(APP_CONFIG.policy.privacySections)
-for (const phrase of ['不上传收藏、学习目标记录、成绩记录、目标年份或输入草稿', '不进行后台网络请求或用户行为追踪']) {
+for (const phrase of [
+  '不会自动把收藏、学习目标记录、成绩记录、目标年份或输入草稿上传到开发者服务器',
+  '不会静默或在后台把收藏、成绩、目标、错题、任务、备份或报告上传到开发者服务器',
+  '不主动分享备份或报告时，上述用户数据只保存在本机',
+  '只有你主动点击发送备份或报告并选择接收方时',
+  '不进行后台网络请求或用户行为追踪'
+]) {
   if (!privacyText.includes(phrase)) fail(`隐私说明缺少：${phrase}`)
 }
 for (const phrase of forbiddenPublicPhrases) {

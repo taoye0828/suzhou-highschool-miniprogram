@@ -477,7 +477,9 @@ function testInfoPages() {
   const privacyPage = createPageInstance(privacyDefinition)
   assert.ok(privacyPage.data.sections.length > 0)
   const privacyText = JSON.stringify(privacyPage.data.sections)
-  assert.ok(privacyText.includes('不会自动、静默或后台上传收藏、成绩、目标、错题、任务、备份或报告'))
+  assert.ok(privacyText.includes('不会自动把收藏、学习目标记录、成绩记录、目标年份或输入草稿上传到开发者服务器'))
+  assert.ok(privacyText.includes('不会静默或在后台把收藏、成绩、目标、错题、任务、备份或报告上传到开发者服务器'))
+  assert.ok(privacyText.includes('不主动分享备份或报告时，上述用户数据只保存在本机'))
   assert.ok(privacyText.includes('只有你主动点击发送备份或报告并选择接收方时'))
   assert.ok(privacyText.includes('不进行后台网络请求或用户行为追踪'))
 }
