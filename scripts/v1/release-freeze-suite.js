@@ -59,7 +59,7 @@ function semanticHash(items) {
 function testIdentityAndNavigation() {
   const project = readJson('project.config.json')
   const app = readJson('app.json')
-  assert.strictEqual(project.appid, PRODUCT_RULES.appId)
+  assert.strictEqual(project.appid, PRODUCT_RULES.officialAppId)
   assert.strictEqual(project.projectname, PRODUCT_RULES.productName)
   assert.strictEqual(project.description, PRODUCT_RULES.productName)
   assert.strictEqual(app.window.navigationBarTitleText, PRODUCT_RULES.productName)
@@ -145,7 +145,7 @@ function testProductionPathRegressionClosure() {
     .map((name) => fs.existsSync(path.join(ROOT, `pages/${name}/${name}.js`)) ? read(`pages/${name}/${name}.js`) : '')
     .join('\n')
   assert.doesNotMatch(storage, /if\s*\(\s*!operationId\s*\)\s*return\s+action\s*\(/)
-  assert.match(storage, /function protectedCall[\s\S]+normalizeOperationContext/)
+  assert.match(storage, /function protectedCall[\s\S]+createOperationContext/)
   assert.match(context, /operationId/)
   assert.match(pages, /beginOperation|operationContext|operationId/)
   assert.doesNotMatch(pages, /wx\.(?:setStorage|setStorageSync|removeStorage|removeStorageSync)\s*\(/)

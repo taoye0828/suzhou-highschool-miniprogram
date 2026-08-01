@@ -1,217 +1,100 @@
 # 苏程记录
 
-面向苏州初中学生和家长的纯本地高中信息、成绩记录和目标规划工具。当前安全基线为 RC11-2（版本仍为 `2.0.0`），不登录、不接后台或云开发、不使用 AI、不上传用户数据。
+苏程记录是一个纯本地微信小程序，用于记录成绩、复盘学习过程、整理高中目标，并基于用户选择的合格 740 分考试与学校历史公开分数线提供“历史分差参考”。它不做录取预测，不提供志愿填报结论。
 
-## RC11-1 RC10 真实验收与旧链路收口
+## 正式身份与导航
 
-- 正式主导航仍为：首页、学校库、成绩、目标规划、我的；功能继续归入五个中心，没有第六个 Tab。
-- RC10 的正式入口、Page、纯逻辑服务、v4 用户存储、迁移、备份/清除与刷新消费者已建立 45 项机器清单和 27 条用户调用链。
-- `utils/storage.js → utils/rc9-storage.js → rc9.profile_data.v4` 是用户数据唯一正式入口；旧 `mp1/rc8` 键只在 `utils/legacy/migration/storage-keys.js` 定义并由 migration 读取，正式页面不再回退读写旧键。
-- 趋势排序统一复用 `utils/planning.js`，总分上限统一复用 `config/app-config.js`；删除考试后独立学习任务保留，来源失效显示安全文本。
-- 三条固定内存用户路径覆盖首次使用、第二次考试/复盘/任务和双档案备份恢复；损坏 JSON 与 checksum 错误均不改变原数据。
-- 当前共有 62 个 `verify_*.js` 门禁，另有两项 smoke；RC11-1 12 个子门禁和全部实际存在的历史门禁已逐个通过，全仓 JS 语法与 JSON 解析通过。
-- 正式数据仍为 55 所、2025 年 103 条、2026 年 43 条、合计 146 条，上限 740；三份原始 SHA-256 未变化。
-- 旧 `pages/target-analysis` 只保留深层链接单跳兼容壳；无安全可删除的 A 类页面。微信开发者工具 RC11-1 已完成普通编译、Problems 0 和五个正式 Tab 的只读切换；全尺寸交互、手机预览、体验版上传和审核尚未执行。
-- 开始安全 HEAD 为 `4a4493c`（RC10 本地收口，开始时仅单向领先远端 8）；RC11-1 最终提交与 push 状态见 [完整报告](docs/rc11_1_full_report.md)。
-- 本轮不包含新考试模板、新周计划、全局搜索、PDF 导出、隐私锁或正式 2027 分数线。
+- 正式名称：苏程记录
+- 正式 AppID：`wxc2a2a94f767438dd`
+- 正式五个 Tab：首页、学校库、成绩、目标规划、我的
+- 公开版本号：2.0.0（本轮未擅自修改）
+- 当前安全代码/测试 HEAD：`1bd7459d29db3a6e03994513371e90ff78a39a18`；其后的冻结证据提交只更新文档与进度，最终 HEAD 以 `git rev-parse HEAD` 为准
 
-## RC10 综合升级
+## V1 included 功能
 
-- 所有用户数据写入使用事务日志、旧值快照、逐键回读和失败回滚；异常退出后启动时先恢复未完成事务。
-- 推荐分段增加当前成绩、下一阶段目标和中考目标三种情景，手动分析值不会改写真实成绩或阶段目标。
-- 考试复盘增加 10 类按学科失分原因，可从一条原因创建统一学习任务。
-- 学习目标分段融合阶段目标、学习任务、来源复盘、当前/目标成绩、截止日期和状态进度。
-- 学校详情增加真实年份逐项目分数线趋势；学校对比支持顺序调整和当前/阶段/中考三种分差。
-- 最近浏览与最近操作保持有限本地记录，可单独清除，不记录复盘正文或备注全文。
-- 双端备份统一为 `backupFormatVersion = 2`，同时兼容导入 RC9 v1 备份；正式学校和分数线不进入用户备份。
-- “我的 → 数据管理 → 数据检查”支持只读扫描、安全修复、修复前快照和恢复。
-- 55 所学校内部数据质量矩阵与 2027 年候选数据维护流程已经建立；没有录入或预测 2027 分数线。
-- 微信开发者工具 RC `2.02.2607171` 已实际执行“普通编译”；Problems 为 0，首页、学校库、成绩、目标规划、我的五个主 Tab 均完成只读切换检查。预览、体验版上传和审核未执行。
-- 完整实现见 [docs/rc10_full_upgrade_report.md](docs/rc10_full_upgrade_report.md)。
+- 学校库：搜索、组合筛选、详情、收藏、目标学校、候选状态、标签、备注、最近浏览、最多 3 校对比。
+- 成绩：考试记录、考试模板、分值方案、历史方案快照、不同满分、原始分/得分率/学科趋势、复盘、失分原因和错题。
+- 目标规划：历史分差参考、主要目标、情景规划、学习任务、周计划、多指标阶段目标和阶段复盘。
+- 我的：多学生档案、考试设置、Backup v3 导出/导入/主动分享、Restore Point v2、数据管理、数据检查、启动恢复、纯文本/JSON 报告、数据与隐私说明。
+- 首页：当前进展、最近成绩、参考成绩、主要目标、本周任务、阶段目标、全局搜索和高频入口。
 
-## RC9 综合升级
+所有用户数据只保存在本机。备份或报告只有在用户主动点击发送并确认数据范围与隐私提示后，才通过微信系统能力交给用户选择的接收方；取消不记录为成功，失败不修改用户数据。
 
-- 五个主导航统一为：首页、学校库、成绩、目标规划、我的。
-- 首页只显示倒计时、最近成绩与变化、主要目标学校、当前分差、阶段目标和快捷操作。
-- 学校库支持真实区域、学校类型、参考年份、参考分上下限、成绩匹配、收藏、目标等级和排序；同类多选为 OR，跨类组合为 AND。
-- 收藏、目标学校、对比、学校详情和“我的”汇总共享同一份本地数据；对比最多选择 3 所正式学校。
-- 成绩中心融合记录、趋势和复盘，支持总分、可配置学科、可选排名、复盘文本、复制考试、搜索和日期筛选。
-- 成绩趋势和目标差距轨迹共用稳定排序与真实记录数坐标；成绩点、数字、考试名称和日期使用同一个 `point.x`，最近最多显示 10 条但不预留固定十格。
-- 目标规划融合推荐、目标学校、主要目标、差距轨迹和阶段学习目标；默认推荐规则保持冲刺 `-30..-1`、目标 `0..15`、保底 `>15`，每类最多 5 所。
-- 本地存储升级到 `storageSchemaVersion = 4`，迁移链为 `v1 → v2 → v3 → v4`；迁移幂等，清除后旧数据不会复活。
-- 新增纯本地多学生档案、独立或共享收藏、结构化 JSON 备份、校验预览、合并/覆盖恢复和导入前快照。
-- 保留首次 7 步教程，并支持按首页、学校筛选、成绩、趋势、目标规划、备份恢复和学生档案分别重播。
-- 完整实现和验证记录见 [docs/rc9_full_upgrade_report.md](docs/rc9_full_upgrade_report.md)；趋势热修复证据见 [docs/rc8_chart_vertical_alignment_hotfix_report.md](docs/rc8_chart_vertical_alignment_hotfix_report.md)。
+## 数据结构与安全
 
-## 当前状态
+- Storage Schema v5，兼容读取 Schema v4。
+- Backup v3 使用 canonical JSON + SHA-256，兼容读取 Backup v2 FNV-1a。
+- Restore Point v2 使用统一 SHA-256，兼容读取 Restore Point v1。
+- 写操作统一经过 OperationContext、幂等、操作锁、事务日志、最终回读和 dataRevision；页面不直接写正式 Storage。
+- 危险操作前创建恢复点；单档案恢复默认不修改共享收藏；删除档案后可恢复为新档案。
+- operation state 最多 100 条、单条不超过 2048 字节，不保存完整用户状态、payload、备份或报告。
 
-- 版本号：2.0.0
+## 历史分差与不同满分
+
+`difference = userScore - referenceScore`：
+
+- 冲刺：`-30 <= difference < 0`
+- 目标：`0 <= difference <= 15`
+- 保底：`difference > 15`
+- 每组最多 5 所学校
+
+只有 `full_total`、`totalMaxScore = 740`、`admissionScaleMax = 740`、资格规则允许、方案快照完整、总分合法且数据健康无阻断的考试能用于历史分差参考。周测、单科、部分学科、非 740 方案、得分率、自动换算值和快照缺失记录均不可使用。其他满分考试仍可显示原始分和得分率，但不会自动换算成 740。
+
+分组仅根据用户选择的历史成绩与学校历史公开分数线计算分差，不考虑招生计划、排名、指标生、批次变化、政策变化和当年试卷难度，不构成录取判断或志愿建议。
+
+历史公开数据整理，仅供目标规划参考。
+
+## 正式数据
+
 - 正式学校数据：55 条
-- 历史录取分数线：146 条（2025 年 103 条、2026 年 43 条）
-- 当前已收录 2025、2026 年官方历史分数线
-- 数据核对日期：2026-07-09
-- 成绩上限：740 分
-- 本地存储版本：4
-- `project.config.json` 已写入正式 AppID：`wxc2a2a94f767438dd`
-- 不写入 AppSecret，不提交账号、密码、token、cookie 或其他密钥
+- 2025 年历史分数线：103 条
+- 2026 年历史分数线：43 条
+- 历史录取分数线：146 条
+- 正式 2027 年分数线：0 条
+- 当前完整中考体系最高分：740
 
-## 当前功能
+当前收录 2025、2026 年官方历史分数线，所有条目均保留来源与核对信息。
 
-- 首页个人总览、学校库实用筛选、学校详情、收藏和 2 至 3 校对比。
-- 成绩记录、总分/学科趋势、确定性个人分析、考试复盘、失分原因和可选排名。
-- 三档成绩情景、目标学校分级、主要目标、差距轨迹、阶段目标及学习任务。
-- 本地学生档案、档案隔离、收藏模式、备份恢复、数据管理、最近浏览和帮助中心。
-- 参考分统一选择不晚于目标年份的最新已收录年份；同校同年多条记录取最高分。
-- 正式学校和分数线数据不会从用户备份导入，也不会被本地清除操作修改。
+2027 候选资料只用于开发维护，位于 `docs/` 与 `scripts/`，不接入正式运行页面，并被上传包排除。
 
-## RC7-FULL 完整升级
+## excluded 功能
 
-- 完成首页成绩入口和 5 步目标规划路径。
-- 成绩记录继续纯本地保存，支持新增、查看、删除、清空、重启读取和最多 100 条限制。
-- 最近 10 次成绩使用原生 Canvas 折线展示，不引入图表依赖。
-- 目标学校绑定 `schoolId + schoolName + level`，统一使用 `sprint / target / safe`。
-- 学校库支持名称智能搜索、分数范围、目标类型及原有区域/类型/性质/标签组合筛选。
-- 学校详情新增“我的目标分析”卡；高中对比支持 1 至 3 所学校。
-- 运行边界保持纯本地、无登录、无支付、无广告、无 AI、无云开发、无后台、无定位。
-- 完整实现与验证记录见 [docs/rc7_full_upgrade_report.md](docs/rc7_full_upgrade_report.md)。
+V1 不包含登录/注册/手机号/openid/unionid、后台、云开发、Supabase、AI、网络推荐、自动上传、云同步、支付、广告、定位、推送、统计 SDK、社区、公开排名、图片上传、PDF、PIN、Face ID、Touch ID 或正式 2027 数据。
 
-## RC7-1 功能增强（RC7-FULL 基线）
+## 测试与冻结状态
 
-- 新增统一搜索服务 `utils/school-search.js`，不再由各页面各写一套学校匹配逻辑。
-- 搜索排序固定为：完整名称包含、别名包含、顺序字符匹配、分散字符匹配；`南航`、`十中`、`园区`、带空格关键词和无结果均有自动测试。
-- 首页可直接搜索并打开学校详情；收藏、目标学校选择、高中对比和成绩分析均接入相同服务。
-- 学校详情继续作为加入目标的正式入口，可选择冲刺、目标或保底；目标列表按三个等级排序，并显示历史参考分、参考年份、我的成绩和当前差距。
-- 成绩分析可按学校名称或简称筛选，标识已加入目标的学校，并显示“需要提升 N 分”或已达到历史参考分。
-- 本阶段只做功能增强，未执行微信审核、体验版上传、备案或其他发布步骤。
-- 完整记录见 [docs/rc7_1_feature_upgrade_report.md](docs/rc7_1_feature_upgrade_report.md)。
+- V1 自动测试：92 个核心 TEST-ID + 11 个冻结 TEST-ID，共 103 个唯一 TEST-ID。
+- 历史回归：85 个已有 `verify_*.js`、两个 smoke、全仓 JavaScript/JSON、上传包、身份/禁用能力、产品规则和正式数据 raw/semantic hash 全部通过。
+- 代码状态：`V1_CODE_FREEZE_READY`。
+- 体验状态：`PRE_RELEASE_UX_FREEZE_CONFIRMED = false`。
 
-## FINAL-RC6 状态
+自动测试不能替代微信开发者工具和人工验收。最终 RC11 提交仍需完成：普通编译、Problems 0、Console 无业务错误、320/375/390/414/430/iPad、多页面真实点击、备份和报告真实发送、恢复点、多档案、手机预览；体验版上传和审核还需要用户授权。
 
-- 小程序本地代码范围已完成并通过自动验证。
-- 运行页面共 12 个，其中包括成绩分析、高中对比、成绩趋势 3 个新增页面和 1 个受控官方来源页；tabBar 保持首页、学校库、收藏、学习目标、我的 5 项。
-- 双端正式数据文件一致性为 16/16：55 所学校、146 条分数线，2025 年 103 条、2026 年 43 条。
-- 微信与 Flutter RC10 备份已经完成双向真实互解析；两端正式数据的数量、字段和哈希继续一致。
-- 收藏、学习目标、成绩记录、输入草稿和中考目标年份只保存在当前设备。
-- 代码完成不等于微信开发者工具编译、手机预览、备案、体验版上传或平台审核完成。
+代码冻结后，上架前只处理布局、视觉、文案、操作步骤、空/加载/错误状态、安全区、多尺寸/iPad、性能、卡顿、崩溃、数据丢失缺陷、审核合规、真机问题、正式官方数据更新和上架材料。新业务建议只记录到 `docs/post_launch_feature_candidates.md`。
 
-## MP6-Release-Check 验收状态（2026-07-26）
+## MP12 页面收口兼容说明
 
-- Git：验收开始时 `main` 工作区干净，`HEAD` 与 `origin/main` 均为 `e2f36046be16d0493fef624109af87f7bb38675a`。
-- 配置：开发者工具打开的项目路径正确，正式 AppID 为 `wxc2a2a94f767438dd`；运行目录未发现 AppSecret、token、password 或密钥形态内容。
-- 自动验证：MP1/MP2/MP4/MP5/MP6、740 分上限、2026 分数线、上传包忽略、RC6、逻辑/页面 smoke、全部 JavaScript 语法和双端一致性检查通过。
-- 编译状态：微信开发者工具 Stable `2.01.2510290` 已实际打开项目并点击编译，但模拟器因 `INVALID_LOGIN, access_token expired` 启动失败；调试器显示 1 个登录错误、0 个警告，不能记为编译通过。
-- 人工测试状态：首页、学校库、学校详情、收藏、目标规划、成绩分析、学校对比、成绩趋势和我的页面均未执行真实模拟器点击验收；脚本验证不能替代人工验收。
-- 发布准备状态：上传包静态检查通过，但在重新登录并完成编译、页面验收和手机预览前，不可标记为可上传体验版。
+早期 MP12 已移除开发阶段用户文案，并用上传包规则排除开发资料；当前 V1 继续保留这些门禁，但以本 README 的冻结范围、正式身份和人工验收状态为准。
 
-## 当前不支持
+## 证据与验证
 
-- 不登录
-- 不获取微信头像昵称
-- 不获取手机号
-- 不请求定位
-- 不接支付
-- 不接广告
-- 不接推送
-- 不接第三方统计 SDK
-- 不接云开发
-- 不接后台请求
-- 不接 AI
-- 不做录取预测
-- 不提供志愿填报结论
-- 不判断学校能否录取
+- 完整报告：`docs/rc11_final_full_report.md`
+- 机器证据：`docs/rc11_final_evidence.json`
+- 证据索引：`docs/rc11_final_evidence_index.md`
+- 测试覆盖：`docs/v1_test_coverage_matrix.json`
+- 生命周期：`docs/v1_entity_lifecycle_matrix.json`
+- 功能冻结：`docs/v1_feature_freeze_manifest.json`
 
-## 数据原则
-
-学校基础信息来自学校官网、教育局官网、政府公开网站等官方公开来源。正式页面只展示已核实字段，未核实字段不进入页面。当前版本收录 2025、2026 年官方历史录取分数线；2026 年仅录入官方公开来源或官方图片核验且能匹配现有 schoolId 的记录。历史录取分数线仅供了解，不代表未来录取结果。
-
-## FINAL-RC6 本地增强升级
-
-- 新增 `pages/target-analysis`：执行固定分差区间分类，边界为 `-30～-1`、`0～15`、`>15`，不输出录取结论。
-- 新增 `pages/school-compare`：最多选择 3 所学校，对比字段全部来自正式本地数据。
-- 新增 `pages/score-trend`：成绩记录最多保存 100 条；RC7-FULL 已将趋势升级为最近 10 次原生折线，数据不上传。
-- 首页新增中考倒计时，默认目标日期为 2027 年 6 月 17 日，目标年份可修改并保存在本机。
-- 学习目标新增冲刺、目标、保底三个等级；旧记录缺少等级时按“目标学校”兼容读取。
-- “我的”页汇总成绩记录和目标年份；清除本地数据覆盖收藏、目标、草稿、成绩和目标年份。
-- 本轮未修改学校和分数线数据，AppID、上传包忽略规则、5 项 tabBar 和 740 分上限保持不变。
-
-## MP12 页面收口
-
-- 用户可见页面已移除开发阶段文案。
-- 上传包已通过 `project.config.json` 的 `packOptions.ignore` 忽略 `docs`、`scripts`、`README.md`、Markdown 文档、Git 目录、系统临时文件和常见临时输出目录。
-- AppID 已写入 `project.config.json`。
-- 数据保持 55 所学校，历史分数线增至 146 条，其中 2025 年 103 条、2026 年 43 条。
-- 小程序仍保持不登录、不上传、不定位、不预测。
-- 重新编译后，应不再看到“提交前说明”和“MP6 填写 AppID 前最终收口版”。
-
-## MP16 上传包清理
-
-- 开发文档、官方来源证据、验证脚本和审计资料继续保留在 GitHub，便于后续维护和数据溯源。
-- 小程序上传包通过 `project.config.json` 的 `packOptions.ignore` 排除 `docs`、`scripts`、`README.md`、Markdown 文档、官方图片缓存、官方页面 HTML 缓存、日志、临时目录、依赖目录和 IDE 配置目录。
-- 本轮不直接删除 `docs` 或 `scripts`，因为它们不属于运行时文件，但属于开发维护和官方来源证明资料。
-- 运行时入口和目录仍保持为 `app.js`、`app.json`、`app.wxss`、`sitemap.json`、`pages`、`data`、`utils`、`config`、`styles`。
-- 数据仍为 55 所学校、146 条历史录取分数线，其中 2025 年 103 条、2026 年 43 条。
-- 学习目标满分仍为 740，小程序仍保持不登录、不定位、不支付、不接广告、不接云开发、不接后台请求。
-
-## 本地验证命令
+完整验证入口：
 
 ```bash
-node -e "JSON.parse(require('fs').readFileSync('project.config.json','utf8')); console.log('project.config.json JSON OK')"
-node --check app.js
-node --check data/schools.js
-node --check data/admission-scores.js
-node --check data/admission-scores-2026.js
-node scripts/verify_mp1.js
-node scripts/verify_mp2.js
-node scripts/verify_mp4.js
-node scripts/verify_mp5.js
-node scripts/verify_mp6.js
-node scripts/verify_score_max_740.js
-node scripts/verify_mp13_2026_scores.js
-node scripts/verify_upload_package_ignore.js
-node scripts/verify_rc6_upgrade.js
-node scripts/verify_rc7_1.js
-node scripts/verify_rc7_full.js
-node scripts/verify_rc8.js
-node scripts/verify_rc8_chart_vertical_alignment.js
-node scripts/verify_mp17_name_sync.js
-node scripts/verify_mp18_name_sync.js
+node scripts/verify_v1_full.js --all-verify
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
-node scripts/verify_rc9_full.js
-node scripts/verify_rc10_full.js
-node scripts/verify_cross_platform_consistency.js ../suzhou_highschool_app
 find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
 git diff --check
 ```
 
-## 重新编译检查
+## 回滚
 
-1. 关闭并重新打开微信开发者工具中的当前项目，或重新导入 `/Users/tom/Dev/suzhou_highschool_miniprogram`。
-2. 点击编译，确认底部五项依次为：首页、学校库、成绩、目标规划、我的。
-3. 首页分别检查无数据与有数据状态，不应恢复旧搜索框、成绩输入框或数据宣传卡。
-4. 学校库检查搜索、区域/类型多选、年份、参考分、成绩匹配、收藏/目标筛选、重置和无结果清除。
-5. 成绩中心录入 740、740、650 三条记录，确认点、数字、名称和日期逐条同 x；再检查编辑、复制、删除、学科和复盘。
-6. 目标规划检查默认推荐、加入目标不重复、主要目标、差距轨迹和阶段学习目标。
-7. “我的”检查档案切换、备份导出/导入预览、帮助教程、当前档案清除和全部清除二次确认。
-8. 在 320、375、390、414、430 宽度和 iPad 模拟尺寸检查表单、筛选、图表、底部对比栏及教程遮罩。
-9. 如仍看到旧文案，优先检查是否打开了旧项目路径、是否未重新编译、是否命中了微信开发者工具缓存。
-10. 官方来源页需要在微信公众平台配置对应 HTTPS 业务域名；未配置时应出现明确失败提示，仍可复制链接用系统浏览器打开。
-
-完整 RC9 结果见 [docs/rc9_full_upgrade_report.md](docs/rc9_full_upgrade_report.md)，人工发布检查见 [docs/manual_wechat_release_checks.md](docs/manual_wechat_release_checks.md)，双端数据结果见 [docs/cross_platform_consistency_report.md](docs/cross_platform_consistency_report.md)。
-
-## 回滚方式
-
-```bash
-cd /Users/tom/Dev/suzhou_highschool_miniprogram
-git revert <本轮 commit hash>
-```
-
-审核结果以微信公众平台为准。本仓库准备完成不等于保证审核通过。
-
-## RC11-2 本地数据稳定性
-
-“我的 → 数据管理 → 恢复点”可以查看、手动创建、恢复和删除本机恢复点。导入（合并/覆盖）、数据修复、清除当前档案、清除全部和恢复其他恢复点前会先自动创建恢复点；恢复前额外创建 `before_restore`。恢复点最多 10 个，只包含用户数据，不包含内置学校和分数线。
-
-恢复点采用独立 format v1、canonical JSON 与 SHA-256；创建时先写 temporary、回读校验，再提交索引/payload。恢复在 temporary 中构建和验证，失败时当前正式数据保持不变。服务层还提供 operationId 幂等、全局/档案/实体锁、实体 version 冲突保护及启动残留检测。测试故障注入只通过测试参数启用，正式页面没有入口。
-
-RC11-2 新增 15 个专项脚本；最终 79 个实际验证脚本全部通过。微信开发者工具已完成普通编译、Problems 0，以及恢复点空状态、手动创建、摘要、恢复确认和删除确认；多尺寸、真机预览、体验版上传和平台审核仍未执行。完整规范和边界见 `docs/rc11_2_full_report.md`。
+撤销某个逻辑提交使用普通 `git revert <commit-sha>`。单文件可从仓库外备份 `/Users/tom/WorkData/05_Backups/suzhou_highschool_miniprogram/RC11_FINAL_MP_20260801_162207` 恢复后重新验证。不要使用 reset、clean、rebase、stash、amend 或 force push。

@@ -194,8 +194,11 @@ for (const { relative, source } of runtimeSources) {
   for (const phrase of forbiddenPublicPhrases) {
     if (containsForbiddenPublicPhrase(source, phrase, relative)) fail(`${relative} 正式运行代码不得出现：${phrase}`)
   }
-  for (const phrase of ['TODO', 'mock', '示例学校', '待核实', 'AI 推荐']) {
+  for (const phrase of ['TODO', '示例学校', '待核实', 'AI 推荐']) {
     if (source.includes(phrase)) fail(`${relative} 正式运行代码不得出现：${phrase}`)
+  }
+  if (/(^|[^A-Za-z0-9_])mock(?=$|[^A-Za-z0-9_])/i.test(source)) {
+    fail(`${relative} 正式运行代码不得出现独立 mock 标记`)
   }
   for (const api of [
     'wx.' + 'login',
