@@ -17,6 +17,7 @@ const { APP_CONFIG } = require('../../config/app-config')
 const { examYearOptions } = require('../../utils/countdown')
 const { schools } = require('../../data/schools')
 const { operationOptions } = require('../../utils/operation-context')
+const { hasExportedBackup } = require('../../utils/backup-restore')
 
 Page({
   data: {
@@ -72,7 +73,7 @@ Page({
         learningTaskCount,
         profileCount: getProfiles().length,
         hasUsedMultipleProfiles: getProfiles().length <= 1,
-        hasBackup: false,
+        hasBackup: hasExportedBackup(),
         healthIssueCount: health.ok ? health.total : 0,
         inCompareMode: false
       })

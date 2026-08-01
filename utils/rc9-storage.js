@@ -983,9 +983,10 @@ function saveTargetRecord(record) {
   const current = existing.records.find((item) => item.schoolId === normalized.schoolId)
   const conflict = versionConflict(current, record && (record.expectedVersion ?? record.version))
   if (conflict) return conflict
+  const merged = current ? normalizeTargetRecord({ ...current, ...record, id: current.id }, profileId) : normalized
   const recordToSave = current
     ? {
-        ...normalized,
+        ...merged,
         id: current.id,
         level: record && (record.level || record.targetLevel)
           ? normalizeTargetLevel(record.level || record.targetLevel)
@@ -1111,14 +1112,26 @@ function deleteLearningTargetRecord(id) {
   const existing = getLearningTargetRecordsResult()
   if (!existing.ok) return existing
   const records = existing.records.filter((item) => item.id !== id)
-  const result = updateActiveProfileData((data) => ({ ...data, stageGoals: records }))
+  const result = updateActiveProfileData((data) => ({
+    ...data,
+    stageGoals: records,
+    learningTasks: data.learningTasks.map((task) => task.stageGoalId === id
+      ? { ...task, stageGoalId: '', updatedAt: new Date().toISOString(), version: Number(task.version || 1) + 1 }
+      : task)
+  }))
   return result.ok ? { ok: true, records } : result
 }
 
 const deleteStageGoalRecord = deleteLearningTargetRecord
 
 function clearLearningTargetRecords() {
-  return updateActiveProfileData((data) => ({ ...data, stageGoals: [] }))
+  return updateActiveProfileData((data) => ({
+    ...data,
+    stageGoals: [],
+    learningTasks: data.learningTasks.map((task) => task.stageGoalId
+      ? { ...task, stageGoalId: '', updatedAt: new Date().toISOString(), version: Number(task.version || 1) + 1 }
+      : task)
+  }))
 }
 
 const clearStageGoalRecords = clearLearningTargetRecords
@@ -1170,6 +1183,50 @@ function saveScoreRecord(record) {
     }, 10)
   }))
   return result.ok ? { ok: true, records } : result
+}
+
+function saveExamWithReview(examRecord, reviewRecord) {
+  const context = activeContext()
+  if (!context.ok) return context
+  const profileId = context.profile.id
+  const normalizedExam = normalizeExamRecord(examRecord, profileId)
+  const normalizedReview = normalizeScoreReview(reviewRecord, profileId)
+  if (!normalizedExam || !normalizedReview || normalizedReview.examRecordId !== normalizedExam.id) {
+    return { ok: false, message: '考试与复盘数据不完整，原数据未修改。' }
+  }
+  const currentExam = context.data.scoreRecords.find((item) => item.id === normalizedExam.id)
+  const examConflict = versionConflict(currentExam, examRecord && (examRecord.expectedVersion ?? examRecord.version))
+  if (examConflict) return examConflict
+  const currentReview = context.data.scoreReviews.find((item) => item.id === normalizedReview.id)
+  const reviewConflict = versionConflict(currentReview, reviewRecord && (reviewRecord.expectedVersion ?? reviewRecord.version))
+  if (reviewConflict) return reviewConflict
+  const now = new Date().toISOString()
+  const savedExam = currentExam
+    ? { ...currentExam, ...normalizedExam, createdAt: currentExam.createdAt, updatedAt: now, version: Number(currentExam.version || 1) + 1 }
+    : normalizedExam
+  const savedReview = currentReview
+    ? { ...currentReview, ...normalizedReview, createdAt: currentReview.createdAt, updatedAt: now, version: Number(currentReview.version || 1) + 1 }
+    : normalizedReview
+  const scoreRecords = [
+    ...context.data.scoreRecords.filter((item) => item.id !== savedExam.id),
+    savedExam
+  ].sort(compareScoreRecords).slice(-APP_CONFIG.scoreRecord.maxRecords)
+  const scoreReviews = [
+    savedReview,
+    ...context.data.scoreReviews.filter((item) => item.id !== savedReview.id)
+  ]
+  const result = updateActiveProfileData((data) => ({
+    ...data,
+    scoreRecords,
+    scoreReviews,
+    recentHistory: addHistoryEntry(data.recentHistory, 'editedExams', {
+      id: savedExam.id,
+      examRecordId: savedExam.id,
+      examName: savedExam.examName,
+      examDate: savedExam.examDate
+    }, 10)
+  }))
+  return result.ok ? { ...result, examRecord: savedExam, review: savedReview } : result
 }
 
 function deleteScoreRecord(id) {
@@ -1456,13 +1513,13 @@ function saveScoreReview(record) {
 }
 
 function deleteScoreReview(id) {
-  const review = getScoreReviews().find((item) => item.id === id)
   return updateActiveProfileData((data) => ({
     ...data,
     scoreReviews: data.scoreReviews.filter((item) => item.id !== id),
-    scoreLossReasons: review
-      ? data.scoreLossReasons.filter((item) => item.examRecordId !== review.examRecordId)
-      : data.scoreLossReasons
+    scoreLossReasons: data.scoreLossReasons.filter((item) => item.reviewId !== id),
+    learningTasks: data.learningTasks.map((task) => task.sourceReviewId === id
+      ? { ...task, sourceReviewId: '', updatedAt: new Date().toISOString(), version: Number(task.version || 1) + 1 }
+      : task)
   }))
 }
 
@@ -1486,12 +1543,16 @@ function saveLearningTask(record, { allowDuplicateSource = false } = {}) {
   const profile = getActiveProfile()
   const normalized = normalizeLearningTask(record, profile && profile.id || DEFAULT_PROFILE_ID)
   if (!normalized) return { ok: false, message: '学习任务格式无效，请检查后重试。' }
-  if (!allowDuplicateSource && normalized.sourceReviewId) {
+  if (!allowDuplicateSource && (normalized.sourceLossReasonId || normalized.sourceMistakeRecordId || normalized.sourceReviewId)) {
     const duplicate = getLearningTasks().find((item) =>
       item.id !== normalized.id &&
-      item.sourceReviewId === normalized.sourceReviewId &&
-      item.sourceReasonType === normalized.sourceReasonType &&
-      item.subjectId === normalized.subjectId
+      (normalized.sourceLossReasonId
+        ? item.sourceLossReasonId === normalized.sourceLossReasonId
+        : normalized.sourceMistakeRecordId
+          ? item.sourceMistakeRecordId === normalized.sourceMistakeRecordId
+          : item.sourceReviewId === normalized.sourceReviewId &&
+            item.sourceReasonType === normalized.sourceReasonType &&
+            item.subjectId === normalized.subjectId)
     )
     if (duplicate) {
       return { ok: false, code: 'DUPLICATE_SOURCE', message: '该复盘已创建过学习任务。' }
@@ -1510,9 +1571,18 @@ function getSubjectConfigs() {
 }
 
 function saveSubjectConfigs(configs) {
-  const normalized = (Array.isArray(configs) ? configs : [])
-    .map(normalizeSubjectConfig)
-    .filter(Boolean)
+  const currentById = new Map(getSubjectConfigs().map((item) => [item.subjectId, item]))
+  const normalized = (Array.isArray(configs) ? configs : []).map((item, index) => {
+    const current = currentById.get(item && (item.subjectId || item.id))
+    const now = new Date().toISOString()
+    return normalizeSubjectConfig({
+      ...current,
+      ...item,
+      createdAt: current && current.createdAt || item && item.createdAt || now,
+      updatedAt: now,
+      version: current ? Number(current.version || 1) + 1 : Number(item && item.version || 1)
+    }, index)
+  }).filter(Boolean)
   return updateActiveProfileData((data) => ({ ...data, subjectConfigs: normalized }))
 }
 
@@ -2542,6 +2612,12 @@ function protectedSaveScoreRecord(record, options = {}) {
   }, () => saveScoreRecord(record))
 }
 
+function protectedSaveExamWithReview(examRecord, reviewRecord, options = {}) {
+  return protectedCall('save_exam_with_review', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: examRecord && examRecord.id || ''
+  }, () => saveExamWithReview(examRecord, reviewRecord))
+}
+
 function protectedDeleteScoreRecord(id, options = {}) {
   return protectedCall('delete_score', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: id
@@ -2638,6 +2714,7 @@ module.exports = {
   getScoreRecordsResult,
   getScoreRecords,
   saveScoreRecord: protectedSaveScoreRecord,
+  saveExamWithReview: protectedSaveExamWithReview,
   deleteScoreRecord: protectedDeleteScoreRecord,
   clearScoreRecords: protectedClearScoreRecords,
   getExamYearResult,

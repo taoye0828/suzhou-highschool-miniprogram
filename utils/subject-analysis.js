@@ -28,6 +28,7 @@ function subjectScoreEntries(record) {
     return raw.map((item) => ({
       subjectId: String(item && (item.subjectId || item.id) || '').trim(),
       subjectName: String(item && (item.subjectName || item.name) || '').trim(),
+      maxScore: item && Number.isFinite(item.maxScore) ? item.maxScore : null,
       score: item && typeof item.score === 'number'
         ? item.score
         : item && typeof item.value === 'number'
@@ -42,9 +43,10 @@ function subjectScoreEntries(record) {
       ? {
         subjectId,
         subjectName: String(value.subjectName || value.name || '').trim(),
+        maxScore: Number.isFinite(value.maxScore) ? value.maxScore : null,
         score: typeof value.score === 'number' ? value.score : value.value
       }
-      : { subjectId, subjectName: '', score: value }
+      : { subjectId, subjectName: '', maxScore: null, score: value }
   })
 }
 
@@ -61,7 +63,9 @@ function collectSubjectSeries(records, subjectConfigs = []) {
         continue
       }
       const config = configs.get(entry.subjectId)
-      const maxScore = config && Number.isFinite(config.maxScore) ? config.maxScore : null
+      const maxScore = Number.isFinite(entry.maxScore)
+        ? entry.maxScore
+        : config && Number.isFinite(config.maxScore) ? config.maxScore : null
       if (maxScore !== null && entry.score > maxScore) continue
       if (!series.has(entry.subjectId)) {
         series.set(entry.subjectId, {
@@ -81,8 +85,10 @@ function collectSubjectSeries(records, subjectConfigs = []) {
         examName: record.examName || '',
         examDate: scoreDate(record),
         createdAt: record.createdAt || '',
-        score: entry.score
+        score: entry.score,
+        maxScore
       })
+      if (maxScore !== null) series.get(entry.subjectId).maxScore = maxScore
     }
   }
   return Array.from(series.values()).sort((left, right) => {

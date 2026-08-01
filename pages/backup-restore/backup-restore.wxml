@@ -1,7 +1,7 @@
 <view class="page">
   <view class="card export-card onboarding-backup">
     <view class="card-title">导出本地用户数据</view>
-    <view class="muted small">包含学生档案、成绩与复盘、收藏、目标学校、阶段目标、推荐设置、教程状态和存储版本；不包含正式学校或分数线数据。</view>
+    <view class="muted small">包含学生档案、成绩与复盘、收藏、目标学校、阶段目标、历史分差参考设置、教程状态和存储版本；不包含正式学校或分数线数据。</view>
     <view class="button-row">
       <button class="button secondary grow" bindtap="previewExport">预览范围</button>
       <button class="button grow" bindtap="exportBackup">生成 JSON 备份</button>
@@ -13,6 +13,8 @@
       <view class="muted small">校验摘要：{{exportPreview.checksum}}</view>
     </view>
     <view wx:if="{{exportPath}}" class="muted small path-text">本地路径：{{exportPath}}</view>
+    <button wx:if="{{exportPath}}" class="button send-backup" bindtap="sendBackupFile">发送备份文件</button>
+    <view wx:if="{{exportPath}}" class="muted tiny">发送会通过微信系统能力交给你选择的接收方；取消或失败不会修改本机数据，也不会记录为成功。</view>
   </view>
 
   <view class="card import-card">

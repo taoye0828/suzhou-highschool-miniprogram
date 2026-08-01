@@ -46,6 +46,7 @@ const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { operationOptions } = require('../../utils/operation-context')
 const { schools } = require('../../data/schools')
 const { admissionScores } = require('../../data/admission-scores')
+const { FORMAL_SCORE_YEARS } = require('../../utils/school')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
 
 const LEVEL_ORDER = ['sprint', 'target', 'safe']
@@ -55,11 +56,9 @@ const STATUS_OPTIONS = [
   { value: 'completed', label: '已完成' },
   { value: 'paused', label: '已暂停' }
 ]
-const LIMIT_OPTIONS = [3, 5, 8, 10]
 const REFERENCE_YEAR_OPTIONS = [
   { value: 'latest', label: '不晚于目标年份的最新数据' },
-  { value: '2026', label: '只看 2026 年' },
-  { value: '2025', label: '只看 2025 年' }
+  ...FORMAL_SCORE_YEARS.map((year) => ({ value: String(year), label: `只看 ${year} 年` }))
 ]
 
 function uniqueValues(values) {
@@ -96,20 +95,11 @@ function statusIndex(status) {
 }
 
 function referenceMode(settings) {
-  if (settings.require2026 || settings.referenceYears.includes(2026)) return '2026'
-  if (settings.referenceYears.length === 1 && settings.referenceYears[0] === 2025) return '2025'
-  return 'latest'
-}
-
-function recommendationRuleDraft(settings) {
-  return {
-    sprintMinDifference: String(settings.sprintMinDifference),
-    sprintMaxDifference: String(settings.sprintMaxDifference),
-    targetMinDifference: String(settings.targetMinDifference),
-    targetMaxDifference: String(settings.targetMaxDifference),
-    safeMinDifference: String(settings.safeMinDifference),
-    safeMaxDifference: settings.safeMaxDifference === null ? '' : String(settings.safeMaxDifference)
+  if (settings.require2026) return String(Math.max(...FORMAL_SCORE_YEARS))
+  if (settings.referenceYears.length === 1 && FORMAL_SCORE_YEARS.includes(settings.referenceYears[0])) {
+    return String(settings.referenceYears[0])
   }
+  return 'latest'
 }
 
 function emptyLearningDraft() {
@@ -357,19 +347,17 @@ Page({
     scenarioCards: [],
     scenarioError: '',
     recommendationScoreSource: '',
+    hasManualReferenceScore: false,
     recommendationError: '',
     recommendationHasRun: false,
     recommendationCount: 0,
     recommendationSections: recommendationSections([]),
     recommendationSettingsOpen: false,
     recommendationSettings: cloneDefaultRecommendationSettings(),
-    recommendationRuleDraft: recommendationRuleDraft(cloneDefaultRecommendationSettings()),
     districtOptions: [],
     schoolTypeOptions: [],
     referenceYearOptions: REFERENCE_YEAR_OPTIONS,
     referenceYearIndex: 0,
-    limitOptions: LIMIT_OPTIONS,
-    limitIndex: 1,
     records: [],
     targetLevels: APP_CONFIG.targetScore.levels,
     currentScoreText: '尚未记录',
@@ -436,8 +424,6 @@ Page({
       0,
       REFERENCE_YEAR_OPTIONS.findIndex((item) => item.value === mode)
     )
-    const limitIndex = Math.max(0, LIMIT_OPTIONS.indexOf(settings.limitPerLevel))
-
     this._targetRecords = targetResult.records
     this._scoreRecords = scoreResult.records
     this._learningRecords = learningResult.records
@@ -465,12 +451,11 @@ Page({
         : current.source === 'draft'
           ? '来自上次输入草稿'
           : '尚未记录成绩',
+      hasManualReferenceScore: scenarioSettings.currentScore !== null && scenarioSettings.currentScore !== current.score,
       recommendationSettings: settings,
-      recommendationRuleDraft: recommendationRuleDraft(settings),
       districtOptions: choiceOptions(districts, settings.districts),
       schoolTypeOptions: choiceOptions(schoolTypes, settings.schoolTypes),
       referenceYearIndex,
-      limitIndex: limitIndex < 0 ? 1 : limitIndex,
       records: targetResult.records
         .map((record) => presentTarget(
           record,
@@ -529,6 +514,26 @@ Page({
       operationOptions('save_target_draft', 'targetDraft')
     )
     if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
+  },
+
+  restoreFormalReferenceScore() {
+    const current = selectCurrentScore(this._scoreRecords || [], {})
+    const next = getScenarioSettings()
+    const saved = saveScenarioSettings({ ...next, currentScore: null }, operationOptions('save_scenario_settings', 'scenarioSettings'))
+    if (!saved.ok) {
+      wx.showToast({ title: saved.message, icon: 'none' })
+      return
+    }
+    this.setData({
+      recommendationScoreInput: current.score === null ? '' : String(current.score),
+      recommendationScoreSource: current.source === 'record'
+        ? `来自最近一次考试：${current.record.examName}`
+        : '尚未记录成绩',
+      hasManualReferenceScore: false
+    }, () => {
+      this.analyzeRecommendations({ silent: true })
+      this.analyzeScenarios({ silent: true })
+    })
   },
 
   onScenarioScoreInput(event) {
@@ -613,7 +618,7 @@ Page({
     const next = {
       ...this.data.recommendationSettings,
       referenceYears: option.value === 'latest' ? [] : [Number(option.value)],
-      require2026: option.value === '2026'
+      require2026: Number(option.value) === Math.max(...FORMAL_SCORE_YEARS)
     }
     this.persistRecommendationSettings(next, { referenceYearIndex: index })
   },
@@ -627,73 +632,6 @@ Page({
     })
   },
 
-  onLimitChange(event) {
-    const index = Number(event.detail.value)
-    const limitPerLevel = LIMIT_OPTIONS[index]
-    if (!Number.isInteger(limitPerLevel)) return
-    this.persistRecommendationSettings({
-      ...this.data.recommendationSettings,
-      limitPerLevel
-    }, { limitIndex: index })
-  },
-
-  onRuleInput(event) {
-    const field = event.currentTarget.dataset.field
-    if (!Object.prototype.hasOwnProperty.call(this.data.recommendationRuleDraft, field)) return
-    this.setData({
-      recommendationRuleDraft: {
-        ...this.data.recommendationRuleDraft,
-        [field]: event.detail.value
-      }
-    })
-  },
-
-  applyRecommendationRules() {
-    const draft = this.data.recommendationRuleDraft
-    const requiredFields = [
-      'sprintMinDifference',
-      'sprintMaxDifference',
-      'targetMinDifference',
-      'targetMaxDifference',
-      'safeMinDifference'
-    ]
-    const parsed = {}
-    for (const field of requiredFields) {
-      const raw = String(draft[field] || '').trim()
-      const value = Number(raw)
-      if (!/^-?\d+$/.test(raw) || !Number.isInteger(value) || Math.abs(value) > EXAM_TOTAL_SCORE) {
-        wx.showToast({ title: '自定义分差必须是 -740 至 740 的整数。', icon: 'none' })
-        return
-      }
-      parsed[field] = value
-    }
-    const safeMaxRaw = String(draft.safeMaxDifference || '').trim()
-    if (safeMaxRaw) {
-      const safeMax = Number(safeMaxRaw)
-      if (!/^-?\d+$/.test(safeMaxRaw) || !Number.isInteger(safeMax) ||
-          Math.abs(safeMax) > EXAM_TOTAL_SCORE) {
-        wx.showToast({ title: '保底上限必须留空或填写有效整数。', icon: 'none' })
-        return
-      }
-      parsed.safeMaxDifference = safeMax
-    } else {
-      parsed.safeMaxDifference = null
-    }
-    if (parsed.sprintMinDifference > parsed.sprintMaxDifference ||
-        parsed.targetMinDifference > parsed.targetMaxDifference ||
-        parsed.safeMaxDifference !== null &&
-          parsed.safeMinDifference > parsed.safeMaxDifference ||
-        parsed.sprintMaxDifference >= parsed.targetMinDifference ||
-        parsed.targetMaxDifference >= parsed.safeMinDifference) {
-      wx.showToast({ title: '分差区间需按冲刺、目标、保底依次排列且不重叠。', icon: 'none' })
-      return
-    }
-    this.persistRecommendationSettings({
-      ...this.data.recommendationSettings,
-      ...parsed
-    })
-  },
-
   resetRecommendationSettings() {
     const settings = cloneDefaultRecommendationSettings()
     const result = saveRecommendationSettings(
@@ -704,7 +642,7 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
-    wx.showToast({ title: '已恢复默认推荐设置', icon: 'success' })
+    wx.showToast({ title: '已恢复默认参考设置', icon: 'success' })
     this.loadAll()
   },
 
@@ -721,7 +659,6 @@ Page({
     this.setData({
       ...extraData,
       recommendationSettings: saved,
-      recommendationRuleDraft: recommendationRuleDraft(saved),
       districtOptions: choiceOptions(
         uniqueValues(schools.map((school) => school.district)),
         saved.districts

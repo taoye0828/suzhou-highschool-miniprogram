@@ -34,7 +34,7 @@
   <view wx:if="{{!hasTarget}}" class="card empty-state-card">
     <view class="card-title">选择一所目标学校</view>
     <view class="muted empty-state-text">加入目标后，可在首页持续查看参考分与当前分差。</view>
-    <button class="button secondary" bindtap="openRecommendations">查看学校推荐</button>
+    <button class="button secondary" bindtap="openRecommendations">查看历史分差参考</button>
   </view>
   <view wx:else class="card target-card onboarding-target-planning">
     <view class="row between target-head">
@@ -59,7 +59,7 @@
   <view class="section-title">快捷操作</view>
   <view class="shortcut-grid">
     <button class="button shortcut-button" bindtap="openScoreCenter">记录成绩</button>
-    <button class="button secondary shortcut-button" bindtap="openRecommendations">学校推荐</button>
+    <button class="button secondary shortcut-button" bindtap="openRecommendations">历史分差参考</button>
     <button class="button secondary shortcut-button wide" bindtap="openTargetPlanning">目标规划</button>
   </view>
 

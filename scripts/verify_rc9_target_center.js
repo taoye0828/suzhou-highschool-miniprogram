@@ -159,7 +159,7 @@ assert.strictEqual(storage.getTargetRecords()[0].level, 'target')
 
 const pageText = `${read('pages/targets/targets.js')}\n${read('pages/targets/targets.wxml')}`
 for (const marker of [
-  '学校推荐',
+  '历史分差参考',
   '目标学校',
   '学习目标',
   'setPrimaryTargetSchool',

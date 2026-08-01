@@ -4,6 +4,9 @@ const {
   readBackupFile,
   importBackupEnvelope
 } = require('../../utils/backup-restore')
+const { FileShareAdapter } = require('../../utils/file-share')
+
+const fileShare = new FileShareAdapter()
 
 Page({
   data: {
@@ -50,8 +53,28 @@ Page({
     })
     wx.showModal({
       title: '本地备份已生成',
-      content: '文件已保存在微信小程序本地沙盒。微信不提供把 JSON 直接保存到系统文件夹的统一接口；本功能不会上传服务器。',
+      content: '文件已在本机生成。你可以主动发送给自己选择的微信接收方；小程序不会自动上传服务器。',
       showCancel: false
+    })
+  },
+
+  sendBackupFile() {
+    if (!this.data.exportPath) return
+    const preview = this.data.exportPreview || {}
+    wx.showModal({
+      title: '发送备份文件',
+      content: `文件包含 ${preview.profileCount || 0} 个档案、${preview.scoreCount || 0} 条成绩、${preview.targetCount || 0} 所目标学校及其他本机用户数据。请只发送给可信接收方。小程序不会自动上传。`,
+      confirmText: '选择接收方',
+      success: (modal) => {
+        if (!modal.confirm) return
+        fileShare.shareFile({ filePath: this.data.exportPath, fileName: '苏程记录本地备份.json' })
+          .then((result) => {
+            wx.showToast({
+              title: result.ok ? '文件已发送' : result.message || '发送失败，可重试',
+              icon: result.ok ? 'success' : 'none'
+            })
+          })
+      }
     })
   },
 

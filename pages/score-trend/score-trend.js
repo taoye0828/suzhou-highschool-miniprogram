@@ -3,6 +3,7 @@ const {
   STORAGE_SCHEMA_VERSION,
   getScoreRecordsResult,
   saveScoreRecord,
+  saveExamWithReview,
   deleteScoreRecord,
   clearScoreRecords,
   getSubjectConfigs,
@@ -1372,7 +1373,7 @@ Page({
       this.setData({ reviewError: values.message })
       return
     }
-    const result = saveScoreRecord({
+    const examPayload = {
       ...record,
       schemaVersion: STORAGE_SCHEMA_VERSION,
       totalScore: values.totalScore,
@@ -1385,12 +1386,8 @@ Page({
       nextActions: values.nextActions,
       notes: values.notes,
       updatedAt: new Date().toISOString()
-    }, operationOptions('save_score', record.id))
-    if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
-      return
     }
-    const reviewResult = saveScoreReview({
+    const reviewPayload = {
       id: `review_${record.id}`,
       examRecordId: record.id,
       summary: values.lossNotes,
@@ -1398,9 +1395,14 @@ Page({
       nextActions: values.nextActions,
       createdAt: record.createdAt,
       updatedAt: new Date().toISOString()
-    }, operationOptions('save_score_review', `review_${record.id}`))
-    if (!reviewResult.ok) {
-      wx.showToast({ title: reviewResult.message, icon: 'none' })
+    }
+    const result = saveExamWithReview(
+      examPayload,
+      reviewPayload,
+      operationOptions('save_exam_with_review', record.id)
+    )
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
       return
     }
     this.loadRecords({ selectedReviewRecordId: record.id })
@@ -1435,9 +1437,11 @@ Page({
     const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
     if (!record || !subject || !reasonType) return
     const lossReasonId = createLossReasonId()
+    const review = getScoreReviews().find((item) => item.examRecordId === record.id)
     const result = saveScoreLossReason({
       id: lossReasonId,
       examRecordId: record.id,
+      reviewId: review && review.id || '',
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
       reasonType,
@@ -1489,7 +1493,7 @@ Page({
           subjectId: reason.subjectId,
           subjectName: reason.subjectName,
           sourceExamId: reason.examRecordId,
-          sourceReviewId: `review_${reason.examRecordId}`,
+          sourceReviewId: reason.reviewId || '',
           sourceLossReasonId: reason.id,
           sourceReasonType: reason.reasonType,
           stageGoalId: stageGoal.id,

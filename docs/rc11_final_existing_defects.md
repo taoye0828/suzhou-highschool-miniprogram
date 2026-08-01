@@ -25,27 +25,27 @@
 | D019 | fixed_verified | high | `validateRestorePoint` | 原实现未校验 backupFormatVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-019 | P2 | Backup v2/v3 门禁通过 |
 | D020 | fixed_verified | high | `validateRestorePoint` | 原实现未校验 appDataVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-020 | P2 | rc11-2/v1 兼容和未来版本拒绝通过 |
 | D021 | fixed_verified | critical | `validateRestoreState` | 原引用校验只覆盖旧实体 | 扩展考试、复盘、错题、任务、周计划、阶段复盘、学校状态和方案引用 | V1-DATA-021 | P2 | 无效周计划任务引用被拒绝 |
-| D022 | confirmed | critical | `restoreRepairSnapshot` | repairSnapshot 恢复绕过 before_restore | 接入恢复点与 protected transaction | V1-RECOVERY-022 | pending | pending |
-| D023 | confirmed | critical | `pages/score-trend` save flows | 成绩和复盘分次写，可能半成功 | service 单事务保存聚合 | V1-TXN-023 | pending | pending |
-| D024 | confirmed | high | `saveTargetRecord` | 修改等级用新对象替换，缺省 reference 字段被清空 | patch 合并保留未提供字段 | V1-DATA-024 | pending | pending |
-| D025 | confirmed | high | `selectPrimaryTarget` 调用链 | 无主要目标时自动挑选其他学校 | 主要目标为空即为空 | V1-DATA-025 | pending | pending |
-| D026 | confirmed | high | `deleteLearningTargetRecord` | 删除目标后任务保留失效 stageGoalId | 同事务清空任务引用 | V1-LEARNING-026 | pending | pending |
-| D027 | confirmed | high | score review delete flow | 删除复盘可能按 examRecordId 清全部失分原因 | 增加 reviewId，只删明确关联 | V1-LEARNING-027 | pending | pending |
-| D028 | confirmed | high | `pages/score-trend` task draft | 构造并不存在的 sourceReviewId | 只引用真实已保存实体 | V1-LEARNING-028 | pending | pending |
-| D029 | confirmed | medium | `saveLearningTask` | 判重未优先 sourceLossReasonId | 业务唯一键优先 loss reason/mistake | V1-LEARNING-029 | pending | pending |
-| D030 | confirmed | high | recommendation settings/pages | 用户可自定义正式历史分差边界 | 运行代码固定规则源边界 | V1-SCHOOL-030 | pending | pending |
-| D031 | confirmed | high | `normalizeRecommendationSettings` | 自定义上下界允许空档 | 删除普通用户边界编辑，固定连续区间 | V1-SCHOOL-031 | pending | pending |
-| D032 | confirmed | high | `scenarioResults`/历史分差 | 情景规划和正式规则可使用不同边界 | 共用唯一分类函数，分数源分离 | V1-SCHOOL-032 | pending | pending |
-| D033 | confirmed | medium | targets reference score UI | 手动参考成绩无清晰取消 | “恢复使用正式参考成绩”操作 | V1-SCHOOL-033 | pending | pending |
-| D034 | confirmed | high | 页面日期函数/`toISOString` | UTC 截取导致本地自然日偏移 | `utils/local-date.js` | V1-DATA-034 | pending | pending |
-| D035 | confirmed | medium | school/target year UI | 2025、2026 写死，数据更新后漂移 | 从正式分数数据动态生成 | V1-SCHOOL-035 | pending | pending |
-| D036 | confirmed | medium | `config/app-config.js` | releaseStatus 仍是旧阶段 | 写内部最终冻结状态 | V1-FREEZE-036 | pending | pending |
-| D037 | confirmed | medium | dynamic help 调用 | hasBackup 固定 false | 读取真实备份/导出状态 | V1-DATA-037 | pending | pending |
-| D038 | confirmed | high | `pages/favorites` | 打开收藏页就写回删除无效 ID | 只展示告警，不在读取路径写入 | V1-SCHOOL-038 | pending | pending |
-| D039 | confirmed | high | `utils/subject-analysis`/趋势页 | 学科趋势只看当前 config maxScore | 优先历史 subject score/scheme snapshot | V1-TREND-039 | pending | pending |
-| D040 | confirmed | medium | `normalizeSubjectConfig` | 配置缺完整 version/createdAt/updatedAt | 归一化并在保存时递增版本 | V1-EXAM-040 | pending | pending |
+| D022 | fixed_verified | critical | `restoreRepairSnapshot` | repairSnapshot 恢复绕过 before_restore | 接入恢复点与 protected transaction | V1-RECOVERY-022 | P3 checkpoint | 恢复前创建 before_restore |
+| D023 | fixed_verified | critical | `pages/score-trend` save flows | 成绩和复盘分次写，可能半成功 | service 单事务保存聚合 | V1-TXN-023 | P3 checkpoint | 成绩与复盘同一受保护事务提交 |
+| D024 | fixed_verified | high | `saveTargetRecord` | 修改等级用新对象替换，缺省 reference 字段被清空 | patch 合并保留未提供字段 | V1-DATA-024 | P3 checkpoint | referenceScore/referenceYear 保留 |
+| D025 | fixed_verified | high | `selectPrimaryTarget` 调用链 | 无主要目标时自动挑选其他学校 | 主要目标为空即为空 | V1-DATA-025 | P3 checkpoint | 无显式主要目标返回 null |
+| D026 | fixed_verified | high | `deleteLearningTargetRecord` | 删除目标后任务保留失效 stageGoalId | 同事务清空任务引用 | V1-LEARNING-026 | P3 checkpoint | 关联任务 stageGoalId 同步清空 |
+| D027 | fixed_verified | high | score review delete flow | 删除复盘可能按 examRecordId 清全部失分原因 | 增加 reviewId，只删明确关联 | V1-LEARNING-027 | P3 checkpoint | 同考试其他复盘的失分原因保留 |
+| D028 | fixed_verified | high | `pages/score-trend` task draft | 构造并不存在的 sourceReviewId | 只引用真实已保存实体 | V1-LEARNING-028 | P3 checkpoint | 仅从 reason.reviewId 带入真实引用 |
+| D029 | fixed_verified | medium | `saveLearningTask` | 判重未优先 sourceLossReasonId | 业务唯一键优先 loss reason/mistake | V1-LEARNING-029 | P3 checkpoint | 失分原因与错题 ID 优先判重 |
+| D030 | fixed_verified | high | recommendation settings/pages | 用户可自定义正式历史分差边界 | 运行代码固定规则源边界 | V1-SCHOOL-030 | P3 checkpoint | 自定义入口和死代码已移除 |
+| D031 | fixed_verified | high | `normalizeRecommendationSettings` | 自定义上下界允许空档 | 删除普通用户边界编辑，固定连续区间 | V1-SCHOOL-031 | P3 checkpoint | -30/-1/0/15/16 连续边界通过 |
+| D032 | fixed_verified | high | `scenarioResults`/历史分差 | 情景规划和正式规则可使用不同边界 | 共用唯一分类函数，分数源分离 | V1-SCHOOL-032 | P3 checkpoint | 情景结果与正式分类逐项一致 |
+| D033 | fixed_verified | medium | targets reference score UI | 手动参考成绩无清晰取消 | “恢复使用正式参考成绩”操作 | V1-SCHOOL-033 | P3 checkpoint | 用户可一次恢复正式成绩源 |
+| D034 | fixed_verified | high | 页面日期函数/`toISOString` | UTC 截取导致本地自然日偏移 | `utils/local-date.js` | V1-DATA-034 | P3 checkpoint | 本地自然日与周一至周日通过 |
+| D035 | fixed_verified | medium | school/target year UI | 2025、2026 写死，数据更新后漂移 | 从正式分数数据动态生成 | V1-SCHOOL-035 | P3 checkpoint | 年份选项由正式数据生成 |
+| D036 | fixed_verified | medium | `config/app-config.js` | releaseStatus 仍是旧阶段 | 写内部最终冻结状态 | V1-FREEZE-036 | P3 checkpoint | 内部状态为 V1 功能冻结版 |
+| D037 | fixed_verified | medium | dynamic help 调用 | hasBackup 固定 false | 读取真实备份/导出状态 | V1-DATA-037 | P3 checkpoint | 帮助卡片使用 hasExportedBackup 真实状态 |
+| D038 | fixed_verified | high | `pages/favorites` | 打开收藏页就写回删除无效 ID | 只展示告警，不在读取路径写入 | V1-SCHOOL-038 | P3 checkpoint | refresh 仅读，用户主动点击才清理 |
+| D039 | fixed_verified | high | `utils/subject-analysis`/趋势页 | 学科趋势只看当前 config maxScore | 优先历史 subject score/scheme snapshot | V1-TREND-039 | P3 checkpoint | 历史 maxScore 优先并通过回归 |
+| D040 | fixed_verified | medium | `normalizeSubjectConfig` | 配置缺完整 version/createdAt/updatedAt | 归一化并在保存时递增版本 | V1-EXAM-040 | P3 checkpoint | version 递增且 createdAt 保持 |
 | D041 | fixed_verified | critical | `mergeProfileData` | 对象展开会让备份设置直接覆盖本机设置 | 实体逐项合并，设置默认保留本机并支持显式 backup 选择 | V1-BACKUP-041 | P2 | 本机推荐/情景/筛选/年份保持 |
-| D042 | confirmed | high | `exportBackupFile`/UI | 文件只在沙盒生成，没有主动带走链路 | FileShareAdapter + 摘要/隐私确认 | V1-BACKUP-042 | pending | pending |
+| D042 | fixed_verified | high | `exportBackupFile`/UI | 文件只在沙盒生成，没有主动带走链路 | FileShareAdapter + 摘要/隐私确认 | V1-BACKUP-042 | P3 checkpoint | 主动发送、取消、失败和重试语义已接入 |
 | D043 | fixed_verified | high | `utils/checksum.js` | 备份 FNV-1a、恢复点 SHA-256 两套 | 新写统一 SHA-256，v2 FNV 只读适配 | V1-BACKUP-043 | P2 | canonical 边界和 v2/v3 摘要通过 |
 | D044 | confirmed | high | `scripts/verify_rc11_2_*` | 历史 PASS 未覆盖生产页面旁路和提交后失败 | V1 分套件覆盖真实 service/page 契约 | V1-FREEZE-044 | pending | pending |
 

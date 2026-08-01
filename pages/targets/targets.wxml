@@ -13,7 +13,7 @@
     <view class="card recommendation-input-card">
       <view class="row between card-heading-row">
         <view>
-          <view class="card-title">学校推荐</view>
+          <view class="card-title">历史分差参考</view>
           <view class="muted small source-note">{{recommendationScoreSource}}</view>
         </view>
         <button class="text-button" bindtap="openScoreCenter">成绩中心</button>
@@ -27,6 +27,7 @@
         placeholder="请输入 0 至 {{scoreMax}} 的整数"
         bindinput="onRecommendationScoreInput"
       />
+      <button wx:if="{{hasManualReferenceScore}}" class="text-button" bindtap="restoreFormalReferenceScore">恢复使用正式参考成绩</button>
       <view class="two-column-fields">
         <view>
           <text class="field-label">下一阶段目标（可留空）</text>
@@ -60,10 +61,10 @@
       <view wx:if="{{recommendationError}}" class="input-error">{{recommendationError}}</view>
       <view wx:if="{{scenarioError}}" class="input-error">{{scenarioError}}</view>
       <view class="row action-row">
-        <button class="button grow onboarding-analyze-button" bindtap="analyzeRecommendations">查看推荐</button>
+        <button class="button grow onboarding-analyze-button" bindtap="analyzeRecommendations">查看历史分差参考</button>
         <button class="button secondary grow" bindtap="analyzeScenarios">对比三个情景</button>
         <button class="button secondary grow" bindtap="toggleRecommendationSettings">
-          {{recommendationSettingsOpen ? '收起设置' : '推荐设置'}}
+          {{recommendationSettingsOpen ? '收起设置' : '参考设置'}}
         </button>
       </view>
     </view>
@@ -106,7 +107,7 @@
 
     <view wx:if="{{recommendationSettingsOpen}}" class="card recommendation-settings-card">
       <view class="row between">
-        <view class="card-title">推荐设置</view>
+        <view class="card-title">参考设置</view>
         <button class="text-button danger-text" bindtap="resetRecommendationSettings">恢复默认</button>
       </view>
 
@@ -144,8 +145,8 @@
 
       <view class="switch-row row between">
         <view>
-          <view class="switch-title">允许回退 2025 数据</view>
-          <view class="muted tiny">目标年份无 2026 数据时，可使用 2025 数据。</view>
+          <view class="switch-title">允许回退上一已收录年份</view>
+          <view class="muted tiny">目标年份无数据时，可使用更早的已核实公开数据。</view>
         </view>
         <switch
           checked="{{recommendationSettings.allow2025Fallback}}"
@@ -174,46 +175,18 @@
       </view>
 
       <view class="settings-group">
-        <view class="field-label">每类最多显示</view>
-        <picker range="{{limitOptions}}" value="{{limitIndex}}" bindchange="onLimitChange">
-          <view class="input picker-input">{{limitOptions[limitIndex]}} 所⌄</view>
-        </picker>
-      </view>
-
-      <view class="settings-group">
-        <view class="field-label">自定义分差区间</view>
-        <view class="muted tiny rule-help">difference = 当前成绩 - 学校参考分</view>
-        <view class="rule-grid">
-          <view class="rule-row">
-            <text class="rule-label">冲刺</text>
-            <input class="input rule-input" type="number" value="{{recommendationRuleDraft.sprintMinDifference}}" data-field="sprintMinDifference" bindinput="onRuleInput" />
-            <text>至</text>
-            <input class="input rule-input" type="number" value="{{recommendationRuleDraft.sprintMaxDifference}}" data-field="sprintMaxDifference" bindinput="onRuleInput" />
-          </view>
-          <view class="rule-row">
-            <text class="rule-label">目标</text>
-            <input class="input rule-input" type="number" value="{{recommendationRuleDraft.targetMinDifference}}" data-field="targetMinDifference" bindinput="onRuleInput" />
-            <text>至</text>
-            <input class="input rule-input" type="number" value="{{recommendationRuleDraft.targetMaxDifference}}" data-field="targetMaxDifference" bindinput="onRuleInput" />
-          </view>
-          <view class="rule-row">
-            <text class="rule-label">保底</text>
-            <input class="input rule-input" type="number" value="{{recommendationRuleDraft.safeMinDifference}}" data-field="safeMinDifference" bindinput="onRuleInput" />
-            <text>至</text>
-            <input class="input rule-input" type="number" value="{{recommendationRuleDraft.safeMaxDifference}}" placeholder="不限" data-field="safeMaxDifference" bindinput="onRuleInput" />
-          </view>
-        </view>
-        <button class="button secondary apply-rule-button" bindtap="applyRecommendationRules">应用分差设置</button>
+        <view class="field-label">固定历史分差区间</view>
+        <view class="muted tiny rule-help">当前成绩 - 学校参考分：冲刺 -30 至 -1，目标 0 至 15，保底高于 15；每组最多 5 所。</view>
       </view>
     </view>
 
     <view wx:if="{{recommendationHasRun}}" class="recommendation-summary row between">
-      <view class="section-title">推荐结果</view>
+      <view class="section-title">历史分差参考结果</view>
       <view class="muted small">共 {{recommendationCount}} 所</view>
     </view>
     <view wx:if="{{recommendationHasRun && recommendationCount === 0}}" class="card empty">
       <view class="card-title">当前条件下暂无结果</view>
-      <view class="muted small empty-note">可以调整地区、参考年份或分差区间，也可恢复默认设置。</view>
+      <view class="muted small empty-note">可以调整地区或参考年份；历史分差区间保持固定。</view>
       <button class="button secondary empty-button" bindtap="resetRecommendationSettings">恢复默认设置</button>
     </view>
 

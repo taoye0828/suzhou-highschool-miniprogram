@@ -4,6 +4,7 @@ const { admissionScores } = require('../data/admission-scores')
 const { analyzeScore } = require('./score-analysis')
 const { getVisibleTrendRecords, calculateScoreStatistics } = require('./score-trend')
 const { LOSS_REASON_TYPES, validDate } = require('./rc9-models')
+const { localDate, addLocalDays } = require('./local-date')
 
 const ALL_ADMISSION_SCORES = admissionScores
 
@@ -100,8 +101,8 @@ function goalProgress(stageGoals, learningTasks, scoreRecords, now = new Date())
   const tasks = Array.isArray(learningTasks) ? learningTasks : []
   const latestScores = getVisibleTrendRecords(scoreRecords, 1)
   const currentScore = latestScores.length ? latestScores[0].score : null
-  const today = now.toISOString().slice(0, 10)
-  const weekEnd = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10)
+  const today = localDate(now)
+  const weekEnd = addLocalDays(now, 7)
   const goalById = new Map(goals.map((item) => [item.id, item]))
   const presentTask = (task) => ({
     ...task,

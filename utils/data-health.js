@@ -276,6 +276,14 @@ function restoreRepairSnapshot() {
     return { ok: false, message: '没有可恢复的修复前快照。' }
   }
   const raw = snapshot.value.raw
+  const operationId = `restore_repair_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const safety = createRestorePoint({
+    reason: 'before_restore',
+    profileScope: { type: 'full_user_state' },
+    operationId: `${operationId}_safety`,
+    note: '恢复数据修复快照前'
+  })
+  if (!safety.ok) return safety
   const keys = [
     KEYS.profiles,
     KEYS.activeProfileId,
@@ -286,7 +294,10 @@ function restoreRepairSnapshot() {
     KEYS.storageSchemaVersion,
     KEYS.dataRevision
   ].filter((key) => Object.prototype.hasOwnProperty.call(raw, key))
-  const result = atomicWrite(Object.fromEntries(keys.map((key) => [key, raw[key]])))
+  const result = atomicWrite(Object.fromEntries(keys.map((key) => [key, raw[key]])), {
+    operationType: 'restore_repair_snapshot',
+    operationId
+  })
   return result.ok
     ? { ok: true, restoredAt: new Date().toISOString() }
     : result

@@ -12,6 +12,8 @@ const {
 } = require('./planning')
 
 const LEVEL_ORDER = ['sprint', 'target', 'safe']
+const DEFAULT_FORMAL_YEARS = [...new Set(defaultScores.map((item) => item.year).filter(Number.isInteger))]
+  .sort((left, right) => right - left)
 
 function isValidReferenceScore(item) {
   return validReference(item)
@@ -43,34 +45,16 @@ function finiteSetting(value, fallback) {
 }
 
 function recommendationRules(settings = {}) {
-  const source = settings.rules || settings.gapRules || settings.customGapRules || {}
-  const base = normalizeLevelRules(source)
-  const rules = {
-    sprint: {
-      min: finiteSetting(settings.sprintMinDifference, base.sprint.min),
-      max: finiteSetting(settings.sprintMaxDifference, base.sprint.max)
-    },
-    target: {
-      min: finiteSetting(settings.targetMinDifference, base.target.min),
-      max: finiteSetting(settings.targetMaxDifference, base.target.max)
-    },
-    safe: {
-      min: finiteSetting(settings.safeMinDifference, base.safe.min),
-      max: settings.safeMaxDifference === Infinity
-        ? Infinity
-        : finiteSetting(settings.safeMaxDifference, base.safe.max)
-    }
-  }
-  return normalizeLevelRules(rules)
+  return normalizeLevelRules(DEFAULT_LEVEL_RULES)
 }
 
 function levelLimit(settings, level) {
   const value = settings.limitPerLevel === undefined
     ? settings.levelLimits
     : settings.limitPerLevel
-  if (Number.isInteger(value) && value >= 0) return value
+  if (Number.isInteger(value) && value >= 0) return Math.min(5, value)
   if (value && typeof value === 'object' && Number.isInteger(value[level]) && value[level] >= 0) {
-    return value[level]
+    return Math.min(5, value[level])
   }
   return 5
 }
@@ -118,14 +102,16 @@ function analyzeScore(options = {}) {
   const selectedReferenceYears = cleanValues(settings.referenceYears)
     .map(Number)
     .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2200)
+  const formalYears = DEFAULT_FORMAL_YEARS
+  const latestFormalYear = formalYears.find((year) => year <= targetYear) || null
   const only2026 = settings.only2026 === true ||
     settings.require2026 === true ||
-    Number(settings.referenceYear) === 2026
+    Number(settings.referenceYear) === latestFormalYear
   const exactReferenceYear = Number.isInteger(Number(settings.referenceYear)) &&
-    [2025, 2026].includes(Number(settings.referenceYear))
+    formalYears.includes(Number(settings.referenceYear))
     ? Number(settings.referenceYear)
     : only2026
-      ? 2026
+      ? latestFormalYear
       : selectedReferenceYears.length === 1
         ? selectedReferenceYears[0]
         : null
@@ -165,7 +151,7 @@ function analyzeScore(options = {}) {
       allowedYears: allowedReferenceYears
     })
     if (!reference) return []
-    if (!allow2025Fallback && targetYear >= 2026 && reference.year < 2026) return []
+    if (!allow2025Fallback && latestFormalYear !== null && reference.year < latestFormalYear) return []
     const schoolScore = referenceScoreValue(reference)
     if (schoolScore < minReferenceScore || schoolScore > maxReferenceScore) return []
 

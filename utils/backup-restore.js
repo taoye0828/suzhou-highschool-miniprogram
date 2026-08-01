@@ -565,6 +565,16 @@ function readBackupFile(filePath) {
   }
 }
 
+function hasExportedBackup() {
+  if (typeof wx === 'undefined' || !wx.getFileSystemManager || !wx.env || !wx.env.USER_DATA_PATH) return false
+  try {
+    return wx.getFileSystemManager().readdirSync(wx.env.USER_DATA_PATH)
+      .some((name) => /^suzhou_highschool_backup_\d{14}\.json$/u.test(name))
+  } catch (error) {
+    return false
+  }
+}
+
 const BackupExportService = Object.freeze({
   createEnvelope: createBackupEnvelope,
   exportFile: exportBackupFile,
@@ -589,5 +599,6 @@ module.exports = {
   importBackupEnvelope,
   exportBackupFile,
   readBackupFile,
+  hasExportedBackup,
   BackupExportService
 }

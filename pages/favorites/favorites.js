@@ -19,16 +19,12 @@ Page({
     const favoriteResult = getFavoriteIdsResult()
     notifyStorageReadResult(this, favoriteResult)
     const { valid, invalid } = splitFavoriteIdsByValidity(favoriteResult.ids)
-    const cleanupResult = invalid.length ? replaceFavoriteIds(valid) : { ok: true }
-    if (!cleanupResult.ok) {
-      wx.showToast({ title: cleanupResult.message, icon: 'none' })
-    }
     this._favoriteSchools = withFavoriteState(
       schools.filter((school) => valid.includes(school.id)),
       valid
     )
     this.setData({
-      invalidCount: cleanupResult.ok ? 0 : invalid.length,
+      invalidCount: invalid.length,
       hasFavoriteSchools: this._favoriteSchools.length > 0
     }, () => this.applySearch())
   },

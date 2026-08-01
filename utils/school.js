@@ -13,7 +13,9 @@ const {
 const SCORE_STATUS_WITH_SCORES = '已收录已核实历史分数线'
 const SCORE_STATUS_WITHOUT_SCORES = '暂未收录已核实历史分数线'
 const SCORE_RANGES = ['全部', '500以下', '500-600', '600-650', '650以上']
-const REFERENCE_YEAR_FILTERS = ['all', 'latest', '2026', '2025']
+const FORMAL_SCORE_YEARS = [...new Set(admissionScores.map((item) => item.year).filter(Number.isInteger))]
+  .sort((left, right) => right - left)
+const REFERENCE_YEAR_FILTERS = ['all', 'latest', ...FORMAL_SCORE_YEARS.map(String)]
 const SCHOOL_SORTS = [
   'default',
   'name',
@@ -80,7 +82,7 @@ function referenceForSchoolFilter(schoolId, options) {
   const yearValues = listValues(rawYear)
   const exactYears = yearValues
     .map(Number)
-    .filter((year) => [2025, 2026].includes(year))
+    .filter((year) => FORMAL_SCORE_YEARS.includes(year))
   const targetYear = Number.isInteger(options.targetYear) ? options.targetYear : 2027
   return selectLatestReference(admissionScores, {
     schoolId,
@@ -166,7 +168,7 @@ function filterSchoolCatalog(options = {}) {
   )
   const selectedReferenceYears = listValues(rawReferenceYears)
   const requiresReference = selectedReferenceYears.some((value) => {
-    return value === 'latest' || [2025, 2026].includes(Number(value))
+    return value === 'latest' || FORMAL_SCORE_YEARS.includes(Number(value))
   })
   const districts = selectedSet(options.districts, options.regions, options.district)
   const schoolTypes = selectedSet(options.schoolTypes, options.types, options.schoolType)
@@ -322,6 +324,7 @@ module.exports = {
   SCORE_STATUS_WITHOUT_SCORES,
   SCORE_RANGES,
   REFERENCE_YEAR_FILTERS,
+  FORMAL_SCORE_YEARS,
   SCHOOL_SORTS,
   SCHOOL_SORT_OPTIONS,
   scoreRangeMatches,

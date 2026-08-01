@@ -625,14 +625,8 @@ function createDefaultProfile(now = new Date().toISOString()) {
 
 function normalizeRecommendationSettings(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
-  const limit = optionalInteger(source.limitPerLevel, { min: 1, max: 20 })
-  const integerOr = (name, fallback) => {
-    const result = optionalInteger(source[name], { min: -740, max: 740 })
-    return result === null ? fallback : result
-  }
   return {
     ...clone(DEFAULT_RECOMMENDATION_SETTINGS),
-    ...clone(source),
     districts: normalizeStringList(source.districts, 100, 80),
     schoolTypes: normalizeStringList(source.schoolTypes, 100, 80),
     referenceYears: (Array.isArray(source.referenceYears) ? source.referenceYears : [])
@@ -643,15 +637,13 @@ function normalizeRecommendationSettings(value) {
     allow2025Fallback: source.allow2025Fallback !== false,
     favoritesOnly: Boolean(source.favoritesOnly),
     excludeTargetSchools: Boolean(source.excludeTargetSchools),
-    limitPerLevel: limit ?? DEFAULT_RECOMMENDATION_SETTINGS.limitPerLevel,
-    sprintMinDifference: integerOr('sprintMinDifference', -30),
-    sprintMaxDifference: integerOr('sprintMaxDifference', -1),
-    targetMinDifference: integerOr('targetMinDifference', 0),
-    targetMaxDifference: integerOr('targetMaxDifference', 15),
-    safeMinDifference: integerOr('safeMinDifference', 16),
-    safeMaxDifference: source.safeMaxDifference === null || source.safeMaxDifference === undefined
-      ? null
-      : optionalInteger(source.safeMaxDifference, { min: -740, max: 740 })
+    limitPerLevel: PRODUCT_RULES.recommendation.limitPerLevel,
+    sprintMinDifference: -30,
+    sprintMaxDifference: -1,
+    targetMinDifference: 0,
+    targetMaxDifference: 15,
+    safeMinDifference: 16,
+    safeMaxDifference: null
   }
 }
 

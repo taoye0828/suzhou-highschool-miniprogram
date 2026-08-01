@@ -1,7 +1,7 @@
 <view class="page redirect-page">
   <view class="card redirect-card">
     <view class="card-title">正在打开目标规划</view>
-    <view class="muted small">学校推荐已合并到“目标规划”的推荐分段。</view>
+    <view class="muted small">历史分差参考已合并到“目标规划”页面。</view>
     <button class="button redirect-button" bindtap="openTargetRecommendations">立即打开</button>
   </view>
 </view>

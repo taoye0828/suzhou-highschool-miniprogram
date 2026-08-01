@@ -1,8 +1,9 @@
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
+const { PRODUCT_RULES } = require('./generated/product-rules')
 
 const DEFAULT_LEVEL_RULES = Object.freeze({
-  sprint: Object.freeze({ min: -30, max: -1 }),
-  target: Object.freeze({ min: 0, max: 15 }),
+  sprint: Object.freeze({ min: PRODUCT_RULES.recommendation.sprint.minInclusive, max: -1 }),
+  target: Object.freeze({ min: PRODUCT_RULES.recommendation.target.minInclusive, max: PRODUCT_RULES.recommendation.target.maxInclusive }),
   safe: Object.freeze({ min: 16, max: Infinity })
 })
 
@@ -148,11 +149,10 @@ function normalizeRule(rule, fallback) {
 }
 
 function normalizeLevelRules(rules = {}) {
-  const source = rules && typeof rules === 'object' ? rules : {}
   return {
-    sprint: normalizeRule(source.sprint, DEFAULT_LEVEL_RULES.sprint),
-    target: normalizeRule(source.target, DEFAULT_LEVEL_RULES.target),
-    safe: normalizeRule(source.safe, DEFAULT_LEVEL_RULES.safe)
+    sprint: { ...DEFAULT_LEVEL_RULES.sprint },
+    target: { ...DEFAULT_LEVEL_RULES.target },
+    safe: { ...DEFAULT_LEVEL_RULES.safe }
   }
 }
 
@@ -225,17 +225,7 @@ function selectPrimaryTarget(records, options = {}) {
   }
   const explicit = items.filter((record) => record.isPrimary === true || record.primary === true)
   if (explicit.length) return explicit.slice().sort(targetCreatedAtCompare)[0]
-
-  const levelOrder = Array.isArray(options.levelOrder) && options.levelOrder.length
-    ? options.levelOrder
-    : DEFAULT_PRIMARY_LEVEL_ORDER
-  return items.slice().sort((left, right) => {
-    const leftRank = levelOrder.indexOf(left.level)
-    const rightRank = levelOrder.indexOf(right.level)
-    const levelCompare = (leftRank < 0 ? levelOrder.length : leftRank) -
-      (rightRank < 0 ? levelOrder.length : rightRank)
-    return levelCompare !== 0 ? levelCompare : targetCreatedAtCompare(left, right)
-  })[0]
+  return null
 }
 
 function selectPlanningContext({

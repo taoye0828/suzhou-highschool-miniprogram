@@ -310,12 +310,11 @@ function testFavoritesPage() {
   const page = createPageInstance(definition)
   page.onShow()
   assert.strictEqual(page.data.favorites.length, 1)
-  assert.deepStrictEqual(storage.getFavoriteIds(), ['suzhou_high_school'])
-  assert.strictEqual(page.data.invalidCount, 0)
+  assert.deepStrictEqual(storage.getFavoriteIds(), ['removed_school', 'suzhou_high_school'])
+  assert.strictEqual(page.data.invalidCount, 1)
 
-  assert.strictEqual(storage.replaceFavoriteIds(['suzhou_high_school', 'removed_school']).ok, true)
   writeFailure = true
-  page.refresh()
+  page.cleanInvalidFavorites()
   writeFailure = false
   assert.strictEqual(page.data.invalidCount, 1)
   assert.ok(toastTitles.some((title) => title.includes('原数据已保留')))

@@ -1,9 +1,9 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
-  "currentPhase": "P2",
-  "currentStepId": "P2-S07",
+  "currentHead": "83d62e1a14fec8ef2648f7850b097ece99a2d0a8",
+  "currentPhase": "P3",
+  "currentStepId": "P3-S01",
   "currentStepStatus": "completed",
   "lastStableCommit": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
   "lastPushedCommit": "928f4c85f71adc98180ff1507b4ea9f5e7993342",
@@ -29,7 +29,27 @@
     "D019",
     "D020",
     "D021",
+    "D022",
+    "D023",
+    "D024",
+    "D025",
+    "D026",
+    "D027",
+    "D028",
+    "D029",
+    "D030",
+    "D031",
+    "D032",
+    "D033",
+    "D034",
+    "D035",
+    "D036",
+    "D037",
+    "D038",
+    "D039",
+    "D040",
     "D041",
+    "D042",
     "D043"
   ],
   "completedFeatureIds": [
@@ -54,7 +74,19 @@
     "P2-V4-V5-MIGRATION",
     "P2-LEGACY-BACKUP-V2",
     "P2-LEGACY-RESTORE-POINT-V1",
-    "P2-FORMAL-APPID"
+    "P2-FORMAL-APPID",
+    "P3-EXAM-REVIEW-ATOMICITY",
+    "P3-TARGET-REFERENCE-PRESERVATION",
+    "P3-PRIMARY-TARGET-SEMANTICS",
+    "P3-LEARNING-REFERENCE-CLEANUP",
+    "P3-FIXED-GAP-RULES",
+    "P3-LOCAL-DATE",
+    "P3-DYNAMIC-FORMAL-YEARS",
+    "P3-DYNAMIC-HELP",
+    "P3-FAVORITES-READ-ONLY",
+    "P3-HISTORICAL-SUBJECT-MAX",
+    "P3-SUBJECT-CONFIG-VERSION",
+    "P3-BACKUP-FILE-SHARE"
   ],
   "completedTestIds": [
     "P0-GIT",
@@ -75,7 +107,11 @@
     "RC10-P2-REGRESSION",
     "RC11-1-P2-REGRESSION",
     "RC11-2-P2-REGRESSION",
-    "UPLOAD-IGNORE-P2"
+    "UPLOAD-IGNORE-P2",
+    "V1-P3-20",
+    "RC9-P3-REGRESSION",
+    "RC10-P3-REGRESSION",
+    "SMOKE-P3"
   ],
   "pendingTestIds": [
     "V1-EXAM",
@@ -110,7 +146,10 @@
     "scripts/verify_v1_p2.js",
     "docs/v1_data_model_spec.md",
     "docs/v1_migration_report.md",
-    "docs/v1_backup_restore_spec.md"
+    "docs/v1_backup_restore_spec.md",
+    "utils/local-date.js",
+    "scripts/v1/business-consistency-suite.js",
+    "scripts/verify_v1_p3.js"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -139,18 +178,34 @@
     "utils/backup-restore.js",
     "scripts/verify_rc9_backup_restore.js",
     "scripts/verify_rc9_storage_migration.js",
-    "scripts/verify_upload_package_ignore.js"
+    "scripts/verify_upload_package_ignore.js",
+    "pages/backup-restore/backup-restore.js",
+    "pages/backup-restore/backup-restore.wxml",
+    "pages/home/home.wxml",
+    "pages/target-analysis/target-analysis.wxml",
+    "pages/score-trend/score-trend.js",
+    "pages/targets/targets.wxml",
+    "utils/data-health.js",
+    "utils/planning.js",
+    "utils/rc10-features.js",
+    "utils/school.js",
+    "utils/score-analysis.js",
+    "utils/subject-analysis.js",
+    "scripts/verify_rc9_target_center.js"
   ],
   "createdCommits": [
     "f181e2689a6e2e566703b05869ea03359761a029",
-    "928f4c85f71adc98180ff1507b4ea9f5e7993342"
+    "928f4c85f71adc98180ff1507b4ea9f5e7993342",
+    "83d62e1a14fec8ef2648f7850b097ece99a2d0a8"
   ],
-  "pushPendingCommits": [],
-  "lastSuccessfulCommand": "V1 P2 13 TEST-ID plus RC9, RC10, RC11-1, RC11-2, smoke and upload ignore regressions passed; formal data files unchanged",
+  "pushPendingCommits": [
+    "83d62e1a14fec8ef2648f7850b097ece99a2d0a8"
+  ],
+  "lastSuccessfulCommand": "V1 P1/P2/P3 51 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON all passed",
   "lastFailedCommand": "",
   "lastErrorSummary": "",
-  "nextAction": "Commit and push P2 stable checkpoint, then start P3 business consistency fixes",
+  "nextAction": "Create the P3 logical commit and ordinary-push P2 plus P3; then start P4",
   "safeToResume": true,
   "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T17:45:00+08:00"
+  "updatedAt": "2026-08-01T17:55:00+08:00"
 }
