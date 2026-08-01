@@ -14,6 +14,12 @@ const {
   getLearningTasks,
   getScoreReviews,
   getScoreLossReasons,
+  getWeeklyPlans,
+  saveWeeklyPlan,
+  deleteWeeklyPlan: removeWeeklyPlan,
+  getStageReviews,
+  saveStageReview,
+  deleteStageReview: removeStageReview,
   saveLearningTask,
   deleteLearningTask: removeLearningTask,
   recordRecentHistory,
@@ -48,6 +54,13 @@ const { schools } = require('../../data/schools')
 const { admissionScores } = require('../../data/admission-scores')
 const { FORMAL_SCORE_YEARS } = require('../../utils/school')
 const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboarding')
+const {
+  METRIC_LABELS,
+  weekRange,
+  copyWeeklyPlanToNextWeek,
+  goalProgressValue,
+  createStageReviewSnapshot
+} = require('../../utils/learning-loop')
 
 const LEVEL_ORDER = ['sprint', 'target', 'safe']
 const STATUS_OPTIONS = [
@@ -60,6 +73,13 @@ const REFERENCE_YEAR_OPTIONS = [
   { value: 'latest', label: '不晚于目标年份的最新数据' },
   ...FORMAL_SCORE_YEARS.map((year) => ({ value: String(year), label: `只看 ${year} 年` }))
 ]
+const GOAL_METRIC_OPTIONS = Object.keys(METRIC_LABELS).map((value) => ({ value, label: METRIC_LABELS[value] }))
+
+function todayLabel() {
+  const date = new Date()
+  const two = (value) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`
+}
 
 function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))]
@@ -109,6 +129,9 @@ function emptyLearningDraft() {
     startDate: '',
     endDate: '',
     targetTotalScore: '',
+    metricType: 'total_score',
+    targetValue: '',
+    metricSubjectName: '',
     targetSubjects: [],
     weeklyTasksText: '',
     status: 'not_started',
@@ -122,6 +145,14 @@ function normalizeLearningDraft(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
   const legacyTitle = source.title === undefined ? source.stage : source.title
   const legacyScore = source.targetTotalScore === undefined ? source.targetScore : source.targetTotalScore
+  const metricType = GOAL_METRIC_OPTIONS.some((item) => item.value === source.metricType)
+    ? source.metricType
+    : 'total_score'
+  const metricValue = source.targetValue === undefined || source.targetValue === null
+    ? legacyScore
+    : metricType === 'score_rate'
+      ? Number(source.targetValue) / 100
+      : source.targetValue
   const targetSubjects = (Array.isArray(source.targetSubjects) ? source.targetSubjects : [])
     .map((item, index) => ({
       clientId: String(item.clientId || item.subjectId || `subject_${Date.now()}_${index}`),
@@ -138,6 +169,9 @@ function normalizeLearningDraft(value) {
     startDate: String(source.startDate || ''),
     endDate: String(source.endDate || ''),
     targetTotalScore: legacyScore === undefined || legacyScore === null ? '' : String(legacyScore),
+    metricType,
+    targetValue: metricValue === undefined || metricValue === null ? '' : String(metricValue),
+    metricSubjectName: String(source.metricSubjectName || ''),
     targetSubjects,
     weeklyTasksText: Array.isArray(source.weeklyTasks)
       ? source.weeklyTasks.join('\n')
@@ -267,7 +301,7 @@ function latestSubjectScoreMap(scoreRecords) {
   return map
 }
 
-function presentLearningTarget(record, currentScore, scoreRecords) {
+function presentLearningTarget(record, currentScore, scoreRecords, learningTasks, stageReviews) {
   const subjectScores = latestSubjectScoreMap(scoreRecords)
   const targetSubjects = (Array.isArray(record.targetSubjects) ? record.targetSubjects : [])
     .map((item) => {
@@ -284,6 +318,14 @@ function presentLearningTarget(record, currentScore, scoreRecords) {
   const totalDifference = Number.isInteger(currentScore) && Number.isInteger(record.targetTotalScore)
     ? currentScore - record.targetTotalScore
     : null
+  const progress = goalProgressValue(record, scoreRecords, learningTasks)
+  const targetMetricText = record.targetValue === null
+    ? '—'
+    : record.metricType === 'score_rate'
+    ? `${(Number(record.targetValue) / 100).toFixed(2)}%`
+    : record.metricType === 'task_completion'
+      ? `${record.targetValue}%`
+      : `${record.targetValue === null ? '—' : record.targetValue} 分`
   return {
     ...record,
     title: record.title || record.stage,
@@ -301,7 +343,11 @@ function presentLearningTarget(record, currentScore, scoreRecords) {
           ? '当前成绩与阶段目标持平'
           : `当前成绩高于阶段目标 ${totalDifference} 分`,
     targetSubjects,
-    weeklyTasks: Array.isArray(record.weeklyTasks) ? record.weeklyTasks : []
+    weeklyTasks: Array.isArray(record.weeklyTasks) ? record.weeklyTasks : [],
+    metricLabel: METRIC_LABELS[record.metricType] || METRIC_LABELS.total_score,
+    targetMetricText,
+    currentMetricText: progress.text,
+    reviewCount: (stageReviews || []).filter((item) => item.stageGoalId === record.id).length
   }
 }
 
@@ -367,6 +413,15 @@ Page({
     goalProgressSummary: null,
     learningError: '',
     statusOptions: STATUS_OPTIONS,
+    goalMetricOptions: GOAL_METRIC_OPTIONS,
+    goalMetricIndex: 0,
+    weeklyPlans: [],
+    weeklyTaskOptions: [],
+    weeklySelectedTaskIds: [],
+    weeklyPlanTitle: '',
+    weeklyPlanStartDate: weekRange(todayLabel()).weekStartDate,
+    weeklyPlanNotes: '',
+    stageReviews: [],
     onboarding: { visible: false, step: null }
   },
 
@@ -398,6 +453,8 @@ Page({
     const learningTasks = getLearningTasks()
     const scoreReviews = getScoreReviews()
     const lossReasons = getScoreLossReasons()
+    const weeklyPlans = getWeeklyPlans()
+    const stageReviews = getStageReviews()
     const failedResult = [
       targetResult,
       scoreResult,
@@ -476,8 +533,9 @@ Page({
         }),
       currentScoreText: current.score === null ? '尚未记录' : `${current.score} 分`,
       learningDraft,
+      goalMetricIndex: Math.max(0, GOAL_METRIC_OPTIONS.findIndex((item) => item.value === learningDraft.metricType)),
       learningRecords: learningResult.records.map((record) =>
-        presentLearningTarget(record, learningCurrent.score, scoreResult.records)
+        presentLearningTarget(record, learningCurrent.score, scoreResult.records, learningTasks, stageReviews)
       ),
       learningTasks: learningTasks.map((task) => presentLearningTask(
         task,
@@ -490,6 +548,13 @@ Page({
         learningTasks,
         scoreResult.records
       ),
+      weeklyPlans: weeklyPlans.slice().sort((left, right) => right.weekStartDate.localeCompare(left.weekStartDate)),
+      weeklyTaskOptions: learningTasks.map((task) => ({
+        id: task.id,
+        label: task.title,
+        checked: this.data.weeklySelectedTaskIds.includes(task.id)
+      })),
+      stageReviews: stageReviews.slice().sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
       learningError: ''
     }, () => {
       this.analyzeRecommendations({ silent: true })
@@ -878,6 +943,17 @@ Page({
     }, () => this.persistLearningDraft())
   },
 
+  updateGoalMetric(event) {
+    const goalMetricIndex = Number(event.detail.value)
+    const option = GOAL_METRIC_OPTIONS[goalMetricIndex]
+    if (!option) return
+    this.setData({
+      goalMetricIndex,
+      learningDraft: { ...this.data.learningDraft, metricType: option.value },
+      learningError: ''
+    }, () => this.persistLearningDraft())
+  },
+
   updateLearningDate(event) {
     const field = event.currentTarget.dataset.field
     if (!['startDate', 'endDate'].includes(field)) return
@@ -969,6 +1045,7 @@ Page({
     if (!record) return
     this.setData({
       learningDraft: normalizeLearningDraft(record),
+      goalMetricIndex: Math.max(0, GOAL_METRIC_OPTIONS.findIndex((item) => item.value === (record.metricType || 'total_score'))),
       learningError: ''
     }, () => this.persistLearningDraft())
   },
@@ -982,11 +1059,26 @@ Page({
       this.setData({ learningError: '请填写阶段目标名称。' })
       return
     }
-    const totalScore = validScoreInput(draft.targetTotalScore, { optional: saveAsDraft })
-    if (!totalScore.ok) {
+    const totalScore = validScoreInput(draft.targetTotalScore, { optional: saveAsDraft || draft.metricType !== 'total_score' })
+    const rawMetricValue = String(draft.targetValue || '').trim()
+    const metricNumber = rawMetricValue ? Number(rawMetricValue) : null
+    const metricValid = draft.metricType === 'total_score'
+      ? totalScore.ok
+      : saveAsDraft && metricNumber === null || metricNumber !== null && metricNumber >= 0 && (
+        draft.metricType === 'score_rate'
+          ? Number.isFinite(metricNumber) && metricNumber <= 100
+          : Number.isInteger(metricNumber) && (draft.metricType === 'task_completion' ? metricNumber <= 100 : metricNumber <= EXAM_TOTAL_SCORE)
+      )
+    if (!metricValid) {
       this.setData({
-        learningError: `目标总分必须是 0 至 ${EXAM_TOTAL_SCORE} 的整数。`
+        learningError: draft.metricType === 'score_rate' || draft.metricType === 'task_completion'
+          ? '目标比例必须是 0 至 100。'
+          : `目标分必须是 0 至 ${EXAM_TOTAL_SCORE}。`
       })
+      return
+    }
+    if (draft.metricType === 'subject_score' && !String(draft.metricSubjectName || '').trim() && !saveAsDraft) {
+      this.setData({ learningError: '学科分目标需要填写学科名称。' })
       return
     }
     if (!saveAsDraft && (!draft.startDate || !draft.endDate)) {
@@ -1033,6 +1125,13 @@ Page({
       startDate: draft.startDate,
       endDate: draft.endDate,
       targetTotalScore: totalScore.value,
+      metricType: draft.metricType,
+      targetValue: draft.metricType === 'total_score'
+        ? totalScore.value
+        : draft.metricType === 'score_rate'
+          ? Math.round(metricNumber * 100)
+          : metricNumber,
+      metricSubjectName: draft.metricSubjectName,
       targetSubjects,
       weeklyTasks: String(draft.weeklyTasksText || '')
         .split(/\r?\n/u)
@@ -1071,6 +1170,86 @@ Page({
       return
     }
     wx.showToast({ title: `状态已更新为${option.label}`, icon: 'success' })
+    this.loadAll()
+  },
+
+  onWeeklyPlanInput(event) {
+    const field = event.currentTarget.dataset.field
+    if (!['weeklyPlanTitle', 'weeklyPlanNotes'].includes(field)) return
+    this.setData({ [field]: event.detail.value })
+  },
+
+  onWeeklyPlanStartChange(event) {
+    this.setData({ weeklyPlanStartDate: weekRange(event.detail.value).weekStartDate })
+  },
+
+  onWeeklyTasksChange(event) {
+    const weeklySelectedTaskIds = event.detail.value
+    this.setData({
+      weeklySelectedTaskIds,
+      weeklyTaskOptions: this.data.weeklyTaskOptions.map((item) => ({ ...item, checked: weeklySelectedTaskIds.includes(item.id) }))
+    })
+  },
+
+  saveWeeklyPlan() {
+    const title = String(this.data.weeklyPlanTitle || '').trim()
+    if (!title) return wx.showToast({ title: '请填写周计划名称', icon: 'none' })
+    const range = weekRange(this.data.weeklyPlanStartDate)
+    const now = new Date().toISOString()
+    const id = `weekly_${range.weekStartDate}`
+    const existing = this.data.weeklyPlans.find((item) => item.id === id)
+    const result = saveWeeklyPlan({
+      ...(existing || {}), id, ...range, title,
+      taskItems: this.data.weeklySelectedTaskIds,
+      notes: this.data.weeklyPlanNotes,
+      createdAt: existing && existing.createdAt || now,
+      updatedAt: now,
+      expectedVersion: existing && existing.version
+    }, operationOptions('save_weekly_plan', id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    this.setData({ weeklyPlanTitle: '', weeklyPlanNotes: '', weeklySelectedTaskIds: [] })
+    this.loadAll()
+  },
+
+  copyWeeklyPlan(event) {
+    const plan = this.data.weeklyPlans.find((item) => item.id === event.currentTarget.dataset.id)
+    if (!plan) return
+    const now = new Date().toISOString()
+    const nextStart = weekRange(new Date(Date.parse(`${plan.weekEndDate}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)).weekStartDate
+    const copy = copyWeeklyPlanToNextWeek(plan, `weekly_${nextStart}`, now)
+    const result = saveWeeklyPlan(copy, operationOptions('save_weekly_plan', copy.id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    this.loadAll()
+  },
+
+  deleteWeeklyPlan(event) {
+    const id = event.currentTarget.dataset.id
+    const result = removeWeeklyPlan(id, operationOptions('delete_weekly_plan', id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    this.loadAll()
+  },
+
+  createStageReview(event) {
+    const goal = (this._learningRecords || []).find((item) => item.id === event.currentTarget.dataset.id)
+    if (!goal) return
+    wx.showModal({
+      title: '阶段复盘总结', content: '', editable: true, placeholderText: '填写你确认的阶段总结', confirmText: '保存复盘',
+      success: (modal) => {
+        if (!modal.confirm) return
+        const now = new Date().toISOString()
+        const id = `stage_review_${goal.id}_${Date.now()}`
+        const snapshot = createStageReviewSnapshot(goal, this._scoreRecords, this._learningTasks, modal.content, id, now)
+        const result = saveStageReview(snapshot, operationOptions('save_stage_review', id))
+        if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+        this.loadAll()
+      }
+    })
+  },
+
+  deleteStageReview(event) {
+    const id = event.currentTarget.dataset.id
+    const result = removeStageReview(id, operationOptions('delete_stage_review', id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
     this.loadAll()
   },
 

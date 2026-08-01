@@ -5,7 +5,9 @@ const {
   getScoreRecordsResult,
   getTargetRecordsResult,
   getLearningTargetRecordsResult,
-  getPrimaryTargetSchoolId
+  getPrimaryTargetSchoolId,
+  getLearningTasks,
+  getWeeklyPlans
 } = require('../../utils/storage')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { calculateExamCountdown, examYearOptions } = require('../../utils/countdown')
@@ -22,6 +24,7 @@ const {
 const { admissionScores } = require('../../data/admission-scores')
 const { summarizeScoreRecords } = require('../../utils/score-trend')
 const { operationOptions } = require('../../utils/operation-context')
+const { goalProgressValue } = require('../../utils/learning-loop')
 
 function importantStageGoal(records) {
   const rank = { in_progress: 0, not_started: 1, paused: 2, completed: 3 }
@@ -57,6 +60,7 @@ Page({
     stageGoalTitle: '',
     stageGoalDeadline: '',
     stageGoalProgressText: '',
+    thisWeekTasks: [],
     onboarding: { visible: false, step: null }
   },
 
@@ -74,6 +78,8 @@ Page({
     const scoreResult = getScoreRecordsResult()
     const targetResult = getTargetRecordsResult()
     const stageResult = getLearningTargetRecordsResult()
+    const learningTasks = getLearningTasks()
+    const weeklyPlans = getWeeklyPlans()
     const yearResult = getExamYearResult()
     const failed = [scoreResult, targetResult, stageResult, yearResult].find((item) => !item.ok)
     notifyStorageReadResult(this, failed || scoreResult)
@@ -93,8 +99,18 @@ Page({
       : null
     const gap = selectGap(recommendationCurrent.score, reference)
     const stageGoal = importantStageGoal(stageResult.records)
-    const targetScore = stageGoal && stageGoal.targetTotalScore
-    const targetGap = latest && Number.isInteger(targetScore) ? targetScore - latest.score : null
+    const stageProgress = stageGoal ? goalProgressValue(stageGoal, scores, learningTasks) : null
+    const totalTarget = stageGoal && stageGoal.metricType === 'total_score'
+      ? stageGoal.targetValue
+      : null
+    const totalTargetGap = latest && Number.isInteger(totalTarget) ? totalTarget - latest.score : null
+    const today = new Date().toISOString().slice(0, 10)
+    const thisWeekPlan = weeklyPlans.find((item) => item.weekStartDate <= today && item.weekEndDate >= today)
+    const taskById = new Map(learningTasks.map((item) => [item.id, item]))
+    const thisWeekTasks = (thisWeekPlan && thisWeekPlan.taskItems || [])
+      .map((id) => taskById.get(id))
+      .filter(Boolean)
+      .slice(0, 3)
     const summary = summarizeScoreRecords(scores)
     this.setData({
       hasScores: Boolean(latest),
@@ -121,13 +137,16 @@ Page({
       targetDifferenceText: formatDifference(gap.difference),
       stageGoalTitle: stageGoal ? stageGoal.title : '',
       stageGoalDeadline: stageGoal && stageGoal.endDate ? stageGoal.endDate : '未设置截止日期',
-      stageGoalProgressText: targetGap === null
-        ? '记录成绩后查看目标差距'
-        : targetGap > 0
-          ? `距离阶段总分目标还有 ${targetGap} 分`
-          : targetGap === 0
-            ? '当前成绩达到阶段总分目标'
-            : `当前成绩高于阶段目标 ${Math.abs(targetGap)} 分`
+      stageGoalProgressText: stageGoal && stageGoal.metricType === 'total_score'
+        ? totalTargetGap === null
+          ? '暂无可比较记录'
+          : totalTargetGap > 0
+            ? `距离阶段总分目标还有 ${totalTargetGap} 分`
+            : totalTargetGap === 0
+              ? '当前成绩达到阶段总分目标'
+              : `当前成绩高于阶段目标 ${Math.abs(totalTargetGap)} 分`
+        : stageProgress ? stageProgress.text : '暂无可比较记录',
+      thisWeekTasks
     })
   },
 

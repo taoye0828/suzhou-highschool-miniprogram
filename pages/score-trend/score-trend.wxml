@@ -686,6 +686,28 @@
         <view class="input picker-input">{{taskStageGoals[taskStageGoalIndex].title}}⌄</view>
       </picker>
 
+      <view class="subsection-title">错题记录（不保存图片）</view>
+      <view class="muted small">重复出错只在你主动确认后记录；错题和学习任务会在一次保存中建立双向关联。</view>
+      <view class="two-column-fields">
+        <input class="input" maxlength="80" value="{{mistakeQuestionType}}" data-field="mistakeQuestionType" bindinput="onMistakeInput" placeholder="题型（可选）" />
+        <input class="input" maxlength="3" type="number" value="{{mistakeLostScore}}" data-field="mistakeLostScore" bindinput="onMistakeInput" placeholder="失分值" />
+      </view>
+      <input class="input" maxlength="200" value="{{mistakeKnowledgePoint}}" data-field="mistakeKnowledgePoint" bindinput="onMistakeInput" placeholder="知识点（可选）" />
+      <textarea class="input textarea" maxlength="1000" value="{{mistakeDetail}}" data-field="mistakeDetail" bindinput="onMistakeInput" placeholder="错因与题目文字说明（不保存图片）"></textarea>
+      <textarea class="input textarea" maxlength="1000" value="{{mistakeImprovementAction}}" data-field="mistakeImprovementAction" bindinput="onMistakeInput" placeholder="改进动作"></textarea>
+      <textarea class="input textarea" maxlength="1000" value="{{mistakeNotes}}" data-field="mistakeNotes" bindinput="onMistakeInput" placeholder="备注（可选）"></textarea>
+      <view class="switch-row row between"><text>已订正</text><switch checked="{{mistakeCorrected}}" data-field="mistakeCorrected" bindchange="onMistakeSwitch" color="#0f766e" /></view>
+      <view class="switch-row row between"><text>我确认这是重复出错</text><switch checked="{{mistakeRepeatedConfirmed}}" data-field="mistakeRepeatedConfirmed" bindchange="onMistakeSwitch" color="#0f766e" /></view>
+      <view class="button-row"><button class="button secondary grow" bindtap="saveMistake">{{editingMistakeId ? '保存错题修改' : '添加错题'}}</button><button wx:if="{{editingMistakeId}}" class="button ghost grow" bindtap="resetMistakeForm">取消</button></view>
+
+      <view wx:for="{{savedMistakes}}" wx:key="id" class="preview-box">
+        <view><text class="tag">{{item.subjectName || '总分'}}</text><text class="tag">{{item.reasonType}}</text><text wx:if="{{item.corrected}}" class="tag">已订正</text></view>
+        <view class="small">{{item.knowledgePoint || item.questionType || '未填写知识点'}} · 失分 {{item.lostScore}}</view>
+        <view wx:if="{{item.repeatedErrorConfirmed}}" class="muted small">用户已确认重复出错</view>
+        <view class="muted small">关联任务 {{item.linkedTaskIds.length}} 条</view>
+        <view class="button-row"><button class="button secondary grow" data-id="{{item.id}}" bindtap="editMistake">编辑</button><button class="button secondary grow" data-id="{{item.id}}" bindtap="createTaskFromMistake">创建任务</button><button class="button danger grow" data-id="{{item.id}}" bindtap="deleteMistake">删除</button></view>
+      </view>
+
       <view wx:if="{{lossStatistics.total}}" class="subsection-title">失分原因统计</view>
       <view wx:if="{{lossStatistics.total}}" class="muted small">
         共 {{lossStatistics.total}} 条；当前最多：{{lossStatistics.mostFrequent.reasonType}}（{{lossStatistics.mostFrequent.count}} 次）

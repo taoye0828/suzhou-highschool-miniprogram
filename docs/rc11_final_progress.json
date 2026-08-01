@@ -1,12 +1,12 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
-  "currentPhase": "P4",
-  "currentStepId": "P4-S09",
+  "currentHead": "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
+  "currentPhase": "P5",
+  "currentStepId": "P5-S05",
   "currentStepStatus": "completed",
-  "lastStableCommit": "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
-  "lastPushedCommit": "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
+  "lastStableCommit": "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
+  "lastPushedCommit": "87c2f6cce7e85c953b109e8be2ecc362c4a98890",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -95,7 +95,12 @@
     "P4-LEGACY-SCORE-MIGRATION",
     "P4-SCORE-RATE",
     "P4-RECOMMENDATION-ELIGIBILITY",
-    "P4-RAW-AND-RATE-TRENDS"
+    "P4-RAW-AND-RATE-TRENDS",
+    "P5-MISTAKE-RECORDS",
+    "P5-BIDIRECTIONAL-TASK-LINKS",
+    "P5-WEEKLY-PLANS",
+    "P5-MULTI-METRIC-STAGE-GOALS",
+    "P5-STAGE-REVIEWS"
   ],
   "completedTestIds": [
     "P0-GIT",
@@ -129,10 +134,18 @@
     "SMOKE-P4",
     "UPLOAD-IGNORE-P4",
     "JS-JSON-P4",
-    "FORMAL-DATA-HASH-P4"
+    "FORMAL-DATA-HASH-P4",
+    "V1-P5-8",
+    "RC11-1-P5-REGRESSION",
+    "RC11-2-P5-REGRESSION",
+    "RC9-P5-REGRESSION",
+    "RC10-P5-REGRESSION",
+    "SMOKE-P5",
+    "UPLOAD-IGNORE-P5",
+    "JS-JSON-P5",
+    "FORMAL-DATA-HASH-P5"
   ],
   "pendingTestIds": [
-    "V1-LEARNING",
     "V1-SCHOOL",
     "V1-SEARCH",
     "V1-REPORT",
@@ -176,7 +189,11 @@
     "docs/v1_exam_template_spec.md",
     "docs/v1_score_scheme_spec.md",
     "docs/v1_score_rate_spec.md",
-    "docs/v1_recommendation_eligibility.md"
+    "docs/v1_recommendation_eligibility.md",
+    "utils/learning-loop.js",
+    "scripts/v1/learning-loop-suite.js",
+    "scripts/verify_v1_p5.js",
+    "docs/v1_learning_loop_spec.md"
   ],
   "modifiedFiles": [
     "utils/rc11-stability.js",
@@ -227,20 +244,22 @@
     "pages/score-trend/score-trend.wxml",
     "pages/score-trend/score-trend.wxss",
     "scripts/verify_rc8_chart_vertical_alignment.js",
-    "utils/score-trend.js"
+    "utils/score-trend.js",
+    "pages/home/home.wxml"
   ],
   "createdCommits": [
     "f181e2689a6e2e566703b05869ea03359761a029",
     "928f4c85f71adc98180ff1507b4ea9f5e7993342",
     "83d62e1a14fec8ef2648f7850b097ece99a2d0a8",
-    "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb"
+    "0ab5694bdabb0a7ea77bcbe9203fac62195d20bb",
+    "87c2f6cce7e85c953b109e8be2ecc362c4a98890"
   ],
   "pushPendingCommits": [],
-  "lastSuccessfulCommand": "P4 13 TEST-ID; P1-P4 64 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal data hashes all passed",
+  "lastSuccessfulCommand": "P5 8 TEST-ID; P1-P5 72 TEST-ID; RC11-1 12 gates; RC11-2 14 gates; RC9 14 suites; RC10 18 suites; smoke, upload ignore, rules, 740, full JS/JSON and formal data hashes all passed",
   "lastFailedCommand": "",
   "lastErrorSummary": "",
-  "nextAction": "Create and ordinary-push the P4 logical commit, then start P5 learning loop implementation.",
+  "nextAction": "Create and ordinary-push the P5 logical commit, then start P6 school planning, search and reports.",
   "safeToResume": true,
   "freezeStatus": "in_progress",
-  "updatedAt": "2026-08-01T18:30:28+08:00"
+  "updatedAt": "2026-08-01T18:55:00+08:00"
 }

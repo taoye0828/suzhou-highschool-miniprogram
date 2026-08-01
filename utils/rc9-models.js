@@ -21,6 +21,7 @@ const LOSS_REASON_TYPES = [
   '其他'
 ]
 const LEARNING_TASK_STATUSES = ['not_started', 'in_progress', 'completed', 'paused']
+const STAGE_GOAL_METRIC_TYPES = ['total_score', 'subject_score', 'score_rate', 'task_completion']
 const STAGE_GOAL_STATUS_LABELS = {
   not_started: '未开始',
   in_progress: '进行中',
@@ -288,6 +289,18 @@ function normalizeStageGoal(value, profileId = DEFAULT_PROFILE_ID) {
     value.targetTotalScore === undefined ? value.targetScore : value.targetTotalScore,
     { min: 0, max: APP_CONFIG.targetScore.max }
   )
+  const metricType = STAGE_GOAL_METRIC_TYPES.includes(value.metricType)
+    ? value.metricType
+    : 'total_score'
+  const targetValueMax = metricType === 'score_rate'
+    ? 10000
+    : metricType === 'task_completion'
+      ? 100
+      : APP_CONFIG.targetScore.max
+  const targetValue = optionalInteger(
+    value.targetValue === undefined ? targetTotalScore : value.targetValue,
+    { min: 0, max: targetValueMax }
+  )
   return {
     id,
     title,
@@ -296,6 +309,10 @@ function normalizeStageGoal(value, profileId = DEFAULT_PROFILE_ID) {
     endDate,
     targetTotalScore,
     targetScore: targetTotalScore,
+    metricType,
+    targetValue,
+    metricSubjectId: text(value.metricSubjectId || value.subjectId, 80),
+    metricSubjectName: text(value.metricSubjectName || value.subjectName, 40),
     targetSubjects: (Array.isArray(value.targetSubjects) ? value.targetSubjects : [])
       .map(normalizeTargetSubject)
       .filter(Boolean),
@@ -785,6 +802,7 @@ module.exports = {
   FAVORITES_MODES,
   STAGE_GOAL_STATUSES,
   STAGE_GOAL_STATUS_LABELS,
+  STAGE_GOAL_METRIC_TYPES,
   LOSS_REASON_TYPES,
   LEARNING_TASK_STATUSES,
   DEFAULT_RECOMMENDATION_SETTINGS,

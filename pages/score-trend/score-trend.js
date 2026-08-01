@@ -17,6 +17,10 @@ const {
   deleteScoreLossReason,
   getLearningTargetRecords,
   saveLearningTask,
+  getMistakeRecords,
+  saveMistakeRecord,
+  deleteMistakeRecord,
+  saveMistakeWithTask,
   recordRecentHistory,
   getExamTemplates,
   getScoreSchemes
@@ -59,6 +63,7 @@ const EXAM_TYPE_OPTIONS = PRODUCT_RULES.examTypes.map((value) => ({
 let recordSequence = 0
 let subjectSequence = 0
 let lossReasonSequence = 0
+let mistakeSequence = 0
 
 function twoDigits(value) {
   return String(value).padStart(2, '0')
@@ -81,6 +86,11 @@ function createSubjectId() {
 function createLossReasonId() {
   lossReasonSequence = (lossReasonSequence + 1) % 1000000
   return `loss_${Date.now()}_${lossReasonSequence}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function createMistakeId() {
+  mistakeSequence = (mistakeSequence + 1) % 1000000
+  return `mistake_${Date.now()}_${mistakeSequence}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 function dateAfter(days) {
@@ -688,6 +698,17 @@ Page({
     taskWeeklyTarget: '1',
     taskStageGoals: [{ id: '', title: '暂不关联阶段目标' }],
     taskStageGoalIndex: 0,
+    savedMistakes: [],
+    editingMistakeId: '',
+    editingMistakeVersion: null,
+    mistakeQuestionType: '',
+    mistakeKnowledgePoint: '',
+    mistakeLostScore: '',
+    mistakeDetail: '',
+    mistakeImprovementAction: '',
+    mistakeNotes: '',
+    mistakeCorrected: false,
+    mistakeRepeatedConfirmed: false,
     onboarding: { visible: false, step: null }
   },
 
@@ -793,6 +814,7 @@ Page({
     const activeProfile = getActiveProfile()
     const activeProfileId = activeProfile && activeProfile.id || ''
     const allLossReasons = getScoreLossReasons()
+    const allMistakes = getMistakeRecords()
     const selectedReviewRecordId = options.selectedReviewRecordId === undefined
       ? this.data.selectedReviewRecordId
       : options.selectedReviewRecordId
@@ -852,6 +874,7 @@ Page({
       dataRevision: getDataRevision()
       ,
       savedLossReasons: allLossReasons.filter((item) => item.examRecordId === effectiveReviewRecordId),
+      savedMistakes: allMistakes.filter((item) => item.examRecordId === effectiveReviewRecordId),
       lossStatistics: lossReasonStatistics(allLossReasons, result.records),
       lossSubjectOptions,
       lossSubjectIndex: 0,
@@ -1581,6 +1604,10 @@ Page({
       lossSubjectOptions,
       lossSubjectIndex: 0,
       savedLossReasons: getScoreLossReasons().filter((item) => item.examRecordId === selected.id)
+      ,
+      savedMistakes: getMistakeRecords().filter((item) => item.examRecordId === selected.id),
+      editingMistakeId: '',
+      editingMistakeVersion: null
     })
   },
 
@@ -1767,5 +1794,125 @@ Page({
         wx.showToast({ title: '学习任务已创建', icon: 'success' })
       }
     })
+  },
+
+  onMistakeInput(event) {
+    const field = event.currentTarget.dataset.field
+    if (![
+      'mistakeQuestionType', 'mistakeKnowledgePoint', 'mistakeLostScore', 'mistakeDetail',
+      'mistakeImprovementAction', 'mistakeNotes'
+    ].includes(field)) return
+    this.setData({ [field]: event.detail.value })
+  },
+
+  onMistakeSwitch(event) {
+    const field = event.currentTarget.dataset.field
+    if (!['mistakeCorrected', 'mistakeRepeatedConfirmed'].includes(field)) return
+    this.setData({ [field]: Boolean(event.detail.value) })
+  },
+
+  resetMistakeForm() {
+    this.setData({
+      editingMistakeId: '', editingMistakeVersion: null, mistakeQuestionType: '',
+      mistakeKnowledgePoint: '', mistakeLostScore: '', mistakeDetail: '',
+      mistakeImprovementAction: '', mistakeNotes: '', mistakeCorrected: false,
+      mistakeRepeatedConfirmed: false
+    })
+  },
+
+  saveMistake() {
+    const record = this.data.records.find((item) => item.id === this.data.selectedReviewRecordId)
+    const subject = this.data.lossSubjectOptions[this.data.lossSubjectIndex]
+    const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
+    const rawLostScore = String(this.data.mistakeLostScore || '').trim()
+    const lostScore = rawLostScore ? Number(rawLostScore) : 0
+    if (!record || !subject || !reasonType || !Number.isInteger(lostScore) || lostScore < 0 || lostScore > record.totalMaxScore) {
+      wx.showToast({ title: '请检查考试、学科和失分分值', icon: 'none' })
+      return
+    }
+    const existing = this.data.savedMistakes.find((item) => item.id === this.data.editingMistakeId)
+    const now = new Date().toISOString()
+    const id = existing && existing.id || createMistakeId()
+    const review = getScoreReviews().find((item) => item.examRecordId === record.id)
+    const result = saveMistakeRecord({
+      ...(existing || {}),
+      id,
+      examRecordId: record.id,
+      reviewId: review && review.id || '',
+      subjectId: subject.subjectId,
+      subjectName: subject.subjectName,
+      questionType: this.data.mistakeQuestionType,
+      knowledgePoint: this.data.mistakeKnowledgePoint,
+      lostScore,
+      reasonType,
+      detail: this.data.mistakeDetail,
+      corrected: this.data.mistakeCorrected,
+      correctedDate: this.data.mistakeCorrected ? localDateLabel() : '',
+      repeatedErrorConfirmed: this.data.mistakeRepeatedConfirmed,
+      improvementAction: this.data.mistakeImprovementAction,
+      notes: this.data.mistakeNotes,
+      createdAt: existing && existing.createdAt || now,
+      updatedAt: now,
+      expectedVersion: this.data.editingMistakeVersion
+    }, operationOptions('save_mistake_record', id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    this.resetMistakeForm()
+    this.loadRecords({ selectedReviewRecordId: record.id })
+  },
+
+  editMistake(event) {
+    const item = this.data.savedMistakes.find((mistake) => mistake.id === event.currentTarget.dataset.id)
+    if (!item) return
+    const subjectIndex = Math.max(0, this.data.lossSubjectOptions.findIndex((subject) => subject.subjectId === item.subjectId))
+    const reasonIndex = Math.max(0, this.data.lossReasonTypes.indexOf(item.reasonType))
+    this.setData({
+      editingMistakeId: item.id,
+      editingMistakeVersion: item.version,
+      lossSubjectIndex: subjectIndex,
+      lossReasonTypeIndex: reasonIndex,
+      mistakeQuestionType: item.questionType,
+      mistakeKnowledgePoint: item.knowledgePoint,
+      mistakeLostScore: String(item.lostScore),
+      mistakeDetail: item.detail,
+      mistakeImprovementAction: item.improvementAction,
+      mistakeNotes: item.notes,
+      mistakeCorrected: item.corrected,
+      mistakeRepeatedConfirmed: item.repeatedErrorConfirmed
+    })
+  },
+
+  deleteMistake(event) {
+    const id = event.currentTarget.dataset.id
+    const result = deleteMistakeRecord(id, operationOptions('delete_mistake_record', id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    this.resetMistakeForm()
+    this.loadRecords({ selectedReviewRecordId: this.data.selectedReviewRecordId })
+  },
+
+  createTaskFromMistake(event) {
+    const mistake = this.data.savedMistakes.find((item) => item.id === event.currentTarget.dataset.id)
+    if (!mistake) return
+    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const stageGoal = this.data.taskStageGoals[this.data.taskStageGoalIndex] || this.data.taskStageGoals[0]
+    const now = new Date().toISOString()
+    const result = saveMistakeWithTask(mistake, {
+      id: taskId,
+      title: mistake.improvementAction || `订正并复习${mistake.knowledgePoint || mistake.subjectName || '该错题'}`,
+      subjectId: mistake.subjectId,
+      subjectName: mistake.subjectName,
+      sourceExamId: mistake.examRecordId,
+      sourceReviewId: mistake.reviewId,
+      sourceTitleSnapshot: `${mistake.subjectName || '错题'} · ${mistake.knowledgePoint || mistake.questionType || '复习任务'}`,
+      stageGoalId: stageGoal.id,
+      startDate: localDateLabel(),
+      dueDate: this.data.taskDueDate,
+      weeklyTarget: Number(this.data.taskWeeklyTarget) || 1,
+      status: 'not_started',
+      createdAt: now,
+      updatedAt: now
+    }, operationOptions('save_mistake_with_task', mistake.id))
+    if (!result.ok) return wx.showToast({ title: result.message, icon: 'none' })
+    this.loadRecords({ selectedReviewRecordId: this.data.selectedReviewRecordId })
+    wx.showToast({ title: '错题与任务已关联', icon: 'success' })
   }
 })

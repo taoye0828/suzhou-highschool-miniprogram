@@ -23,7 +23,10 @@ const {
   normalizeProfileData,
   normalizeSubjectConfig,
   normalizeExamTemplate,
-  normalizeScoreScheme
+  normalizeScoreScheme,
+  normalizeMistakeRecord,
+  normalizeWeeklyPlan,
+  normalizeStageReview
 } = require('./rc9-models')
 const {
   builtInExamTemplates,
@@ -1568,7 +1571,102 @@ function saveLearningTask(record, { allowDuplicateSource = false } = {}) {
 }
 
 function deleteLearningTask(id) {
-  return deleteProfileRecord('learningTasks', id)
+  return updateActiveProfileData((data) => ({
+    ...data,
+    learningTasks: data.learningTasks.filter((item) => item.id !== id),
+    mistakeRecords: data.mistakeRecords.map((item) => item.linkedTaskIds.includes(id)
+      ? {
+          ...item,
+          linkedTaskIds: item.linkedTaskIds.filter((taskId) => taskId !== id),
+          updatedAt: new Date().toISOString(),
+          version: Number(item.version || 1) + 1
+        }
+      : item)
+  }))
+}
+
+function getMistakeRecords() {
+  return listFromActiveData('mistakeRecords')
+}
+
+function saveMistakeRecord(record) {
+  return saveProfileRecord(
+    'mistakeRecords',
+    record,
+    normalizeMistakeRecord,
+    '错题记录',
+    PRODUCT_RULES.limits.maxMistakeRecordsPerProfile
+  )
+}
+
+function deleteMistakeRecord(id) {
+  return deleteProfileRecord('mistakeRecords', id)
+}
+
+function saveMistakeWithTask(mistakeInput, taskInput) {
+  const profile = getActiveProfile()
+  const profileId = profile && profile.id || DEFAULT_PROFILE_ID
+  const mistake = normalizeMistakeRecord(mistakeInput, profileId)
+  const task = normalizeLearningTask({
+    ...taskInput,
+    sourceMistakeRecordId: mistake && mistake.id || ''
+  }, profileId)
+  if (!mistake || !task) return { ok: false, message: '错题或学习任务格式无效。' }
+  const context = activeContext()
+  if (!context.ok) return context
+  const currentMistake = context.data.mistakeRecords.find((item) => item.id === mistake.id)
+  const currentTask = context.data.learningTasks.find((item) => item.id === task.id)
+  const mistakeConflict = versionConflict(currentMistake, mistakeInput && (mistakeInput.expectedVersion ?? mistakeInput.version))
+  if (mistakeConflict) return mistakeConflict
+  const taskConflict = versionConflict(currentTask, taskInput && (taskInput.expectedVersion ?? taskInput.version))
+  if (taskConflict) return taskConflict
+  const duplicate = context.data.learningTasks.find((item) =>
+    item.id !== task.id && item.sourceMistakeRecordId === mistake.id)
+  if (duplicate) return { ok: false, code: 'DUPLICATE_SOURCE', message: '该错题已创建过学习任务。' }
+  const now = new Date().toISOString()
+  const savedTask = currentTask
+    ? { ...currentTask, ...task, createdAt: currentTask.createdAt, updatedAt: now, version: Number(currentTask.version || 1) + 1 }
+    : task
+  const linkedTaskIds = [...new Set([...(mistake.linkedTaskIds || []), savedTask.id])]
+  const savedMistake = currentMistake
+    ? { ...currentMistake, ...mistake, linkedTaskIds, createdAt: currentMistake.createdAt, updatedAt: now, version: Number(currentMistake.version || 1) + 1 }
+    : { ...mistake, linkedTaskIds }
+  const result = updateActiveProfileData((data) => ({
+    ...data,
+    mistakeRecords: [savedMistake, ...data.mistakeRecords.filter((item) => item.id !== savedMistake.id)]
+      .slice(0, PRODUCT_RULES.limits.maxMistakeRecordsPerProfile),
+    learningTasks: [savedTask, ...data.learningTasks.filter((item) => item.id !== savedTask.id)]
+      .slice(0, PRODUCT_RULES.limits.maxLearningTasksPerProfile)
+  }))
+  return result.ok ? { ok: true, mistakeRecord: savedMistake, learningTask: savedTask } : result
+}
+
+function getWeeklyPlans() {
+  return listFromActiveData('weeklyPlans')
+}
+
+function saveWeeklyPlan(record) {
+  return saveProfileRecord(
+    'weeklyPlans', record, normalizeWeeklyPlan, '周计划', PRODUCT_RULES.limits.maxWeeklyPlansPerProfile
+  )
+}
+
+function deleteWeeklyPlan(id) {
+  return deleteProfileRecord('weeklyPlans', id)
+}
+
+function getStageReviews() {
+  return listFromActiveData('stageReviews')
+}
+
+function saveStageReview(record) {
+  return saveProfileRecord(
+    'stageReviews', record, normalizeStageReview, '阶段复盘', PRODUCT_RULES.limits.maxStageReviewsPerProfile
+  )
+}
+
+function deleteStageReview(id) {
+  return deleteProfileRecord('stageReviews', id)
 }
 
 function getSubjectConfigs() {
@@ -2524,6 +2622,48 @@ function protectedDeleteLearningTask(id, options = {}) {
   }, () => deleteLearningTask(id))
 }
 
+function protectedSaveMistakeRecord(record, options = {}) {
+  return protectedCall('save_mistake_record', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveMistakeRecord(record))
+}
+
+function protectedDeleteMistakeRecord(id, options = {}) {
+  return protectedCall('delete_mistake_record', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteMistakeRecord(id))
+}
+
+function protectedSaveMistakeWithTask(mistakeRecord, taskRecord, options = {}) {
+  return protectedCall('save_mistake_with_task', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: mistakeRecord && mistakeRecord.id || ''
+  }, () => saveMistakeWithTask(mistakeRecord, taskRecord))
+}
+
+function protectedSaveWeeklyPlan(record, options = {}) {
+  return protectedCall('save_weekly_plan', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveWeeklyPlan(record))
+}
+
+function protectedDeleteWeeklyPlan(id, options = {}) {
+  return protectedCall('delete_weekly_plan', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteWeeklyPlan(id))
+}
+
+function protectedSaveStageReview(record, options = {}) {
+  return protectedCall('save_stage_review', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: record && record.id || ''
+  }, () => saveStageReview(record))
+}
+
+function protectedDeleteStageReview(id, options = {}) {
+  return protectedCall('delete_stage_review', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: id
+  }, () => deleteStageReview(id))
+}
+
 function protectedSaveSubjectConfigs(configs, options = {}) {
   return protectedCall('save_subject_configs', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: 'subjectConfigs'
@@ -2875,6 +3015,16 @@ module.exports = {
   saveLearningTask: protectedSaveLearningTask,
   deleteLearningTask: protectedDeleteLearningTask,
   clearLearningTasks: protectedClearLearningTasks,
+  getMistakeRecords,
+  saveMistakeRecord: protectedSaveMistakeRecord,
+  deleteMistakeRecord: protectedDeleteMistakeRecord,
+  saveMistakeWithTask: protectedSaveMistakeWithTask,
+  getWeeklyPlans,
+  saveWeeklyPlan: protectedSaveWeeklyPlan,
+  deleteWeeklyPlan: protectedDeleteWeeklyPlan,
+  getStageReviews,
+  saveStageReview: protectedSaveStageReview,
+  deleteStageReview: protectedDeleteStageReview,
   getSubjectConfigs,
   saveSubjectConfigs: protectedSaveSubjectConfigs,
   getExamTemplates,

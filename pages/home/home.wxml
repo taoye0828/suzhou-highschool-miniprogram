@@ -56,6 +56,12 @@
     <button class="button secondary card-action" bindtap="openTargetPlanning">管理学习目标</button>
   </view>
 
+  <view wx:if="{{thisWeekTasks.length}}" class="card">
+    <view class="card-title">本周任务</view>
+    <view wx:for="{{thisWeekTasks}}" wx:key="id" class="info-row"><text>{{item.title}}</text><text class="muted small">{{item.status === 'completed' ? '已完成' : '待执行'}}</text></view>
+    <view class="muted small">首页最多展示 3 项；未完成任务不会自动移动到下周。</view>
+  </view>
+
   <view class="section-title">快捷操作</view>
   <view class="shortcut-grid">
     <button class="button shortcut-button" bindtap="openScoreCenter">记录成绩</button>
