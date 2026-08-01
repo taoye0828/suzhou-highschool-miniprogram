@@ -1,12 +1,12 @@
 {
   "task": "PRELAUNCH-FINAL-MP",
   "startHead": "af259e8ecffe96b47457a2f44c3a13e41954943f",
-  "currentHead": "c73ff600cf0b550792221778926811a2f2029fa2",
-  "currentPhase": "P16",
-  "currentStepId": "PRELAUNCH-DEFECT-001",
-  "currentStepStatus": "fixed_pending_commit",
-  "lastStableCommit": "c73ff600cf0b550792221778926811a2f2029fa2",
-  "lastPushedCommit": "c73ff600cf0b550792221778926811a2f2029fa2",
+  "currentHead": "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
+  "currentPhase": "P18",
+  "currentStepId": "P18-FULL-REGRESSION",
+  "currentStepStatus": "in_progress",
+  "lastStableCommit": "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
+  "lastPushedCommit": "34fc36e46a5744df4921ab141dfee0119cdfb8e8",
   "completedCheckIds": [
     "P0-GIT-GATE",
     "P0-CONCURRENCY",
@@ -68,7 +68,8 @@
     "UPLOAD_PACKAGE_IGNORE",
     "PRODUCT_RULES_GENERATED",
     "FORMAL_IDENTITY",
-    "FORMAL_DATA_RAW_AND_SEMANTIC_HASHES"
+    "FORMAL_DATA_RAW_AND_SEMANTIC_HASHES",
+    "PRELAUNCH_FINAL_STATIC"
   ],
   "pendingManualItems": [
     "Use a WeChat account authorized as developer for wxc2a2a94f767438dd",
@@ -86,7 +87,8 @@
     "PRELAUNCH-DEFECT-001"
   ],
   "createdCommits": [
-    "c73ff600cf0b550792221778926811a2f2029fa2"
+    "c73ff600cf0b550792221778926811a2f2029fa2",
+    "34fc36e46a5744df4921ab141dfee0119cdfb8e8"
   ],
   "pushPendingCommits": [],
   "testDataRestorePointId": "",
@@ -96,8 +98,8 @@
   "lastSuccessfulCommand": "P4-P15 automated journey, accessibility, privacy and upload-package gates",
   "lastFailedCommand": "WeChat DevTools normal compile",
   "lastErrorSummary": "Current logged-in WeChat user is not a developer of wxc2a2a94f767438dd; simulator creation was blocked before business-code runtime acceptance",
-  "nextAction": "Commit the privacy wording fix and focused regression assertions, then run the final full automated regression",
+  "nextAction": "Commit the prelaunch-specific static gate, then run the final full automated regression",
   "safeToResume": true,
   "freezeStatus": "V1_CODE_FREEZE_READY",
-  "updatedAt": "2026-08-01T23:12:00+08:00"
+  "updatedAt": "2026-08-01T23:15:00+08:00"
 }
