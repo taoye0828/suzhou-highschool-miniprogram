@@ -1,0 +1,60 @@
+# RC11-FINAL-MP D001—D044 源码复核
+
+审计基线：`217c55af2c55e061f7e28fa064c9d738596cc204`。状态值使用规定枚举。开始审计确认 44 项均可在正式源码路径复现；修复提交后逐项更新为 `fixed_verified`。
+
+| ID | 状态 | 严重级别 | 文件 / 函数 | 触发路径与后果 | 修复方法 | TEST-ID | commit | 结果 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| D001 | confirmed | critical | `utils/rc9-storage.js atomicWrite` | 正式值已写，committed journal 写失败却返回失败，页面误导重试 | 按最终回读分类 committed_with_warning/uncertain | V1-TXN-008 | pending | pending |
+| D002 | confirmed | critical | `utils/rc9-storage.js atomicWrite` | journal 删除失败返回 ok:false，数据已提交却误报 | 清理失败返回 committed_with_warning | V1-TXN-010 | pending | pending |
+| D003 | confirmed | critical | `restoreFromRestorePoint` | 恢复提交后验证/清理失败仍显示原数据保留 | 用 committed 字段和最终回读生成提示 | V1-RECOVERY-008 | pending | pending |
+| D004 | confirmed | critical | `atomicRemove` | 删除成功但 removing journal 残留，启动恢复 before | 写 expectedAfter 和 committed journal；启动只清理 | V1-TXN-011 | pending | pending |
+| D005 | confirmed | critical | `recoverInterruptedTransaction` | removing 未记录已提交语义，无法区分未完成清除 | 分类 committed remove 与 uncommitted remove | V1-RECOVERY-004 | pending | pending |
+| D006 | confirmed | high | `pages/**`、`protectedCall` | 除恢复点页外写操作未提供稳定 operationId | 页面 OperationContext 覆盖全部写入口 | V1-LOCK-006 | pending | pending |
+| D007 | confirmed | critical | `protectedCall` | operationId 为空直接 action，幂等和锁被旁路 | service 强制生成/校验上下文，不允许旁路 | V1-LOCK-007 | pending | pending |
+| D008 | confirmed | high | `finishOperation` | operation state 保存完整 result，可含数组/payload | 只存紧凑摘要，100 条/2048 字节 | V1-LOCK-008 | pending | pending |
+| D009 | confirmed | high | `importBackupEnvelope` | 同 checksum 导入复用固定 safety operationId | 每次危险操作新 operationId/新恢复点 | V1-BACKUP-009 | pending | pending |
+| D010 | confirmed | high | `deleteRestorePoint`、operation state | 恢复点删除后旧幂等结果仍可报成功 | 校验实体存在与 resultVersion/checksum | V1-RECOVERY-010 | pending | pending |
+| D011 | confirmed | high | `app.js`、`pages/data-management` | 启动异常只记录状态，没有完整用户处理入口 | 未完成数据操作卡片和安全操作 | V1-RECOVERY-011 | pending | pending |
+| D012 | confirmed | critical | `deleteStudentProfile` | 删除档案前无 full_user_state 恢复点 | 删除前创建唯一恢复点 | V1-RECOVERY-012 | pending | pending |
+| D013 | confirmed | critical | `clearScoreRecords` | 清空成绩前无恢复点 | 当前档案恢复点 + protected remove | V1-RECOVERY-013 | pending | pending |
+| D014 | confirmed | critical | `clearTargetRecords` | 清空目标学校前无恢复点 | 当前档案恢复点 + protected remove | V1-RECOVERY-014 | pending | pending |
+| D015 | confirmed | critical | stage/task clear | 清空阶段目标或任务前无恢复点 | 每次新恢复点并清引用 | V1-RECOVERY-015 | pending | pending |
+| D016 | confirmed | critical | `payloadForScope/stateAfterRestore` | shared 档案 single_profile 默认携带并恢复共享收藏 | 默认排除共享收藏，显式 opt-in | V1-RECOVERY-016 | pending | pending |
+| D017 | confirmed | high | `stateAfterRestore` | 档案已删除时抛 PROFILE_NOT_FOUND | 支持恢复为新档案并处理 ID 冲突 | V1-RECOVERY-017 | pending | pending |
+| D018 | confirmed | high | `validateRestorePoint` | 未校验 storageSchemaVersion | v1 adapter/v2 门禁 | V1-RECOVERY-018 | pending | pending |
+| D019 | confirmed | high | `validateRestorePoint` | 未校验 backupFormatVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-019 | pending | pending |
+| D020 | confirmed | high | `validateRestorePoint` | 未校验 appDataVersion | 兼容列表和高版本拒绝 | V1-RECOVERY-020 | pending | pending |
+| D021 | confirmed | critical | `validateRestoreState` | 引用完整性未覆盖全部实体/共享范围 | 生命周期引用全检 | V1-DATA-021 | pending | pending |
+| D022 | confirmed | critical | `restoreRepairSnapshot` | repairSnapshot 恢复绕过 before_restore | 接入恢复点与 protected transaction | V1-RECOVERY-022 | pending | pending |
+| D023 | confirmed | critical | `pages/score-trend` save flows | 成绩和复盘分次写，可能半成功 | service 单事务保存聚合 | V1-TXN-023 | pending | pending |
+| D024 | confirmed | high | `saveTargetRecord` | 修改等级用新对象替换，缺省 reference 字段被清空 | patch 合并保留未提供字段 | V1-DATA-024 | pending | pending |
+| D025 | confirmed | high | `selectPrimaryTarget` 调用链 | 无主要目标时自动挑选其他学校 | 主要目标为空即为空 | V1-DATA-025 | pending | pending |
+| D026 | confirmed | high | `deleteLearningTargetRecord` | 删除目标后任务保留失效 stageGoalId | 同事务清空任务引用 | V1-LEARNING-026 | pending | pending |
+| D027 | confirmed | high | score review delete flow | 删除复盘可能按 examRecordId 清全部失分原因 | 增加 reviewId，只删明确关联 | V1-LEARNING-027 | pending | pending |
+| D028 | confirmed | high | `pages/score-trend` task draft | 构造并不存在的 sourceReviewId | 只引用真实已保存实体 | V1-LEARNING-028 | pending | pending |
+| D029 | confirmed | medium | `saveLearningTask` | 判重未优先 sourceLossReasonId | 业务唯一键优先 loss reason/mistake | V1-LEARNING-029 | pending | pending |
+| D030 | confirmed | high | recommendation settings/pages | 用户可自定义正式历史分差边界 | 运行代码固定规则源边界 | V1-SCHOOL-030 | pending | pending |
+| D031 | confirmed | high | `normalizeRecommendationSettings` | 自定义上下界允许空档 | 删除普通用户边界编辑，固定连续区间 | V1-SCHOOL-031 | pending | pending |
+| D032 | confirmed | high | `scenarioResults`/历史分差 | 情景规划和正式规则可使用不同边界 | 共用唯一分类函数，分数源分离 | V1-SCHOOL-032 | pending | pending |
+| D033 | confirmed | medium | targets reference score UI | 手动参考成绩无清晰取消 | “恢复使用正式参考成绩”操作 | V1-SCHOOL-033 | pending | pending |
+| D034 | confirmed | high | 页面日期函数/`toISOString` | UTC 截取导致本地自然日偏移 | `utils/local-date.js` | V1-DATA-034 | pending | pending |
+| D035 | confirmed | medium | school/target year UI | 2025、2026 写死，数据更新后漂移 | 从正式分数数据动态生成 | V1-SCHOOL-035 | pending | pending |
+| D036 | confirmed | medium | `config/app-config.js` | releaseStatus 仍是旧阶段 | 写内部最终冻结状态 | V1-FREEZE-036 | pending | pending |
+| D037 | confirmed | medium | dynamic help 调用 | hasBackup 固定 false | 读取真实备份/导出状态 | V1-DATA-037 | pending | pending |
+| D038 | confirmed | high | `pages/favorites` | 打开收藏页就写回删除无效 ID | 只展示告警，不在读取路径写入 | V1-SCHOOL-038 | pending | pending |
+| D039 | confirmed | high | `utils/subject-analysis`/趋势页 | 学科趋势只看当前 config maxScore | 优先历史 subject score/scheme snapshot | V1-TREND-039 | pending | pending |
+| D040 | confirmed | medium | `normalizeSubjectConfig` | 配置缺完整 version/createdAt/updatedAt | 归一化并在保存时递增版本 | V1-EXAM-040 | pending | pending |
+| D041 | confirmed | critical | `mergeProfileData` | 对象展开让备份设置直接覆盖本机设置 | 字段级冲突计划与用户选择 | V1-BACKUP-041 | pending | pending |
+| D042 | confirmed | high | `exportBackupFile`/UI | 文件只在沙盒生成，没有主动带走链路 | FileShareAdapter + 摘要/隐私确认 | V1-BACKUP-042 | pending | pending |
+| D043 | confirmed | high | backup vs restore checksum | 备份 FNV-1a、恢复点 SHA-256 两套 | 新写统一 SHA-256，v2 FNV 只读 | V1-BACKUP-043 | pending | pending |
+| D044 | confirmed | high | `scripts/verify_rc11_2_*` | 历史 PASS 未覆盖生产页面旁路和提交后失败 | V1 分套件覆盖真实 service/page 契约 | V1-FREEZE-044 | pending | pending |
+
+## 开始验证证据
+
+- RC11-2 全套：通过（14 个子门禁）。
+- RC11-1 全套：通过（12 个子门禁）。
+- RC9 全套：通过（14 个专项）。
+- RC10 全套：通过（18 个专项）。
+- smoke_local_logic / smoke_page_logic / 上传包排除：通过。
+- 上述结果仅说明既有行为未回归；D001—D044 按本轮最终契约仍为 confirmed。
+
