@@ -1,12 +1,15 @@
 {
   "task": "RC11-FINAL-MP",
   "startHead": "217c55af2c55e061f7e28fa064c9d738596cc204",
-  "currentHead": "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
+  "currentHead": "e8547913899c09a7384015393c2ede8dfca35dc8",
   "currentPhase": "P8",
-  "currentStepId": "P8-EVIDENCE-COMMIT",
-  "currentStepStatus": "completed_pending_push",
-  "lastStableCommit": "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
-  "lastPushedCommit": "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
+  "currentStepId": "P8-GIT-CLOSURE",
+  "currentStepStatus": "completed",
+  "lastStableCommit": "e8547913899c09a7384015393c2ede8dfca35dc8",
+  "lastPushedCommit": "e8547913899c09a7384015393c2ede8dfca35dc8",
+  "startBackupBranch": "backup/rc11-final-start-20260801-217c55a",
+  "finalBackupBranch": "backup/v1-feature-freeze-20260801-e854791",
+  "progressHeadSemantics": "currentHead is the final validated evidence commit; the commit containing this progress-only closure is resolved by Git and reported in the final chat.",
   "completedDefectIds": [
     "D001",
     "D002",
@@ -333,14 +336,15 @@
     "ad60f458811ac85350f9e72d1d5c0a0982c28b35",
     "3ca5e5d27bdf4c012c7df67233b02394c9b42a67",
     "1bd7459d29db3a6e03994513371e90ff78a39a18",
-    "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b"
+    "800fd2ef0b2db49cbf139068bbba89ede3dbdc7b",
+    "e8547913899c09a7384015393c2ede8dfca35dc8"
   ],
   "pushPendingCommits": [],
-  "lastSuccessfulCommand": "V1 103 unique TEST-ID; all 85 existing verify scripts; smoke; full JavaScript and 37 JSON files; upload package; rules; identity; disabled capabilities; raw and semantic formal data hashes all passed",
+  "lastSuccessfulCommand": "V1 103 unique TEST-ID; all 85 existing verify scripts; smoke; full JavaScript and 37 JSON files; upload package; rules; identity; disabled capabilities; raw and semantic formal data hashes passed; evidence commit and final evidence backup branch ordinary-pushed",
   "lastFailedCommand": "Historical verify_mp1/verify_mp5/verify_mp6 gates initially failed and were rerun after focused fixes",
   "lastErrorSummary": "Resolved: MP4 route inventory learned the three allowed V1 pages; README restored stable data wording; MP6 distinguishes mock_exam from a standalone mock marker and privacy copy was made explicit.",
-  "nextAction": "Commit and ordinary-push the final freeze evidence, then create and push the final backup branch and run the final Git gate.",
+  "nextAction": "Run WeChat DevTools and manual UX acceptance; do not add new V1 business scope before release.",
   "safeToResume": true,
-  "freezeStatus": "V1_CODE_FREEZE_READY_PENDING_FINAL_PUSH",
-  "updatedAt": "2026-08-01T21:20:00+08:00"
+  "freezeStatus": "V1_CODE_FREEZE_READY",
+  "updatedAt": "2026-08-01T21:30:00+08:00"
 }
