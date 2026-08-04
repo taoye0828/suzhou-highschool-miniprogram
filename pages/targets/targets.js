@@ -74,7 +74,9 @@ const REFERENCE_YEAR_OPTIONS = [
   { value: 'latest', label: '不晚于目标年份的最新数据' },
   ...FORMAL_SCORE_YEARS.map((year) => ({ value: String(year), label: `只看 ${year} 年` }))
 ]
-const GOAL_METRIC_OPTIONS = Object.keys(METRIC_LABELS).map((value) => ({ value, label: METRIC_LABELS[value] }))
+const GOAL_METRIC_OPTIONS = Object.keys(METRIC_LABELS)
+  .filter((value) => value !== 'subject_score')
+  .map((value) => ({ value, label: METRIC_LABELS[value] }))
 const TRAJECTORY_MIN_WIDTH_RPX = 560
 const TRAJECTORY_POINT_SPACING_RPX = 116
 const TRAJECTORY_PADDING_RPX = 56
@@ -311,6 +313,8 @@ function latestSubjectScoreMap(scoreRecords) {
 }
 
 function presentLearningTarget(record, currentScore, scoreRecords, learningTasks, stageReviews) {
+  const isLegacySubjectGoal = record.metricType === 'subject_score' ||
+    (Array.isArray(record.targetSubjects) && record.targetSubjects.length > 0)
   const subjectScores = latestSubjectScoreMap(scoreRecords)
   const targetSubjects = (Array.isArray(record.targetSubjects) ? record.targetSubjects : [])
     .map((item) => {
@@ -353,9 +357,11 @@ function presentLearningTarget(record, currentScore, scoreRecords, learningTasks
           : `当前成绩高于阶段目标 ${totalDifference} 分`,
     targetSubjects,
     weeklyTasks: Array.isArray(record.weeklyTasks) ? record.weeklyTasks : [],
-    metricLabel: METRIC_LABELS[record.metricType] || METRIC_LABELS.total_score,
-    targetMetricText,
-    currentMetricText: progress.text,
+    metricLabel: isLegacySubjectGoal
+      ? '旧版目标（已保留）'
+      : METRIC_LABELS[record.metricType] || METRIC_LABELS.total_score,
+    targetMetricText: isLegacySubjectGoal ? 'V1 暂不展示' : targetMetricText,
+    currentMetricText: isLegacySubjectGoal ? 'V1 暂不展示' : progress.text,
     reviewCount: (stageReviews || []).filter((item) => item.stageGoalId === record.id).length
   }
 }
@@ -1106,6 +1112,10 @@ Page({
       (item) => item.id === event.currentTarget.dataset.id
     )
     if (!record) return
+    if (record.metricType === 'subject_score' || (record.targetSubjects || []).length) {
+      wx.showToast({ title: '旧版单科目标已保留，V1 暂不支持编辑', icon: 'none' })
+      return
+    }
     this.setData({
       learningDraft: normalizeLearningDraft(record),
       goalMetricIndex: Math.max(0, GOAL_METRIC_OPTIONS.findIndex((item) => item.value === (record.metricType || 'total_score'))),
@@ -1140,10 +1150,6 @@ Page({
       })
       return
     }
-    if (draft.metricType === 'subject_score' && !String(draft.metricSubjectName || '').trim() && !saveAsDraft) {
-      this.setData({ learningError: '学科分目标需要填写学科名称。' })
-      return
-    }
     if (!saveAsDraft && (!draft.startDate || !draft.endDate)) {
       this.setData({ learningError: '请填写开始日期和截止日期。' })
       return
@@ -1152,34 +1158,7 @@ Page({
       this.setData({ learningError: '截止日期不能早于开始日期。' })
       return
     }
-    const subjectConfigs = new Map(
-      (this._subjectConfigs || []).map((item) => [item.subjectName, item])
-    )
     const targetSubjects = []
-    for (let index = 0; index < draft.targetSubjects.length; index += 1) {
-      const item = draft.targetSubjects[index]
-      const subjectName = String(item.subjectName || '').trim()
-      const rawScore = String(item.targetScore || '').trim()
-      if (!subjectName && !rawScore) continue
-      const config = subjectConfigs.get(subjectName)
-      const maximum = config && Number.isInteger(config.maxScore)
-        ? config.maxScore
-        : EXAM_TOTAL_SCORE
-      const parsed = validScoreInput(rawScore)
-      if (!subjectName || !parsed.ok || parsed.value > maximum) {
-        this.setData({
-          learningError: config
-            ? `${subjectName || '学科'}目标分必须是 0 至 ${maximum} 的整数。`
-            : '每个学科目标都需要名称和有效分数。'
-        })
-        return
-      }
-      targetSubjects.push({
-        subjectId: item.subjectId || (config && config.subjectId) || `subject_target_${index + 1}`,
-        subjectName,
-        targetScore: parsed.value
-      })
-    }
     if (!this.beginSaving()) return
     const now = new Date().toISOString()
     const stageGoalId = draft.id || `learning_${Date.now()}`
@@ -1195,7 +1174,7 @@ Page({
         : draft.metricType === 'score_rate'
           ? Math.round(metricNumber * 100)
           : metricNumber,
-      metricSubjectName: draft.metricSubjectName,
+      metricSubjectName: '',
       targetSubjects,
       weeklyTasks: String(draft.weeklyTasksText || '')
         .split(/\r?\n/u)
@@ -1392,8 +1371,14 @@ Page({
   },
 
   syncOnboarding() {
+    const onboarding = onboardingForPage('/pages/targets/targets')
+    const requiredSegment = onboarding.visible && onboarding.step &&
+      onboarding.step.selector === '.onboarding-target-school-entry'
+      ? 'schools'
+      : this.data.activeSegment
     this.setData({
-      onboarding: onboardingForPage('/pages/targets/targets')
+      onboarding,
+      activeSegment: requiredSegment
     })
   },
 

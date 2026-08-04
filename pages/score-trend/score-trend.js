@@ -383,7 +383,6 @@ function presentRecordCards(records, keyword, dateFilter, expandedRecordId) {
     .map((record) => {
       const subjects = presentSubjectScores(record)
       const hasReview = Boolean(
-        subjects.length ||
         Number.isInteger(record.classRank) ||
         Number.isInteger(record.gradeRank) ||
         record.improvementNotes ||
@@ -393,6 +392,9 @@ function presentRecordCards(records, keyword, dateFilter, expandedRecordId) {
       )
       return {
         ...record,
+        scoreSchemeName: record.metricType === 'single_subject'
+          ? '旧版方案（已保留）'
+          : record.scoreSchemeName,
         examDate: examDate(record),
         date: examDate(record),
         totalScore: scoreValue(record),
@@ -794,7 +796,20 @@ Page({
   },
 
   syncOnboarding() {
-    const onboarding = onboardingForPage('/pages/score-trend/score-trend')
+    let onboarding = onboardingForPage('/pages/score-trend/score-trend')
+    if (onboarding.visible && onboarding.step && onboarding.step.title === '记录成绩变化') {
+      const hasRecords = getScoreRecordsResult().records.length > 0
+      onboarding = {
+        ...onboarding,
+        step: {
+          ...onboarding.step,
+          selector: hasRecords ? '.onboarding-score-trend' : '.onboarding-score-form',
+          description: hasRecords
+            ? '查看总分趋势，考试名称和日期与折线使用同一批记录。'
+            : '先记录考试名称、日期和总分，保存后即可查看趋势。'
+        }
+      }
+    }
     const selector = onboarding.step && onboarding.step.selector
     const requiredSegment = onboarding.visible && selector === '.onboarding-score-form'
       ? 'records'
@@ -819,8 +834,9 @@ Page({
     const result = getScoreRecordsResult()
     notifyStorageReadResult(this, result)
     const subjectConfigs = getSubjectConfigs()
-    const examTemplates = getExamTemplates()
-    const scoreSchemes = getScoreSchemes()
+    const scoreSchemes = getScoreSchemes().filter((item) => item.metricType !== 'single_subject')
+    const usableSchemeIds = new Set(scoreSchemes.map((item) => item.id))
+    const examTemplates = getExamTemplates().filter((item) => usableSchemeIds.has(item.scoreSchemeId))
     const activeProfile = getActiveProfile()
     const activeProfileId = activeProfile && activeProfile.id || ''
     const allLossReasons = getScoreLossReasons()
@@ -1057,8 +1073,8 @@ Page({
       selectedExamTemplateId: template.id,
       examTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((item) => item.value === template.examType)),
       examName: template.defaultExamName || template.name,
-      showRecordDetails: template.enableSubjectScores || template.enableRank || template.enableReview,
-      formEnableSubjectScores: template.enableSubjectScores,
+      showRecordDetails: template.enableRank || template.enableReview,
+      formEnableSubjectScores: false,
       formEnableRank: template.enableRank,
       formEnableReview: template.enableReview,
       ...schemeState,
@@ -1408,7 +1424,7 @@ Page({
       totalScore: this.data.scoreInput,
       classRank: this.data.classRankInput,
       gradeRank: this.data.gradeRankInput,
-      subjectScores: this.data.formSubjectScores,
+      subjectScores: [],
       improvementNotes: this.data.improvementNotes,
       lossNotes: this.data.lossNotes,
       nextActions: this.data.nextActions,
@@ -1454,7 +1470,9 @@ Page({
       admissionScaleMax: schemeSnapshot.admissionScaleMax,
       eligibilityRuleId: schemeSnapshot.eligibilityRuleId,
       migrationSource: original && original.migrationSource || 'v1_user_entry',
-      subjectScores: values.subjectScores,
+      subjectScores: original && Array.isArray(original.subjectScores)
+        ? original.subjectScores
+        : [],
       classRank: values.classRank,
       gradeRank: values.gradeRank,
       improvementNotes: values.improvementNotes,
@@ -1482,6 +1500,10 @@ Page({
     const id = event.currentTarget.dataset.id
     const record = (this._scoreRecords || []).find((item) => item.id === id)
     if (!record) return
+    if (record.metricType === 'single_subject') {
+      wx.showToast({ title: '旧版考试已保留，V1 暂不支持编辑', icon: 'none' })
+      return
+    }
     this.rememberSegment('records')
     this.setData({
       activeSegment: 'records',
@@ -1493,6 +1515,10 @@ Page({
     const id = event.currentTarget.dataset.id
     const record = (this._scoreRecords || []).find((item) => item.id === id)
     if (!record) return
+    if (record.metricType === 'single_subject') {
+      wx.showToast({ title: '旧版考试已保留，V1 暂不支持复制', icon: 'none' })
+      return
+    }
     this.rememberSegment('records')
     this.setData({
       activeSegment: 'records',
@@ -1685,7 +1711,7 @@ Page({
       totalScore: this.data.reviewDraft.totalScore,
       classRank: this.data.reviewDraft.classRank,
       gradeRank: this.data.reviewDraft.gradeRank,
-      subjectScores: this.data.reviewSubjectScores,
+      subjectScores: [],
       improvementNotes: this.data.reviewDraft.improvementNotes,
       lossNotes: this.data.reviewDraft.lossNotes,
       nextActions: this.data.reviewDraft.nextActions,
@@ -1703,7 +1729,7 @@ Page({
       schemaVersion: STORAGE_SCHEMA_VERSION,
       totalScore: values.totalScore,
       score: values.totalScore,
-      subjectScores: values.subjectScores,
+      subjectScores: Array.isArray(record.subjectScores) ? record.subjectScores : [],
       classRank: values.classRank,
       gradeRank: values.gradeRank,
       improvementNotes: values.improvementNotes,
@@ -1760,7 +1786,7 @@ Page({
 
   addLossReason() {
     const record = (this._scoreRecords || []).find((item) => item.id === this.data.selectedReviewRecordId)
-    const subject = this.data.lossSubjectOptions[this.data.lossSubjectIndex]
+    const subject = { subjectId: 'overall', subjectName: '总分' }
     const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
     if (!record || !subject || !reasonType) return
     const lossReasonId = createLossReasonId()
@@ -1803,9 +1829,7 @@ Page({
       return
     }
     const stageGoal = this.data.taskStageGoals[this.data.taskStageGoalIndex] || this.data.taskStageGoals[0]
-    const defaultTitle = reason.reasonType === '单词或语法'
-      ? `每周完成${reason.subjectName || '英语'}语法专项练习并订正`
-      : `每周完成${reason.subjectName || '该学科'}${reason.reasonType}专项练习并订正`
+    const defaultTitle = `每周完成${reason.reasonType}专项练习并订正`
     wx.showModal({
       title: '创建学习任务',
       content: defaultTitle,
@@ -1867,16 +1891,21 @@ Page({
 
   saveMistake() {
     const record = (this._scoreRecords || []).find((item) => item.id === this.data.selectedReviewRecordId)
-    const subject = this.data.lossSubjectOptions[this.data.lossSubjectIndex]
+    const existing = this.data.savedMistakes.find((item) => item.id === this.data.editingMistakeId)
+    const subject = existing
+      ? {
+          subjectId: existing.subjectId || 'overall',
+          subjectName: existing.subjectName || '总分'
+        }
+      : { subjectId: 'overall', subjectName: '总分' }
     const reasonType = this.data.lossReasonTypes[this.data.lossReasonTypeIndex]
     const rawLostScore = String(this.data.mistakeLostScore || '').trim()
     const lostScore = rawLostScore ? Number(rawLostScore) : 0
     if (!record || !subject || !reasonType || !Number.isInteger(lostScore) || lostScore < 0 || lostScore > record.totalMaxScore) {
-      wx.showToast({ title: '请检查考试、学科和失分分值', icon: 'none' })
+      wx.showToast({ title: '请检查考试和失分分值', icon: 'none' })
       return
     }
     if (!this.beginSaving()) return
-    const existing = this.data.savedMistakes.find((item) => item.id === this.data.editingMistakeId)
     const now = new Date().toISOString()
     const id = existing && existing.id || createMistakeId()
     const review = getScoreReviews().find((item) => item.examRecordId === record.id)
@@ -1944,12 +1973,12 @@ Page({
     const now = new Date().toISOString()
     const result = saveMistakeWithTask(mistake, {
       id: taskId,
-      title: mistake.improvementAction || `订正并复习${mistake.knowledgePoint || mistake.subjectName || '该错题'}`,
+      title: mistake.improvementAction || `订正并复习${mistake.knowledgePoint || '该错题'}`,
       subjectId: mistake.subjectId,
       subjectName: mistake.subjectName,
       sourceExamId: mistake.examRecordId,
       sourceReviewId: mistake.reviewId,
-      sourceTitleSnapshot: `${mistake.subjectName || '错题'} · ${mistake.knowledgePoint || mistake.questionType || '复习任务'}`,
+      sourceTitleSnapshot: `错题 · ${mistake.knowledgePoint || mistake.questionType || '复习任务'}`,
       stageGoalId: stageGoal.id,
       startDate: localDateLabel(),
       dueDate: this.data.taskDueDate,

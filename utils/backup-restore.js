@@ -361,10 +361,13 @@ function validateBackupEnvelope(input) {
     errors.push('导出时间无效。')
   }
   const payload = backupPayload(backup)
-  const expectedAlgorithm = formatVersion === BACKUP_FORMAT_VERSION ? CHECKSUM_ALGORITHM : LEGACY_FNV_ALGORITHM
-  if (!backup.checksum || backup.checksum.algorithm !== expectedAlgorithm) {
+  const supportedAlgorithms = formatVersion === BACKUP_FORMAT_VERSION
+    ? [CHECKSUM_ALGORITHM]
+    : [LEGACY_FNV_ALGORITHM, CHECKSUM_ALGORITHM]
+  const declaredAlgorithm = backup.checksum && backup.checksum.algorithm
+  if (!supportedAlgorithms.includes(declaredAlgorithm)) {
     errors.push('校验摘要算法不受支持。')
-  } else if (checksumForPayload(payload, expectedAlgorithm) !== backup.checksum.value) {
+  } else if (checksumForPayload(payload, declaredAlgorithm) !== backup.checksum.value) {
     errors.push('校验摘要不匹配，文件可能已损坏。')
   }
   const profiles = Array.isArray(payload.profiles) ? payload.profiles : []

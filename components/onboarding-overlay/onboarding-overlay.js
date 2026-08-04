@@ -12,7 +12,12 @@ Component({
 
   observers: {
     'visible,step': function syncTarget(visible, step) {
-      if (!visible || !step) return
+      this._measureGeneration = (this._measureGeneration || 0) + 1
+      if (!visible || !step) {
+        if (this._measureTimer) clearTimeout(this._measureTimer)
+        this.setData({ highlightVisible: false, highlightStyle: '' })
+        return
+      }
       if (this._measureTimer) clearTimeout(this._measureTimer)
       this._measureAttempts = 0
       this.setData({
@@ -29,6 +34,7 @@ Component({
 
   lifetimes: {
     detached() {
+      this._measureGeneration = (this._measureGeneration || 0) + 1
       if (this._measureTimer) clearTimeout(this._measureTimer)
     }
   },
@@ -38,6 +44,7 @@ Component({
     measureTarget() {
       if (!this.properties.visible || !this.properties.step) return
       if (typeof wx.createSelectorQuery !== 'function') return
+      const generation = this._measureGeneration
       let query
       try {
         query = wx.createSelectorQuery()
@@ -46,6 +53,7 @@ Component({
         return
       }
       query.exec((results) => {
+        if (generation !== this._measureGeneration || !this.properties.visible) return
         const rect = results && results[0]
         const hasRect = rect &&
           Number.isFinite(Number(rect.left)) &&

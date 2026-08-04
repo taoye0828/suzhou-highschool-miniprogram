@@ -98,8 +98,15 @@ Page({
 
   dismissDynamicHelp() {
     if (!this.data.dynamicHelp) return
-    dismissDynamicHelp(this.data.dynamicHelp.id)
+    const current = this.data.dynamicHelp
     this.setData({ dynamicHelp: null })
+    const result = dismissDynamicHelp(current.id)
+    if (result.ok) return
+    this.setData({ dynamicHelp: current })
+    wx.showToast({
+      title: result.message || '关闭提示失败，请重试',
+      icon: 'none'
+    })
   },
 
   onExamYearChange(event) {

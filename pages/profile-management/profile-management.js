@@ -25,7 +25,8 @@ Page({
   data: {
     profiles: [],
     activeProfile: null,
-    favoritesModes: FAVORITES_MODES
+    favoritesModes: FAVORITES_MODES,
+    creatingProfile: false
   },
 
   onShow() {
@@ -45,6 +46,8 @@ Page({
   },
 
   createProfile() {
+    if (this.data.creatingProfile) return
+    this.setData({ creatingProfile: true })
     wx.showModal({
       title: '新建学生档案',
       content: '',
@@ -68,7 +71,8 @@ Page({
         }
         this.refresh()
         wx.showToast({ title: '档案已创建并切换', icon: 'success' })
-      }
+      },
+      complete: () => this.setData({ creatingProfile: false })
     })
   },
 

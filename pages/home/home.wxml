@@ -15,7 +15,7 @@
   <view class="section-title">当前进展</view>
   <view wx:if="{{!hasScores}}" class="card empty-state-card">
     <view class="card-title">从第一次考试记录开始</view>
-    <view class="muted empty-state-text">记录总分或学科成绩后，这里会显示最近变化与趋势摘要。</view>
+    <view class="muted empty-state-text">记录总分后，这里会显示最近变化与趋势摘要。</view>
     <button class="button" bindtap="openScoreCenter">记录第一次成绩</button>
   </view>
   <view wx:else class="card score-card onboarding-score-record">

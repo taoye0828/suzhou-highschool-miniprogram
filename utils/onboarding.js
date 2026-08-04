@@ -1,5 +1,10 @@
 const { APP_CONFIG } = require('../config/app-config')
-const { getOnboardingState, saveOnboardingState } = require('./storage')
+const {
+  getOnboardingState,
+  saveOnboardingState,
+  getDynamicHelpDismissed,
+  saveDynamicHelpDismissed
+} = require('./storage')
 const { dynamicHelpState } = require('./rc10-features')
 
 const ONBOARDING_STEPS = [
@@ -35,15 +40,15 @@ const ONBOARDING_STEPS = [
   },
   {
     page: '/pages/targets/targets',
-    selector: '.onboarding-target-planning',
+    selector: '.onboarding-target-school-entry',
     title: '建立目标规划',
-    description: '把具体学校设为冲刺、目标或保底。'
+    description: '进入目标学校，添加具体学校并设置冲刺、目标或保底。'
   },
   {
     page: '/pages/score-trend/score-trend',
-    selector: '.onboarding-trend-entry',
+    selector: '.onboarding-score-form',
     title: '记录成绩变化',
-    description: '每次考试后保存成绩，可以查看最近 10 次变化。'
+    description: '先记录一场考试；已有成绩时会直接指向总分趋势。'
   }
 ]
 
@@ -57,13 +62,13 @@ const FEATURE_TUTORIALS = {
     page: '/pages/score-trend/score-trend',
     selector: '.onboarding-score-form',
     title: '记录一次考试',
-    description: '可只填总分，也可添加学科成绩和考试复盘。'
+    description: '填写考试名称、日期和总分，也可补充排名和考试复盘。'
   }],
   score_trend: [{
     page: '/pages/score-trend/score-trend',
     selector: '.onboarding-score-trend',
     title: '查看成绩趋势',
-    description: '总分、学科和考试标签使用同一批记录与同一横坐标。'
+    description: '总分、考试名称和日期使用同一批记录与同一横坐标。'
   }],
   target_planning: [
     ONBOARDING_STEPS[1],
@@ -184,24 +189,18 @@ function handleOnboardingAction(event) {
 }
 
 function dynamicHelpForContext(context) {
-  const state = getOnboardingState()
-  return dynamicHelpState(context, state.dynamicHelpDismissed || {})
+  return dynamicHelpState(context, getDynamicHelpDismissed())
 }
 
 function dismissDynamicHelp(id) {
-  const state = getOnboardingState()
-  return saveOnboardingState({
-    ...state,
-    dynamicHelpDismissed: {
-      ...(state.dynamicHelpDismissed || {}),
-      [id]: { version: 1, dismissedAt: new Date().toISOString() }
-    }
+  return saveDynamicHelpDismissed({
+    ...getDynamicHelpDismissed(),
+    [id]: { version: 1, dismissedAt: new Date().toISOString() }
   })
 }
 
 function resetDynamicHelp() {
-  const state = getOnboardingState()
-  return saveOnboardingState({ ...state, dynamicHelpDismissed: {} })
+  return saveDynamicHelpDismissed({})
 }
 
 module.exports = {

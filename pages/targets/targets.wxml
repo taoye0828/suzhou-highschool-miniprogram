@@ -248,7 +248,7 @@
         <view class="muted small">当前成绩</view>
         <view class="summary-score">{{currentScoreText}}</view>
       </view>
-      <button class="button secondary compact-button" bindtap="openSchools">添加学校</button>
+      <button class="button secondary compact-button onboarding-target-school-entry" bindtap="openSchools">添加学校</button>
     </view>
 
     <view class="row between section-row">
@@ -360,7 +360,7 @@
       <view class="row between">
         <view>
           <view class="card-title">{{task.title}}</view>
-          <view class="muted small">{{task.subjectName || '未指定学科'}} · 截止 {{task.dueDate || '未设置'}}</view>
+          <view class="muted small">截止 {{task.dueDate || '未设置'}}</view>
         </view>
         <text class="status-badge status-{{task.status}}">{{task.status === 'not_started' ? '未开始' : task.status === 'in_progress' ? '进行中' : task.status === 'completed' ? '已完成' : '已暂停'}}</text>
       </view>
@@ -380,7 +380,7 @@
     <view class="section-title">周学习计划</view>
     <view class="card learning-form-card">
       <view class="muted small">周一开始、周日结束；未完成任务不会自动移动，删除计划也不会删除任务。</view>
-      <text class="field-label">计划名称</text><input class="input" maxlength="120" value="{{weeklyPlanTitle}}" data-field="weeklyPlanTitle" bindinput="onWeeklyPlanInput" placeholder="例如：本周数学复习" />
+      <text class="field-label">计划名称</text><input class="input" maxlength="120" value="{{weeklyPlanTitle}}" data-field="weeklyPlanTitle" bindinput="onWeeklyPlanInput" placeholder="例如：本周复习计划" />
       <text class="field-label">所在周</text><picker mode="date" value="{{weeklyPlanStartDate}}" bindchange="onWeeklyPlanStartChange"><view class="input picker-input">周一 {{weeklyPlanStartDate}}⌄</view></picker>
       <text class="field-label">选择已有任务</text>
       <checkbox-group bindchange="onWeeklyTasksChange">
@@ -421,18 +421,7 @@
       <text class="field-label">目标指标</text>
       <picker range="{{goalMetricOptions}}" range-key="label" value="{{goalMetricIndex}}" bindchange="updateGoalMetric"><view class="input picker-input">{{goalMetricOptions[goalMetricIndex].label}}⌄</view></picker>
       <block wx:if="{{learningDraft.metricType === 'total_score'}}"><text class="field-label">目标总分</text><input class="input" type="number" maxlength="3" value="{{learningDraft.targetTotalScore}}" placeholder="0 至 {{scoreMax}}" data-field="targetTotalScore" bindinput="updateLearningInput" /></block>
-      <block wx:if="{{learningDraft.metricType === 'subject_score'}}"><text class="field-label">学科和目标分</text><view class="two-column-fields"><input class="input" maxlength="40" value="{{learningDraft.metricSubjectName}}" placeholder="学科名称" data-field="metricSubjectName" bindinput="updateLearningInput" /><input class="input" type="number" maxlength="3" value="{{learningDraft.targetValue}}" placeholder="目标分" data-field="targetValue" bindinput="updateLearningInput" /></view></block>
       <block wx:if="{{learningDraft.metricType === 'score_rate' || learningDraft.metricType === 'task_completion'}}"><text class="field-label">目标{{learningDraft.metricType === 'score_rate' ? '得分率' : '任务完成率'}}（%）</text><input class="input" type="digit" maxlength="6" value="{{learningDraft.targetValue}}" placeholder="0 至 100" data-field="targetValue" bindinput="updateLearningInput" /></block>
-
-      <view class="row between subject-heading">
-        <text class="field-label">目标学科（可选）</text>
-        <button class="text-button" bindtap="addTargetSubject">添加学科</button>
-      </view>
-      <view class="subject-target-row" wx:for="{{learningDraft.targetSubjects}}" wx:key="clientId">
-        <input class="input subject-name-input" value="{{item.subjectName}}" maxlength="40" placeholder="学科名称" data-index="{{index}}" data-field="subjectName" bindinput="updateTargetSubject" />
-        <input class="input subject-score-input" type="number" maxlength="3" value="{{item.targetScore}}" placeholder="目标分" data-index="{{index}}" data-field="targetScore" bindinput="updateTargetSubject" />
-        <button class="subject-remove" data-index="{{index}}" bindtap="removeTargetSubject">移除</button>
-      </view>
 
       <text class="field-label">每周任务</text>
       <textarea
@@ -488,13 +477,6 @@
         <view class="info-row"><text class="info-label">阶段复盘</text><text class="info-value">{{item.reviewCount}} 条</text></view>
       </view>
 
-      <view wx:if="{{item.targetSubjects.length > 0}}" class="record-block">
-        <view class="field-label">学科目标</view>
-        <view class="subject-progress-row" wx:for="{{item.targetSubjects}}" wx:key="subjectId" wx:for-item="subject">
-          <text>{{subject.subjectName}}</text>
-          <text class="muted small">{{subject.currentScoreText}} → {{subject.targetScore}} 分 · {{subject.subjectGapText}}</text>
-        </view>
-      </view>
       <view wx:if="{{item.weeklyTasks.length > 0}}" class="record-block">
         <view class="field-label">每周任务</view>
         <view class="task-row" wx:for="{{item.weeklyTasks}}" wx:key="*this" wx:for-item="task">· {{task}}</view>

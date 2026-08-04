@@ -17,10 +17,14 @@ const EXAM_TYPE_OPTIONS = PRODUCT_RULES.examTypes.map((value) => ({
   value,
   label: EXAM_TYPE_LABELS[value] || value
 }))
-const METRIC_OPTIONS = PRODUCT_RULES.statusEnums.metricType.map((value) => ({
-  value,
-  label: METRIC_TYPE_LABELS[value] || value
-}))
+const METRIC_OPTIONS = PRODUCT_RULES.statusEnums.metricType
+  .filter((value) => value !== 'single_subject')
+  .map((value) => ({
+    value,
+    label: value === 'partial_total'
+      ? '自定义总分'
+      : METRIC_TYPE_LABELS[value] || value
+  }))
 
 function createId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
@@ -35,7 +39,7 @@ function emptyTemplateForm(defaultSchemeId = 'suzhou_admission_740_v1') {
     templateExamTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((item) => item.value === 'custom')),
     templateSchemeIndex: 0,
     templateScoreSchemeId: defaultSchemeId,
-    templateEnableSubjectScores: true,
+    templateEnableSubjectScores: false,
     templateEnableRank: true,
     templateEnableReview: true,
     templateError: '',
@@ -113,28 +117,35 @@ Page({
 
   refresh() {
     const scoreSchemes = getScoreSchemes()
+    const legacySchemeIds = new Set(scoreSchemes
+      .filter((item) => item.metricType === 'single_subject')
+      .map((item) => item.id))
+    const selectableSchemes = scoreSchemes.filter((item) => item.metricType !== 'single_subject')
     const templates = getExamTemplates().map((item) => ({
       ...item,
+      name: legacySchemeIds.has(item.scoreSchemeId) ? '旧版模板（已保留）' : item.name,
       examTypeLabel: EXAM_TYPE_LABELS[item.examType] || item.examType,
-      referenceCount: examTemplateReferenceCount(item.id)
+      referenceCount: examTemplateReferenceCount(item.id),
+      isLegacyScheme: legacySchemeIds.has(item.scoreSchemeId)
     }))
     const presentedSchemes = scoreSchemes.map((item) => ({
       ...item,
+      name: item.metricType === 'single_subject' ? '旧版方案（已保留）' : item.name,
       metricLabel: METRIC_TYPE_LABELS[item.metricType] || item.metricType,
       references: scoreSchemeReferenceStats(item.id)
     }))
     const currentSchemeId = this.data.templateScoreSchemeId || 'suzhou_admission_740_v1'
-    const templateSchemeIndex = Math.max(0, scoreSchemes.findIndex((item) => item.id === currentSchemeId))
+    const templateSchemeIndex = Math.max(0, selectableSchemes.findIndex((item) => item.id === currentSchemeId))
     this.setData({
       activeProfileName: (getActiveProfile() || {}).nickname || '默认档案',
       templates,
       scoreSchemes: presentedSchemes,
-      scoreSchemeOptions: scoreSchemes.map((item) => ({
+      scoreSchemeOptions: selectableSchemes.map((item) => ({
         id: item.id,
         label: `${item.name} · ${item.totalMaxScore} 分${item.isBuiltIn ? ' · 内置' : ''}`
       })),
       templateSchemeIndex,
-      templateScoreSchemeId: scoreSchemes[templateSchemeIndex] && scoreSchemes[templateSchemeIndex].id || '',
+      templateScoreSchemeId: selectableSchemes[templateSchemeIndex] && selectableSchemes[templateSchemeIndex].id || '',
       loading: false,
       pageError: ''
     })
@@ -176,8 +187,8 @@ Page({
 
   onTemplateSchemeChange(event) {
     const index = Number(event.detail.value)
-    const scheme = this.data.scoreSchemes[index]
-    if (scheme) this.setData({ templateSchemeIndex: index, templateScoreSchemeId: scheme.id, templateError: '' })
+    const option = this.data.scoreSchemeOptions[index]
+    if (option) this.setData({ templateSchemeIndex: index, templateScoreSchemeId: option.id, templateError: '' })
   },
 
   onTemplateSwitch(event) {
@@ -204,7 +215,9 @@ Page({
       defaultExamName,
       examType: examType.value,
       scoreSchemeId: this.data.templateScoreSchemeId,
-      enableSubjectScores: this.data.templateEnableSubjectScores,
+      enableSubjectScores: this.data.editingTemplateId
+        ? this.data.templateEnableSubjectScores
+        : false,
       enableRank: this.data.templateEnableRank,
       enableReview: this.data.templateEnableReview,
       displayOrder: this.data.templates.length * 10 + 100,
@@ -225,6 +238,10 @@ Page({
   editTemplate(event) {
     const item = this.data.templates.find((template) => template.id === event.currentTarget.dataset.id)
     if (!item || item.isBuiltIn) return
+    if (item.isLegacyScheme) {
+      wx.showToast({ title: '旧版模板已保留，V1 暂不支持编辑', icon: 'none' })
+      return
+    }
     this.setData({
       activeSection: 'templates',
       editingTemplateId: item.id,
@@ -232,7 +249,7 @@ Page({
       templateNameInput: item.name,
       templateExamNameInput: item.defaultExamName,
       templateExamTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((option) => option.value === item.examType)),
-      templateSchemeIndex: Math.max(0, this.data.scoreSchemes.findIndex((scheme) => scheme.id === item.scoreSchemeId)),
+      templateSchemeIndex: Math.max(0, this.data.scoreSchemeOptions.findIndex((option) => option.id === item.scoreSchemeId)),
       templateScoreSchemeId: item.scoreSchemeId,
       templateEnableSubjectScores: item.enableSubjectScores,
       templateEnableRank: item.enableRank,
@@ -245,6 +262,10 @@ Page({
   copyTemplate(event) {
     const item = this.data.templates.find((template) => template.id === event.currentTarget.dataset.id)
     if (!item) return
+    if (item.isLegacyScheme) {
+      wx.showToast({ title: '旧版模板已保留，V1 暂不支持复制', icon: 'none' })
+      return
+    }
     this.setData({
       activeSection: 'templates',
       editingTemplateId: '',
@@ -252,9 +273,9 @@ Page({
       templateNameInput: `${item.name}副本`.slice(0, 80),
       templateExamNameInput: item.defaultExamName,
       templateExamTypeIndex: Math.max(0, EXAM_TYPE_OPTIONS.findIndex((option) => option.value === item.examType)),
-      templateSchemeIndex: Math.max(0, this.data.scoreSchemes.findIndex((scheme) => scheme.id === item.scoreSchemeId)),
+      templateSchemeIndex: Math.max(0, this.data.scoreSchemeOptions.findIndex((option) => option.id === item.scoreSchemeId)),
       templateScoreSchemeId: item.scoreSchemeId,
-      templateEnableSubjectScores: item.enableSubjectScores,
+      templateEnableSubjectScores: false,
       templateEnableRank: item.enableRank,
       templateEnableReview: item.enableReview,
       templateError: '',
@@ -332,7 +353,7 @@ Page({
       id,
       name,
       metricType: metric.value,
-      subjectRules: parsed.rules,
+      subjectRules: this.data.editingSchemeId ? parsed.rules : [],
       totalMaxScore,
       admissionScaleMax,
       eligibilityRuleId,
@@ -354,6 +375,10 @@ Page({
   editScheme(event) {
     const item = this.data.scoreSchemes.find((scheme) => scheme.id === event.currentTarget.dataset.id)
     if (!item || item.isBuiltIn) return
+    if (item.metricType === 'single_subject' || (item.subjectRules || []).length) {
+      wx.showToast({ title: '旧版方案已保留，V1 暂不支持编辑', icon: 'none' })
+      return
+    }
     this.setData({
       activeSection: 'schemes',
       editingSchemeId: item.id,
@@ -371,6 +396,10 @@ Page({
   copyScheme(event) {
     const item = this.data.scoreSchemes.find((scheme) => scheme.id === event.currentTarget.dataset.id)
     if (!item) return
+    if (item.metricType === 'single_subject') {
+      wx.showToast({ title: '旧版方案已保留，V1 暂不支持复制', icon: 'none' })
+      return
+    }
     this.setData({
       activeSection: 'schemes',
       editingSchemeId: '',
@@ -379,7 +408,7 @@ Page({
       schemeMetricIndex: Math.max(0, METRIC_OPTIONS.findIndex((option) => option.value === item.metricType)),
       schemeTotalMaxInput: String(item.totalMaxScore),
       schemeAdmissionMaxInput: item.admissionScaleMax === null ? '' : String(item.admissionScaleMax),
-      schemeSubjectRulesInput: subjectRulesText(item.subjectRules),
+      schemeSubjectRulesInput: '',
       schemeError: '',
       schemeSaveText: '保存方案副本'
     })

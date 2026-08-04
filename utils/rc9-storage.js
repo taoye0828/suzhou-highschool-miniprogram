@@ -1340,6 +1340,29 @@ function saveOnboardingState(state) {
   return result
 }
 
+function getDynamicHelpDismissed() {
+  const context = activeContext()
+  if (!context.ok) return {}
+  const legacyExtensions = context.data.legacyExtensions || {}
+  const value = legacyExtensions.dynamicHelpDismissed
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? clone(value)
+    : {}
+}
+
+function saveDynamicHelpDismissed(value) {
+  const dismissed = value && typeof value === 'object' && !Array.isArray(value)
+    ? clone(value)
+    : {}
+  return updateActiveProfileData((data) => ({
+    ...data,
+    legacyExtensions: {
+      ...(data.legacyExtensions || {}),
+      dynamicHelpDismissed: dismissed
+    }
+  }))
+}
+
 function getRecommendationSettings() {
   const context = activeContext()
   return context.ok
@@ -2569,6 +2592,12 @@ function protectedSaveOnboardingState(state, options = {}) {
   }, () => saveOnboardingState(state))
 }
 
+function protectedSaveDynamicHelpDismissed(value, options = {}) {
+  return protectedCall('save_dynamic_help', options.operationContext || options.operationId, {
+    profileId: (getActiveProfile() || {}).id || '', entityId: 'dynamicHelpDismissed'
+  }, () => saveDynamicHelpDismissed(value))
+}
+
 function protectedSaveRecommendationSettings(settings, options = {}) {
   return protectedCall('save_recommendation_settings', options.operationContext || options.operationId, {
     profileId: (getActiveProfile() || {}).id || '', entityId: 'recommendationSettings'
@@ -3023,6 +3052,8 @@ module.exports = {
   saveExamYear: protectedSaveExamYear,
   getOnboardingState,
   saveOnboardingState: protectedSaveOnboardingState,
+  getDynamicHelpDismissed,
+  saveDynamicHelpDismissed: protectedSaveDynamicHelpDismissed,
   getRecommendationSettings,
   saveRecommendationSettings: protectedSaveRecommendationSettings,
   getScenarioSettings,
