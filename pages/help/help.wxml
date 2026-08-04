@@ -1,4 +1,11 @@
 <view class="page">
+  <view class="card help-intro-card">
+    <view class="card-title">帮助与反馈</view>
+    <view class="muted small">如果您遇到功能问题、页面显示异常、数据问题或有功能建议，可以通过反馈问卷告诉我们。</view>
+    <view class="muted tiny privacy-note">提交截图前，请注意遮挡姓名、联系方式等个人信息。请勿提交密码、身份证号等敏感信息。</view>
+    <button class="button feedback-button" bindtap="copyFeedbackLink">复制反馈问卷链接</button>
+  </view>
+
   <view class="card tutorial-card">
     <view class="card-title">教程</view>
     <view class="muted small">教程只介绍操作，不会创建成绩、收藏或目标，也不会更改已有数据。</view>

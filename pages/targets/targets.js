@@ -232,8 +232,10 @@ function trajectoryPresentation(scoreRecords, reference) {
   const range = Math.max(1, maximum - minimum)
   const yFor = (score) => 12 + ((maximum - score) / range) * 68
   const count = source.length
+  // 横坐标计算：与utils/score-trend.js保持一致的分布规则
+  // 对于百分比布局：单条居中(50%)，多条从0%到100%均匀分布
   const visibleTrendPoints = source.map((item, index) => {
-    const x = count === 1 ? 50 : index * 100 / (count - 1)
+    const x = count === 1 ? 50 : (100 * index / (count - 1))
     const y = yFor(item.score)
     return {
       ...item,

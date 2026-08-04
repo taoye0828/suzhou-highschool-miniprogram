@@ -1,5 +1,7 @@
 const { replayOnboarding, tutorialSteps, resetDynamicHelp } = require('../../utils/onboarding')
 
+const FEEDBACK_URL = 'https://ycn8xfqnmoql.feishu.cn/share/base/form/shrcng2vmqyiVYLULDAEbJNWhtg55'
+
 const TUTORIALS = [
   { flow: 'home', label: '首页' },
   { flow: 'school_filters', label: '学校筛选' },
@@ -93,5 +95,24 @@ Page({
   replayDynamicHelp() {
     resetDynamicHelp()
     wx.showToast({ title: '状态提示已重置', icon: 'success' })
+  },
+
+  copyFeedbackLink() {
+    wx.setClipboardData({
+      data: FEEDBACK_URL,
+      success: () => {
+        wx.showToast({
+          title: '链接已复制，请在浏览器中打开',
+          icon: 'success',
+          duration: 3000
+        })
+      },
+      fail: () => {
+        wx.showToast({
+          title: '复制失败，请重试',
+          icon: 'none'
+        })
+      }
+    })
   }
 })

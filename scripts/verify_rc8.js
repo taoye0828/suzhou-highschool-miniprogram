@@ -32,7 +32,7 @@ for (const phrase of ['目标学校', '阶段目标', 'learningRecords', 'saveLe
 }
 
 const profileText = `${read('pages/profile/profile.js')}\n${read('pages/profile/profile.wxml')}`
-for (const phrase of ['收藏汇总', '备份与恢复', '数据管理', '教程与常见问题']) {
+for (const phrase of ['收藏汇总', '备份与恢复', '数据管理', '帮助与反馈']) {
   assert.ok(profileText.includes(phrase), `profile missing ${phrase}`)
 }
 
