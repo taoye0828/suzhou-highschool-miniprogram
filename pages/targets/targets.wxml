@@ -1,7 +1,7 @@
 <view class="page target-center-page">
   <view wx:if="{{loading}}" class="card muted">正在读取当前档案的目标规划…</view>
   <view wx:if="{{pageError}}" class="input-error">{{pageError}}</view>
-  <view class="segment-control onboarding-target-planning">
+  <view class="segment-control">
     <view
       wx:for="{{segments}}"
       wx:key="value"

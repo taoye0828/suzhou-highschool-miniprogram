@@ -206,7 +206,7 @@ const businessKeys = [
 const existingBusinessValues = new Map(businessKeys.map((key) => [key, memory.get(key)]))
 let overlay = onboarding.onboardingForPage('/pages/home/home', { autoStart: true })
 assert.strictEqual(overlay.visible, true)
-assert.strictEqual(onboarding.ONBOARDING_STEPS.length, 7)
+assert.strictEqual(onboarding.ONBOARDING_STEPS.length, 5)
 onboarding.handleOnboardingAction({ detail: { action: 'next' } })
 assert.strictEqual(storage.getOnboardingState().currentStep, 1)
 onboarding.handleOnboardingAction({ detail: { action: 'previous' } })
@@ -214,7 +214,7 @@ assert.strictEqual(storage.getOnboardingState().currentStep, 0)
 onboarding.handleOnboardingAction({ detail: { action: 'skip' } })
 assert.strictEqual(storage.getOnboardingState().skipped, true)
 onboarding.replayOnboarding()
-for (let index = 0; index < 6; index += 1) {
+for (let index = 0; index < onboarding.ONBOARDING_STEPS.length - 1; index += 1) {
   onboarding.handleOnboardingAction({ detail: { action: 'next' } })
 }
 onboarding.handleOnboardingAction({ detail: { action: 'complete' } })
@@ -257,5 +257,5 @@ console.log('- 导航与入口：5 Tab、收藏/对比/数据管理/教程入口
 console.log('- 页面精简：指定冗余运行时文案已移除')
 console.log('- 趋势：0/1/2/3/10/11、740/740/650、同日、排序、统计、坐标与 ID 一致通过')
 console.log('- 推荐：0/1/650/739/740、边界、互斥、排序、schoolId、目标更新通过')
-console.log('- 教程：7 步、首次、上一步、下一步、跳过、重播、完成且不写业务数据通过')
+console.log('- 教程：5 步、首次、上一步、下一步、跳过、重播、完成且不写业务数据通过')
 console.log('- 数据与安全：55、146、2025=103、2026=43、740、AppID、纯本地边界通过')

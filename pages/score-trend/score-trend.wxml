@@ -1,7 +1,7 @@
 <view class="page">
   <view wx:if="{{loading}}" class="card muted">正在读取当前档案的成绩数据…</view>
   <view wx:if="{{pageError}}" class="input-error">{{pageError}}</view>
-  <view class="segment-control onboarding-trend-entry">
+  <view class="segment-control">
     <view
       class="segment {{activeSegment === 'records' ? 'active' : ''}}"
       data-segment="records"

@@ -36,7 +36,7 @@
     <view class="muted empty-state-text">加入目标后，可在首页持续查看参考分与当前分差。</view>
     <button class="button secondary" bindtap="openRecommendations">查看历史分差参考</button>
   </view>
-  <view wx:else class="card target-card onboarding-target-planning">
+  <view wx:else class="card target-card">
     <view class="row between target-head">
       <view class="grow">
         <view class="muted small">主要目标 · {{targetLevelLabel}}</view>

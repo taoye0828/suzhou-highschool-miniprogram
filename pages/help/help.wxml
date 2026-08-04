@@ -9,7 +9,7 @@
   <view class="card tutorial-card">
     <view class="card-title">使用说明</view>
     <view class="muted small">可重播完整教程或按功能查看操作说明。教程不会创建成绩、收藏或目标，也不会更改已有数据。</view>
-    <button class="button full-button" bindtap="replayFullTutorial">重播完整 7 步教程</button>
+    <button class="button full-button" bindtap="replayFullTutorial">重播完整 5 步教程</button>
     <button class="button secondary full-button" bindtap="replayDynamicHelp">重播状态型帮助</button>
     <view class="tutorial-grid">
       <button

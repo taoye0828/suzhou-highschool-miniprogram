@@ -32,18 +32,6 @@ const ONBOARDING_STEPS = [
     selector: '.onboarding-school-card',
     title: '查看学校信息',
     description: '打开学校详情，可以查看历史分数线并加入目标。'
-  },
-  {
-    page: '/pages/targets/targets',
-    selector: '.onboarding-target-planning',
-    title: '建立目标规划',
-    description: '把具体学校设为冲刺、目标或保底。'
-  },
-  {
-    page: '/pages/score-trend/score-trend',
-    selector: '.onboarding-trend-entry',
-    title: '记录成绩变化',
-    description: '每次考试后保存成绩，可以查看最近 10 次变化。'
   }
 ]
 
@@ -67,8 +55,7 @@ const FEATURE_TUTORIALS = {
   }],
   target_planning: [
     ONBOARDING_STEPS[1],
-    ONBOARDING_STEPS[2],
-    ONBOARDING_STEPS[5]
+    ONBOARDING_STEPS[2]
   ],
   backup_restore: [{
     page: '/pages/backup-restore/backup-restore',
@@ -117,6 +104,10 @@ function replayOnboarding(flow = 'full') {
 function onboardingForPage(pagePath, { autoStart = false } = {}) {
   const state = autoStart ? ensureOnboardingStarted() : getOnboardingState()
   const steps = tutorialSteps(state.flow)
+  if (state.active && state.currentStep >= steps.length) {
+    completeOnboarding()
+    return { visible: false, step: null }
+  }
   const step = steps[state.currentStep]
   return {
     visible: Boolean(state.active && step && step.page === pagePath),
