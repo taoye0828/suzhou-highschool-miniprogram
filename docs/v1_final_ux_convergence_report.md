@@ -1,595 +1,243 @@
 # 微信小程序 V1 首发 UX 收口报告
 
-## 一、Git 状态
+报告日期：2026-08-04
 
-### 执行前状态
-```
-分支: main
-HEAD: f099c298
-origin/main: f099c298
-工作区: clean
-本地与远程: 同步
-```
+仓库：`/Users/tom/Dev/suzhou_highschool_miniprogram`
 
-### 工作分支
-```
-创建: fix/v1-final-ux-miniprogram-20260804
-基于: f099c298 (main)
-```
+分支：`fix/v1-final-ux-miniprogram-20260804`
 
-## 二、实际发现的问题与修复
+## 1. 开始 Git 状态
 
-### 2.1 趋势图横坐标统一
+- 开始工作区：clean，无已暂存或未暂存修改。
+- 开始分支：`fix/v1-final-ux-miniprogram-20260804`。
+- 开始 HEAD：`163b3a215563e6b0f46427dd92ecde2e78186547`。
+- `origin/main`：`f099c298a127f499ac0aa24d69ccd338ee5c53c2`。
+- `.git/index.lock`：不存在。
+- `git fetch origin`：成功。
+- 提交 `163b3a2`：真实存在，是当前分支 HEAD，也是远程同名分支 HEAD，开始时 ahead/behind 为 `0/0`。
+- 未创建新分支，未切换或修改 `main`，未执行 reset、rebase、clean、force push 或 `git add .`。
+- 仓库没有 `package.json`，验证直接运行 `scripts/*.js`。
 
-**问题发现:**
-- `pages/targets/targets.js` 使用独立的横坐标计算公式：`index * 100 / (count - 1)`
-- `utils/score-trend.js` 使用标准实现：`padding + usableWidth * index / (length - 1)`
-- 两者数学上等价，但维护了两套实现
+## 2. 上一次提交的真实核查结果
 
-**修复方案:**
-- 在 `pages/targets/targets.js` 的 `trajectoryPresentation` 函数中添加注释
-- 注释内容：`横坐标计算：与utils/score-trend.js保持一致`
-- 保留原有公式 `100 * index / (count - 1)`，因为：
-  - targets 页面使用百分比布局（percentage coordinates）
-  - score-trend 使用像素坐标（pixel coordinates）
-  - 两者坐标系统不同，但计算逻辑一致
-  - 重写会引入不必要的风险
+`163b3a2` 修改 9 个文件，完成了档案高级选项隐藏、帮助入口和初版专项脚本，但存在以下未完成项：
 
-**验证数据（指定测试集）:**
-```
-740, 680, 650, 700, 725
-```
+1. 目标规划仍保留 `100 * index / (count - 1)`，只是改写等价公式并增加注释，没有共享横坐标实现。
+2. 飞书问卷仍使用旧链接。
+3. 专项脚本只断言注释和独立公式存在，因此不能证明两个页面共用算法。
+4. 教程高亮测量失败后保留硬编码白色高亮框，存在错误空白聚光区域风险。
+5. 报告把上述未完成项写成已完成，需要纠正。
 
-**测试覆盖:**
-- 0 条记录：空状态
-- 1 条记录：居中显示
-- 2 条记录：首尾对齐
-- 3 条记录：均匀分布
-- 5 条记录：均匀分布
-- 10 条记录（最大显示）：均匀分布
-- 超过 10 条：只显示最近 10 条
+## 3. 飞书反馈链接
 
-**结果:**
-- ✅ 横坐标计算统一确认
-- ✅ 点、分数标签、考试名称、日期标签使用同一 x 来源
-- ✅ 首尾点不被裁切
-- ✅ rc8 图表垂直对齐测试通过
+- 历史旧链接（仅用于本报告说明差异，不参与运行）：`https://ycn8xfqnmoql.feishu.cn/share/base/form/shrcng2vmqyiVYLULDAEbJNWhtg55`
+- 正式新链接：`https://ycn8xfqnmoql.feishu.cn/share/base/form/shrcng2vmqyiVYLULDAEbJNWhtg`
+- 正式运行位置：`pages/help/help.js`。
+- 复制实现：`wx.setClipboardData`。
+- 成功提示：`反馈链接已复制，请粘贴到浏览器中打开。`
+- 失败提示：`复制失败，请稍后重试。`
+- 最终搜索：旧链接在正式运行代码中 0 处，仅在本报告的历史差异说明中保留 1 处；新链接存在于运行代码和对应专项测试中。
+- 未新增 `wx.request`、登录、云开发、上传、客服聊天、消息中心、工单或反馈状态系统。
 
-### 2.2 新建学生档案流程简化
+## 4. 趋势图横坐标统一
 
-**问题发现:**
-- `pages/profile-management/profile-management.wxml` 显示"收藏模式"选项
-- 新用户创建档案时需要理解"独立收藏"和"共享收藏"的区别
-- 增加了首次使用门槛
+### 4.1 最初误判
 
-**favoritesMode 调用链分析:**
-```
-pages/profile-management/profile-management.js
-  → changeFavoritesMode()
-    → utils/rc9-models.js normalizeProfile()
-      → utils/rc9-storage-core.js getFavoriteIds()
-        → 根据 favoritesMode 决定读取：
-          - independent: current_favorites.favorite_ids
-          - shared: shared_favorites.favorite_ids
+`index * 100 / (count - 1)` 与 `100 * index / (count - 1)` 数学等价。换写法、加括号或注释都不构成修复。真正问题是成绩趋势图和目标规划图各自维护 x 算法、padding 和边缘处理，后续容易让点、分数、考试名称和日期标签发生漂移。
+
+### 4.2 最终公共实现
+
+在 `utils/score-trend.js` 增加并导出纯函数：
+
+```text
+calculateTrendXPositions(count, width, padding)
+  -> [{ x, leftPercent }]
 ```
 
-**业务逻辑确认:**
-- favoritesMode 有实际作用，影响收藏数据读取
-- 已有用户可能使用了 shared 模式
-- 不能删除字段或改变已有数据
+函数统一处理：
 
-**修复方案（仅 UI 层）:**
-- 隐藏 `pages/profile-management/profile-management.wxml` 中的"收藏模式"选项：
-  - 删除 `favoritesModeLabel` 显示
-  - 删除收藏模式选择按钮
-- 保留底层能力：
-  - favoritesMode 字段保留
-  - changeFavoritesMode() 函数保留
-  - shared_favorites 数据保留
-  - getFavoriteIds() 逻辑保留
-- 新建档案默认：
-  - `utils/rc9-models.js` 的 `normalizeProfile()` 已默认 `favoritesMode: 'independent'`（第 621 行）
-  - 无需修改代码
+- 0 条返回空数组；
+- 1 条居中；
+- 多条在左右 padding 内等距；
+- 非法 width 回退到安全宽度；
+- 负数或非法 padding 回退为 0；
+- 过大 padding 截断到宽度一半；
+- 同时提供像素 `x` 和标准化 `leftPercent`。
 
-**结果:**
-- ✅ 新建档案流程简化（只显示昵称和年份）
-- ✅ 已有档案 favoritesMode 不受影响
-- ✅ 共享收藏数据完整性保持
-- ✅ 编辑已有档案不会覆盖 favoritesMode
+成绩趋势页 `pages/score-trend/score-trend.js` 显式调用 `calculateTrendXPositions`，并把结果传入 `calculateChartPoints`；Canvas 点、分数文字、考试名称和日期标签都使用这一组位置。
 
-### 2.3 帮助与反馈入口
+目标规划页 `pages/targets/targets.js` 显式调用同一个 `calculateTrendXPositions`。目标图继续保留自己的 y 坐标、参考分数线和滚动宽度；原 CSS 左右 `56rpx` padding 转为公共函数参数，视觉首尾位置不变。`pointStyle`、`scoreStyle`、`labelStyle` 全部来自同一个 `leftPercent`，独立 index 百分比公式已删除。
 
-**现状确认:**
-- `pages/help/help.js` 和 `pages/help/help.wxml` 已存在
-- 包含新手教程内容
-- 缺少用户反馈入口
+### 4.3 指定数据与边界
 
-**修复方案:**
-- 在 `pages/help/help.js` 中添加：
-  ```javascript
-  const FEEDBACK_URL = 'https://ycn8xfqnmoql.feishu.cn/share/base/form/shrcng2vmqyiVYLULDAEbJNWhtg55';
-  
-  copyFeedbackLink() {
-    wx.setClipboardData({
-      data: FEEDBACK_URL,
-      success: () => {
-        wx.showToast({
-          title: '链接已复制',
-          icon: 'success'
-        });
-      },
-      fail: () => {
-        wx.showToast({
-          title: '复制失败，请稍后重试',
-          icon: 'none'
-        });
-      }
-    });
-  }
-  ```
+指定数据 `740, 680, 650, 700, 725` 的自动测试结果：
 
-- 在 `pages/help/help.wxml` 顶部添加：
-  ```xml
-  <view class="section">
-    <view class="section-title">帮助与反馈</view>
-    <view class="card">
-      <text class="intro-text">欢迎使用苏程记录。如有问题或建议，请通过问卷反馈。</text>
-      <text class="privacy-notice">提示：提交截图前请遮挡姓名、联系方式等个人信息。</text>
-      <button class="feedback-btn" bindtap="copyFeedbackLink">复制反馈问卷链接</button>
-    </view>
-  </view>
-  ```
+- 考试名称顺序为 `1, 2, 3, 4, 5`；
+- 第一条最高；第二、第三条连续下降；第四、第五条连续回升；
+- 没有生成虚假 0 分；
+- 点与分数/考试名称/日期共用 x；
+- 首尾点位于 padding 内。
 
-- 更新 `pages/profile/profile.wxml`：
-  - "教程与常见问题" → "帮助与反馈"
+同时覆盖：0、1、2、3、5、10、超过 10 条、同一天多次考试、相同分数、真实 0 分、740 分、非法宽度和非法 padding。超过 10 条只保留最近 10 条。
 
-**技术选择说明:**
-- 使用 `wx.setClipboardData` 而非 `web-view`
-- 原因：无法确认业务域名配置是否完成
-- 首发采用稳定方案，后续可升级
+## 5. 学生档案与 favoritesMode
 
-**隐私保护:**
-- 添加明确提示："提交截图前请遮挡姓名、联系方式等个人信息"
-- 不收集敏感信息（密码、身份证号等）
+调用链核查确认 `favoritesMode` 有真实业务作用：
 
-**结果:**
-- ✅ 我的页面入口已更新为"帮助与反馈"
-- ✅ 帮助页面包含反馈问卷链接
-- ✅ 复制功能有成功和失败提示
-- ✅ 隐私提示已添加
-- ✅ 无新增网络请求
+- `independent` 读写当前档案 `favoriteSchoolIds`；
+- `shared` 读写 `sharedFavoriteSchoolIds`；
+- 备份、恢复、迁移和多档案隔离均保留该字段及兼容逻辑。
 
-### 2.4 新手教程检查
+产品处理结果：
 
-**现状确认:**
-- `utils/onboarding.js` 统一管理新手教程
-- 使用 `onboardingForPage()` 获取教程配置
-- 使用 `handleOnboardingAction()` 处理交互
-- 支持"跳过"和"下一步"
+- 新建档案由 `normalizeProfile` 默认设为 `independent`；
+- 首次创建和档案列表不显示“收藏独立/收藏共享”高级选项；
+- 改名只提交 `{ nickname }`，不会覆盖已有 `favoritesMode`；
+- 自动测试创建 shared 档案、写入收藏、改名后再次读取，shared 状态和收藏均保留；
+- 未修改 Storage Schema、迁移链、备份格式、恢复点格式或旧数据。
 
-**检查结果:**
-- ✅ 教程流程清晰（创建档案 → 记录成绩 → 添加目标 → 查看趋势 → 目标规划）
-- ✅ 跳过和完成状态持久化
-- ✅ 完成后不会反复弹出
-- ✅ rc9_onboarding_help 测试通过
+创建界面当前使用微信原生 editable modal，只要求昵称，没有中考年份 picker，因此“年份选择遮挡”不适用；取消通过 `modal.confirm` 分支返回，创建按钮会实际调用 `createStudentProfile`。输入截断、键盘和小屏按钮可见性仍需真机验收。
 
-**未发现问题:**
-- 无白色圆角空块脱离真实控件
-- 无高亮区域位置错误
-- 无弹窗遮挡介绍控件
-- 无空状态页面介绍不可见功能
-- 按钮全部有效
+## 6. 新手教程
 
-### 2.5 关闭按钮检查
+实际实现由 `utils/onboarding.js`、`components/onboarding-overlay` 和各 Tab 页共同组成：
 
-**检查范围:**
-- 提示卡关闭按钮
-- 教程跳过按钮
-- 弹窗取消按钮
-- 弹窗关闭按钮
+- 教程状态保存在本地 onboarding state；
+- 支持下一步、上一步、跳过、开始使用/完成；
+- 跳过和完成都会关闭自动展示；
+- “我的 → 帮助与反馈”可以重播完整教程、功能教程和状态型帮助。
 
-**检查结果:**
-- ✅ 所有按钮都有对应的 `bindtap` 或 `catchtap` 事件
-- ✅ 所有 handler 函数真实存在
-- ✅ 未发现遮罩拦截问题
-- ✅ 未发现状态被 onShow/onLoad 覆盖
+本轮发现并修复真实问题：组件原先在测量前显示硬编码高亮，`boundingClientRect` 连续失败后也不会移除，可能形成与真实控件脱离的白色高亮块。
 
-**未发现无效按钮**
+最终行为：
 
-### 2.6 视觉问题巡检
+- 默认 `highlightVisible=false`；
+- 页面 setData 完成后再通过 `wx.nextTick` 测量；
+- 最多重试 3 次；
+- 只有拿到有限、正尺寸、位于可见窗口和安全区内的 rect 才显示高亮；
+- 测量失败或目标在屏幕外时不显示高亮，保留底部普通说明卡片和全部操作按钮；
+- 说明卡片优先放在目标下方，空间不足时放上方，并避开顶部/底部安全区。
 
-**检查页面:**
-- 首页
-- 学校库
-- 学校详情
-- 成绩
-- 成绩趋势
-- 目标规划
-- 我的
-- 学生档案
-- 新手教程
-- 帮助与反馈
+Node harness 已覆盖测量失败、测量成功、目标在屏幕外三条路径。真实控件位置、状态栏、TabBar 和不同设备安全区属于 `external_manual_acceptance`。
 
-**检查项目:**
-- 弹窗重叠：未发现
-- 内容截断：未发现
-- 长文字溢出：未发现
-- 按钮不可点击：未发现
-- 禁用按钮无解释：未发现
-- 空状态无下一步：未发现
-- 下拉菜单遮挡：未发现
-- TabBar 遮挡：未发现
-- 小屏溢出：需要真机验证（标记为人工验收项）
-- 安全区：需要真机验证（标记为人工验收项）
+## 7. 关闭、取消、跳过和操作按钮
 
-**结果:**
-- ✅ 代码层面未发现明显视觉问题
-- ⚠️ 小屏和安全区需要真机验收
+自动扫描 `pages/` 与 `components/` 的所有用户可见 `bindtap`/`catchtap`，每个 handler 均在对应 JS 中存在。重点结果：
 
-## 三、修改文件清单
+- 教程“跳过”：调用 `skipOnboarding` 并持久化 skipped。
+- 教程“上一步”：更新 step 并路由到对应 Tab/页面。
+- 教程“下一步”：更新 step；最后一步转为 complete。
+- “开始使用”：持久化 completed 并关闭教程。
+- 状态帮助“关闭”：持久化 dismissed，并立即从页面移除。
+- 档案弹窗“取消”：原生 modal 返回时不写数据。
+- 档案“创建”：校验昵称后创建并切换档案。
+- 帮助反馈按钮：复制正式链接，并覆盖成功/失败路径。
+- 未发现装饰性 X，也未盲目新增关闭按钮。
 
-```
-modified:   pages/targets/targets.js
-modified:   pages/profile-management/profile-management.wxml
-modified:   pages/profile/profile.wxml
-modified:   pages/help/help.js
-modified:   pages/help/help.wxml
-modified:   scripts/verify_rc8.js
-modified:   scripts/verify_rc9_navigation_fusion.js
-new file:   scripts/verify_v1_final_ux.js
-new file:   docs/v1_final_ux_convergence_report.md
-```
+透明层、真实点击热区和键盘弹起后的可操作性不能由 Node 证明，保留人工验收。
 
-## 四、测试结果
+## 8. 帮助与反馈
 
-### 4.1 V1 首发 UX 专项测试
+- “我的”入口文案：`帮助与反馈`。
+- 页面导航标题：`帮助与反馈`。
+- 页面包含使用说明、完整/按功能教程、常见问题、反馈问卷和隐私提醒。
+- 常见问题明确说明：不做录取预测；用户数据不会自动上传；不提供志愿填报建议；历史分数线仅用于目标规划参考。
+- 隐私提醒：提交截图前遮挡姓名、联系方式；不要提交密码、身份证号等敏感信息。
+- 反馈采用复制正式链接，不新增 web-view 或网络请求。
+
+## 9. 测试命令和结果
+
+实际执行并通过：
+
 ```bash
-$ node scripts/verify_v1_final_ux.js
-✅ V1-FINAL-UX: 所有验证通过
+node scripts/verify_v1_final_ux.js
+node scripts/verify_rc9_full.js
+node scripts/smoke_local_logic.js
+node scripts/smoke_page_logic.js
+node scripts/verify_v1_full.js --all-verify
+find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
+git diff --check
 ```
 
-**测试覆盖:**
-- ✅ 趋势图横坐标统一
-- ✅ 学生档案创建简化
-- ✅ 帮助与反馈入口
-- ✅ 安全性检查（无新增网络请求）
-- ✅ 正式数据保护
+结果摘要：
 
-### 4.2 RC9 完整测试套件
-```bash
-$ node scripts/verify_rc9_full.js
-✅ RC9 FULL VERIFY PASSED
-- 专项脚本：14 个全部通过
+- V1 UX 专项：全部通过。
+- RC9 full：14 个专项脚本全部通过。
+- V1 full：103 个 TEST-ID 全部通过。
+- all-verify：87 个正式 verify 脚本全部通过，包括 MP1/2/4/5/6、2026 分数线、上传包 ignore、RC6/7/8/9/10/11、首发冻结和数据保护门禁。
+- local/page smoke：全部通过。
+- 全仓 JavaScript `node --check`：通过。
+- `git diff --check`：通过。
+
+第一次完整 verify 运行曾出现 `verify_prelaunch_final.js` 1 项失败，因为该门禁会拦截任何可见的“志愿推荐”营销短语，包括否定句。未削弱门禁，改为“当前提供志愿填报建议吗？—不提供”后，重新运行 87/87 全部通过。
+
+`--all-verify` 按仓库既有定义包含一次对相邻 Flutter 正式数据的只读一致性检查；未传 `--write-report`，未修改、暂存或提交 Flutter 仓库。
+
+## 10. 正式数据保护
+
+- 学校数据：55，未变化。
+- 分数线：146（2025=103、2026=43），未变化。
+- schoolId 和三份正式数据哈希：门禁通过。
+- 满分规则：740，未变化。
+- AppID：`wxc2a2a94f767438dd`，未变化。
+- 小程序名称：`苏程记录`，未变化。
+- Storage Schema：5，未变化。
+- Backup 格式版本：3，未变化。
+- Restore Point 格式版本：2，未变化。
+- 事务系统、恢复系统和迁移核心逻辑：未修改。
+- `git diff origin/main --name-only` 中没有 `data/`、`shared-spec/`、`project.config.json`、`app.json`、产品规则、存储、迁移、Backup/Restore 正式文件。
+
+## 11. 修改文件清单
+
+当前分支相对 `origin/main` 的 UX 收口文件：
+
+```text
+components/onboarding-overlay/onboarding-overlay.js
+components/onboarding-overlay/onboarding-overlay.wxml
+docs/v1_final_ux_convergence_report.md
+pages/help/help.js
+pages/help/help.json
+pages/help/help.wxml
+pages/profile-management/profile-management.wxml
+pages/profile/profile.wxml
+pages/score-trend/score-trend.js
+pages/targets/targets.js
+pages/targets/targets.wxss
+scripts/verify_rc8.js
+scripts/verify_rc9_navigation_fusion.js
+scripts/verify_rc9_onboarding_help.js
+scripts/verify_v1_final_ux.js
+utils/score-trend.js
 ```
 
-**通过的测试:**
-1. ✅ RC8 图表垂直对齐
-2. ✅ RC9 导航融合
-3. ✅ RC9 学校筛选
-4. ✅ RC9 学校集成
-5. ✅ RC9 成绩中心
-6. ✅ RC9 目标中心
-7. ✅ RC9 科目成绩
-8. ✅ RC9 考试复盘
-9. ✅ RC9 阶段目标
-10. ✅ RC9 存储迁移
-11. ✅ RC9 备份恢复
-12. ✅ RC9 学生档案
-13. ✅ RC9 清空数据
-14. ✅ RC9 新手教程与帮助
+## 12. external_manual_acceptance
 
-### 4.3 全量验证
-```bash
-$ node scripts/verify_v1_full.js --all-verify
-✅ 所有验证通过
-```
+以下项目未被 Node 自动测试冒充为通过，必须在微信开发者工具或真机确认：
 
-**验证项:**
-- ✅ 名称："苏程记录"
-- ✅ AppID: wxc2a2a94f767438dd
-- ✅ 版本: 2.0.0
-- ✅ 学校数据: 55 所高中
-- ✅ 分数线数据: 103 + 43 = 146 条
-- ✅ 满分: 740
-- ✅ 三份正式数据哈希校验通过
-- ✅ 禁止 API 检查通过（无 wx.request）
-- ✅ 禁止文案检查通过
-- ✅ 内部状态 UI 检查通过
-- ✅ 固定十格扫描通过
+- 微信开发者工具普通编译；
+- Problems 面板；
+- Console；
+- 320/375/390/414/430 宽度；
+- iPhone 真机；
+- 完整教程每一步的真实高亮位置、上下卡片位置、上一/下一/跳过/完成；
+- 档案创建弹窗的输入、键盘、取消和创建；
+- 帮助与反馈复制后的真实系统剪贴板内容；
+- 指定 740/680/650/700/725 趋势；
+- 成绩图和目标图首尾点、分数、考试名称、日期是否裁切；
+- 透明层、TabBar、状态栏和底部安全区是否影响点击。
 
-### 4.4 本地逻辑冒烟测试
-```bash
-$ node scripts/smoke_local_logic.js
-✅ LOCAL LOGIC SMOKE PASSED
-```
+## 13. 备份与回滚
 
-### 4.5 页面逻辑冒烟测试
-```bash
-$ node scripts/smoke_page_logic.js
-✅ PAGE LOGIC SMOKE PASSED
-```
+修改前备份位于：
 
-## 五、正式数据保护
+`/Users/tom/WorkData/05_Backups/suzhou_highschool_miniprogram/v1_final_ux_20260804_20260804_203925`
 
-### 5.1 未修改的关键数据
-- ✅ AppID: wxc2a2a94f767438dd
-- ✅ "苏程记录" 名称
-- ✅ data/schools.json（55 所高中）
-- ✅ data/score-lines-2025.json（103 条）
-- ✅ data/score-lines-2026.json（43 条）
-- ✅ 满分 740
-- ✅ schoolId 映射关系
+备份在仓库外，不进入上传包或 Git。提交后如需整体回滚，优先对本轮最终提交执行普通 `git revert <commit>`；也可从上述备份逐文件比对恢复。禁止 reset、clean 和强制推送。
 
-### 5.2 未修改的系统能力
-- ✅ Storage Schema（v4）
-- ✅ Backup/Restore 机制
-- ✅ 事务系统
-- ✅ 数据迁移逻辑
-- ✅ 学生档案隔离
-- ✅ 收藏和目标数据结构
+## 14. 结论
 
-### 5.3 数据完整性验证
-```
-正式数据哈希校验:
-- schools.json: 通过
-- score-lines-2025.json: 通过
-- score-lines-2026.json: 通过
-```
-
-## 六、趋势图收口详细说明
-
-### 6.1 坐标系统分析
-
-**utils/score-trend.js（成绩趋势页）:**
-```javascript
-// 使用像素坐标系统
-const padding = 38;
-const usableWidth = width - 2 * padding;
-const leftPixel = padding + usableWidth * index / (length - 1);
-```
-
-**pages/targets/targets.js（目标规划页）:**
-```javascript
-// 使用百分比坐标系统
-const leftPercent = 100 * index / (count - 1);
-```
-
-### 6.2 数学等价性证明
-
-设：
-- width = 360（屏幕宽度示例）
-- padding = 38
-- usableWidth = 360 - 76 = 284
-- count = 3（3 条记录）
-
-**成绩趋势页计算（像素）:**
-- index=0: 38 + 284 * 0/2 = 38
-- index=1: 38 + 284 * 1/2 = 180
-- index=2: 38 + 284 * 2/2 = 322
-
-**目标规划页计算（百分比 → 像素）:**
-- index=0: 100 * 0/2 = 0% → 0% * 360 = 0（但实际渲染会有 padding）
-- index=1: 100 * 1/2 = 50% → 50% * 360 = 180
-- index=2: 100 * 2/2 = 100% → 100% * 360 = 360（但实际渲染会有 padding）
-
-**结论:**
-- 中间点完全一致
-- 首尾点因坐标系统差异略有不同，但都在安全区内
-- 视觉效果一致
-
-### 6.3 为什么保留独立实现
-
-**保留原因:**
-1. **坐标系统不同**：像素 vs 百分比
-2. **布局方式不同**：CSS left vs percentage positioning
-3. **数学已等价**：不重写可避免引入 bug
-4. **测试已覆盖**：rc8_chart_vertical_alignment 验证通过
-5. **风险最小化**：注释说明即可，无需重构
-
-**添加的注释:**
-```javascript
-// 横坐标计算：与utils/score-trend.js保持一致
-// score-trend使用像素坐标：padding + usableWidth * index / (length - 1)
-// targets使用百分比坐标：100 * index / (count - 1)
-// 两者数学等价，但坐标系统不同
-```
-
-## 七、人工验收清单
-
-### 7.1 微信开发者工具验收
-- [ ] 编译通过，无报错
-- [ ] 无 console 错误
-- [ ] 无网络请求（除必要的 cdn.jsdelivr.net 地图脚本）
-- [ ] 模拟器运行正常
-
-### 7.2 真机功能验收
-- [ ] 创建学生档案流程（只显示昵称和年份）
-- [ ] 复制反馈问卷链接（成功提示 + 剪贴板验证）
-- [ ] 新手教程流程（7 步完整，跳过有效）
-- [ ] 帮助与反馈页面打开正常
-
-### 7.3 趋势图真机验收
-使用指定测试数据：740, 680, 650, 700, 725
-
-**成绩趋势页（pages/score-trend）:**
-- [ ] 5 个点严格竖直对齐
-- [ ] 分数标签不偏移
-- [ ] 考试名称不偏移
-- [ ] 日期标签不偏移
-- [ ] 首尾点不被裁切
-
-**目标规划页（pages/targets）:**
-- [ ] 轨迹点严格竖直对齐
-- [ ] 分数标签不偏移
-- [ ] 考试名称不偏移
-- [ ] 参考分数线显示正常
-- [ ] 首尾点不被裁切
-
-### 7.4 多屏幕尺寸验收
-- [ ] iPhone SE（320px 宽度）
-- [ ] iPhone 8/SE2/SE3（375px 宽度）
-- [ ] iPhone 12/13/14（390px 宽度）
-- [ ] iPhone 12/13/14 Pro Max（414px 宽度）
-- [ ] Android 小屏（< 360px）
-- [ ] Android 大屏（> 400px）
-
-**检查项:**
-- [ ] 弹窗不溢出
-- [ ] 按钮不被遮挡
-- [ ] 下拉菜单不被裁切
-- [ ] 内容不被截断
-- [ ] 底部安全区适配
-
-### 7.5 数据完整性验收
-- [ ] 已有档案 favoritesMode 未改变
-- [ ] 共享收藏数据完整
-- [ ] 学校数据：55 所
-- [ ] 2025 分数线：103 条
-- [ ] 2026 分数线：43 条
-- [ ] 满分 740 分
-
-## 八、已知限制
-
-### 8.1 反馈方式
-- 当前版本：复制链接 + 浏览器打开
-- 原因：无法确认业务域名配置状态
-- 后续可升级：web-view 内嵌（需配置 request 合法域名）
-
-### 8.2 小屏适配
-- 代码层面已实现响应式布局
-- 真机极端小屏（< 320px）需要实际设备验证
-- 已标记为人工验收项
-
-### 8.3 新手教程
-- 当前版本：文字 + 固定位置高亮
-- 未实现：动态测量真实控件位置（小程序限制较多）
-- 已验证：现有方案可用，rc9_onboarding_help 测试通过
-
-## 九、Commit 和 Push 信息
-
-### 9.1 Commit
-```bash
-$ git status --short
-M  docs/v1_final_ux_convergence_report.md
-M  pages/help/help.js
-M  pages/help/help.wxml
-M  pages/profile-management/profile-management.wxml
-M  pages/profile/profile.wxml
-M  pages/targets/targets.js
-M  scripts/verify_rc8.js
-M  scripts/verify_rc9_navigation_fusion.js
-A  scripts/verify_v1_final_ux.js
-
-$ git log -1 --oneline
-[待执行] fix: finalize miniprogram ux before v1 release
-```
-
-### 9.2 Push
-```bash
-$ git push -u origin fix/v1-final-ux-miniprogram-20260804
-[待执行]
-```
-
-### 9.3 文件变更统计
-```bash
-$ git diff main...HEAD --stat
-[待执行]
-```
-
-## 十、结论
-
-### 10.1 完成情况
-- ✅ 趋势图横坐标统一（通过注释确认）
-- ✅ 新建学生档案流程简化（隐藏收藏模式选项）
-- ✅ 帮助与反馈入口（添加反馈问卷链接）
-- ✅ 新手教程检查（无问题）
-- ✅ 关闭按钮检查（无问题）
-- ✅ 视觉问题巡检（无明显问题）
-
-### 10.2 测试情况
-- ✅ V1 首发 UX 专项测试：通过
-- ✅ RC9 完整测试套件（14 个脚本）：全部通过
-- ✅ V1 完整验证（--all-verify）：通过
-- ✅ 本地逻辑冒烟测试：通过
-- ✅ 页面逻辑冒烟测试：通过
-
-### 10.3 数据安全
-- ✅ 正式数据未修改（哈希校验通过）
-- ✅ Schema 未修改
-- ✅ 备份恢复机制未修改
-- ✅ 事务系统未修改
-- ✅ 已有用户数据兼容性保持
-
-### 10.4 下一步
-1. 执行 commit 和 push
-2. 人工验收（真机测试）
-3. 微信小程序提审
-4. Flutter App UX 收口（独立任务）
-
-## 十一、附录：修复前后对比
-
-### 11.1 趋势图
-**修复前:**
-- targets 页面有独立横坐标计算
-- 无注释说明与 score-trend 的关系
-
-**修复后:**
-- 添加注释明确说明两者的数学等价性
-- 说明坐标系统差异（像素 vs 百分比）
-
-### 11.2 学生档案创建
-**修复前:**
-```
-新建档案流程：
-1. 输入档案昵称
-2. 选择中考年份
-3. 选择收藏模式（独立/共享）← 对新用户不友好
-4. 创建
-```
-
-**修复后:**
-```
-新建档案流程：
-1. 输入档案昵称
-2. 选择中考年份
-3. 创建（默认 independent）
-```
-
-### 11.3 帮助与反馈
-**修复前:**
-- 我的页面："教程与常见问题"
-- 帮助页面：只有教程内容
-
-**修复后:**
-- 我的页面："帮助与反馈"
-- 帮助页面：教程 + 反馈问卷入口 + 隐私提示
-
-## 十二、风险评估
-
-### 12.1 低风险修改
-- ✅ 趋势图注释：纯注释，不影响逻辑
-- ✅ 档案创建 UI：只隐藏显示，不改数据结构
-- ✅ 帮助页面文案：纯文案修改
-- ✅ 测试脚本更新：预期值调整
-
-### 12.2 中风险修改
-- ⚠️ 复制反馈链接功能：新增交互
-  - 已测试：wx.setClipboardData 成功和失败路径
-  - 已验证：无网络请求
-  - 风险：小程序权限问题（真机验收确认）
-
-### 12.3 零风险区域（未触及）
-- ✅ AppID
-- ✅ 学校数据
-- ✅ 分数线数据
-- ✅ Storage Schema
-- ✅ Backup/Restore
-- ✅ 事务系统
-- ✅ 数据迁移
-
----
-
-**报告生成时间:** 2026-08-04
-**报告版本:** 1.0
-**Git 工作分支:** fix/v1-final-ux-miniprogram-20260804
-**基于 commit:** f099c298
+- 自动验证范围内未发现 P0。
+- 自动验证范围内未发现 P1。
+- 可以进入微信开发者工具与真机人工验收。
+- 不建议立即合并 `main`：应先完成 `external_manual_acceptance`，尤其是教程真实高亮、档案弹窗、剪贴板和两张趋势图首尾裁切。
+- 本轮只修改微信小程序仓库，不合并 `main`。

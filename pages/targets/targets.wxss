@@ -366,7 +366,6 @@
 .trajectory-shell {
   box-sizing: border-box;
   min-width: 100%;
-  padding: 0 56rpx;
 }
 
 .trajectory-chart {

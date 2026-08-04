@@ -5,15 +5,25 @@ Component({
   },
 
   data: {
-    highlightStyle: 'left: 32rpx; top: 220rpx; width: 686rpx; height: 140rpx;',
-    bubbleStyle: 'left: 32rpx; top: 390rpx; width: 686rpx;'
+    highlightVisible: false,
+    highlightStyle: '',
+    bubbleStyle: 'left:16px;bottom:calc(24px + env(safe-area-inset-bottom));width:calc(100% - 32px);'
   },
 
   observers: {
     'visible,step': function syncTarget(visible, step) {
       if (!visible || !step) return
+      if (this._measureTimer) clearTimeout(this._measureTimer)
       this._measureAttempts = 0
-      this.measureTarget()
+      this.setData({
+        highlightVisible: false,
+        highlightStyle: '',
+        bubbleStyle: 'left:16px;bottom:calc(24px + env(safe-area-inset-bottom));width:calc(100% - 32px);'
+      }, () => {
+        const schedule = () => this.measureTarget()
+        if (typeof wx.nextTick === 'function') wx.nextTick(schedule)
+        else this._measureTimer = setTimeout(schedule, 0)
+      })
     }
   },
 
@@ -27,27 +37,60 @@ Component({
     noop() {},
     measureTarget() {
       if (!this.properties.visible || !this.properties.step) return
-      const query = wx.createSelectorQuery()
-      query.select(this.properties.step.selector).boundingClientRect()
+      if (typeof wx.createSelectorQuery !== 'function') return
+      let query
+      try {
+        query = wx.createSelectorQuery()
+        query.select(this.properties.step.selector).boundingClientRect()
+      } catch (error) {
+        return
+      }
       query.exec((results) => {
         const rect = results && results[0]
-        if (!rect && this._measureAttempts < 3) {
+        const hasRect = rect &&
+          Number.isFinite(Number(rect.left)) &&
+          Number.isFinite(Number(rect.top)) &&
+          Number.isFinite(Number(rect.width)) && Number(rect.width) > 0 &&
+          Number.isFinite(Number(rect.height)) && Number(rect.height) > 0
+        if (!hasRect && this._measureAttempts < 3) {
           this._measureAttempts += 1
           this._measureTimer = setTimeout(() => this.measureTarget(), 120)
           return
         }
-        if (!rect) return
+        if (!hasRect) return
         const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
-        const windowHeight = info.windowHeight || info.screenHeight || 700
+        const windowWidth = Number(info.windowWidth || info.screenWidth || 375)
+        const windowHeight = Number(info.windowHeight || info.screenHeight || 700)
+        const safeTop = Number(info.safeArea && info.safeArea.top || 0)
+        const safeBottom = Number(
+          info.safeArea && (windowHeight - info.safeArea.bottom) || 0
+        )
         const padding = 8
-        const left = Math.max(8, rect.left - padding)
-        const top = Math.max(8, rect.top - padding)
-        const width = Math.max(40, rect.width + padding * 2)
-        const height = Math.max(40, rect.height + padding * 2)
-        const bubbleTop = top + height + 12 + 180 < windowHeight
-          ? top + height + 12
-          : Math.max(12, top - 172)
+        const rectBottom = Number(rect.bottom || (Number(rect.top) + Number(rect.height)))
+        const rectRight = Number(rect.right || (Number(rect.left) + Number(rect.width)))
+        const viewportTop = safeTop + padding
+        const viewportBottom = windowHeight - safeBottom - padding
+        const targetIsVisible = rectBottom > viewportTop && Number(rect.top) < viewportBottom &&
+          rectRight > padding && Number(rect.left) < windowWidth - padding
+        if (!targetIsVisible) return
+        const left = Math.max(padding, Number(rect.left) - padding)
+        const top = Math.max(viewportTop, Number(rect.top) - padding)
+        const width = Math.max(40, Math.min(
+          Number(rect.width) + padding * 2,
+          windowWidth - left - padding
+        ))
+        const height = Math.max(40, Math.min(
+          Number(rect.height) + padding * 2,
+          viewportBottom - top
+        ))
+        const bubbleHeight = 180
+        const belowTop = top + height + 12
+        const aboveTop = top - bubbleHeight - 12
+        const bubbleTop = belowTop + bubbleHeight <= viewportBottom
+          ? belowTop
+          : Math.max(viewportTop + 4, aboveTop)
         this.setData({
+          highlightVisible: true,
           highlightStyle: `left:${left}px;top:${top}px;width:${width}px;height:${height}px;`,
           bubbleStyle: `left:16px;top:${bubbleTop}px;width:calc(100% - 32px);`
         })

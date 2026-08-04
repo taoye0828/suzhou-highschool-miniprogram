@@ -47,6 +47,7 @@ const {
   formatDifference
 } = require('../../utils/planning')
 const { analyzeScore } = require('../../utils/score-analysis')
+const { calculateTrendXPositions } = require('../../utils/score-trend')
 const { scenarioResults, goalProgress } = require('../../utils/rc10-features')
 const { notifyStorageReadResult } = require('../../utils/storage-feedback')
 const { operationOptions } = require('../../utils/operation-context')
@@ -74,6 +75,9 @@ const REFERENCE_YEAR_OPTIONS = [
   ...FORMAL_SCORE_YEARS.map((year) => ({ value: String(year), label: `只看 ${year} 年` }))
 ]
 const GOAL_METRIC_OPTIONS = Object.keys(METRIC_LABELS).map((value) => ({ value, label: METRIC_LABELS[value] }))
+const TRAJECTORY_MIN_WIDTH_RPX = 560
+const TRAJECTORY_POINT_SPACING_RPX = 116
+const TRAJECTORY_PADDING_RPX = 56
 
 function todayLabel() {
   const date = new Date()
@@ -232,19 +236,20 @@ function trajectoryPresentation(scoreRecords, reference) {
   const range = Math.max(1, maximum - minimum)
   const yFor = (score) => 12 + ((maximum - score) / range) * 68
   const count = source.length
-  // 横坐标计算：与utils/score-trend.js保持一致的分布规则
-  // 对于百分比布局：单条居中(50%)，多条从0%到100%均匀分布
+  const plotWidthRpx = Math.max(TRAJECTORY_MIN_WIDTH_RPX, count * TRAJECTORY_POINT_SPACING_RPX)
+  const xPositions = calculateTrendXPositions(count, plotWidthRpx, TRAJECTORY_PADDING_RPX)
   const visibleTrendPoints = source.map((item, index) => {
-    const x = count === 1 ? 50 : (100 * index / (count - 1))
+    const { x, leftPercent } = xPositions[index]
     const y = yFor(item.score)
     return {
       ...item,
       displayIndex: index + 1,
       x,
+      leftPercent,
       y,
-      pointStyle: `left:${x.toFixed(4)}%;top:${y.toFixed(4)}%;`,
-      scoreStyle: `left:${x.toFixed(4)}%;top:${Math.max(0, y - 13).toFixed(4)}%;`,
-      labelStyle: `left:${x.toFixed(4)}%;`,
+      pointStyle: `left:${leftPercent.toFixed(4)}%;top:${y.toFixed(4)}%;`,
+      scoreStyle: `left:${leftPercent.toFixed(4)}%;top:${Math.max(0, y - 13).toFixed(4)}%;`,
+      labelStyle: `left:${leftPercent.toFixed(4)}%;`,
       shortDate: item.examDate ? item.examDate.slice(5) : '',
       differenceText: formatDifference(item.difference)
     }
@@ -257,7 +262,7 @@ function trajectoryPresentation(scoreRecords, reference) {
     referenceLineStyle: Number.isFinite(referenceScore)
       ? `top:${yFor(referenceScore).toFixed(4)}%;`
       : '',
-    plotWidthRpx: Math.max(560, count * 116),
+    plotWidthRpx,
     firstChangeText: formatChange(latest.score - first.score),
     recentChangeText: previous ? formatChange(latest.score - previous.score) : '数据不足'
   }

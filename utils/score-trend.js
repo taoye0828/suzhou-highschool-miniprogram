@@ -70,16 +70,53 @@ function calculateScoreStatistics(records) {
   }
 }
 
-function calculateChartPoints(records, width, height, padding = 30) {
-  const safeWidth = Math.max(1, Number(width) || 1)
-  const safeHeight = Math.max(1, Number(height) || 1)
+function calculateTrendXPositions(count, width, padding = 0) {
+  const safeCount = Math.max(0, Math.floor(Number(count) || 0))
+  if (!safeCount) return []
+
+  const numericWidth = Number(width)
+  const safeWidth = Number.isFinite(numericWidth) && numericWidth > 0 ? numericWidth : 1
+  const numericPadding = Number(padding)
+  const requestedPadding = Number.isFinite(numericPadding) && numericPadding >= 0
+    ? numericPadding
+    : 0
+  const safePadding = Math.min(requestedPadding, safeWidth / 2)
+  const usableWidth = Math.max(0, safeWidth - safePadding * 2)
+
+  return Array.from({ length: safeCount }, (_, index) => {
+    const x = safeCount === 1
+      ? safeWidth / 2
+      : safePadding + usableWidth * index / (safeCount - 1)
+    return {
+      x,
+      leftPercent: x / safeWidth * 100
+    }
+  })
+}
+
+function calculateChartPoints(records, width, height, padding = 30, providedXPositions = null) {
+  const numericWidth = Number(width)
+  const numericHeight = Number(height)
+  const safeWidth = Number.isFinite(numericWidth) && numericWidth > 0 ? numericWidth : 1
+  const safeHeight = Number.isFinite(numericHeight) && numericHeight > 0 ? numericHeight : 1
+  const numericPadding = Number(padding)
+  const safePadding = Math.min(
+    Number.isFinite(numericPadding) && numericPadding >= 0 ? numericPadding : 0,
+    Math.min(safeWidth, safeHeight) / 2
+  )
   const items = Array.isArray(records) ? records : []
   if (!items.length) return []
 
-  const usableWidth = Math.max(1, safeWidth - padding * 2)
-  const usableHeight = Math.max(1, safeHeight - padding * 2)
+  const xPositions = Array.isArray(providedXPositions) &&
+    providedXPositions.length === items.length &&
+    providedXPositions.every((item) => item &&
+      Number.isFinite(item.x) && Number.isFinite(item.leftPercent))
+    ? providedXPositions
+    : calculateTrendXPositions(items.length, safeWidth, safePadding)
+  const usableWidth = Math.max(0, safeWidth - safePadding * 2)
+  const usableHeight = Math.max(0, safeHeight - safePadding * 2)
   const spacing = items.length > 1 ? usableWidth / (items.length - 1) : usableWidth
-  const labelWidth = Math.max(20, Math.min(76, padding * 2, spacing * 0.92))
+  const labelWidth = Math.max(20, Math.min(76, safePadding * 2, spacing * 0.92))
   const scaleMax = items[0] && items[0].trendMetric === 'rate' ? 100 : EXAM_TOTAL_SCORE
 
   return items.map((record, index) => {
@@ -88,9 +125,7 @@ function calculateChartPoints(records, width, height, padding = 30) {
     const examName = typeof record.examName === 'string' && record.examName.trim()
       ? record.examName.trim()
       : `第 ${displayIndex} 次考试`
-    const x = items.length === 1
-      ? safeWidth / 2
-      : padding + usableWidth * index / (items.length - 1)
+    const { x, leftPercent } = xPositions[index]
     return {
       id: record.id,
       examName,
@@ -101,8 +136,8 @@ function calculateChartPoints(records, width, height, padding = 30) {
       sourceIndex: record.sourceIndex,
       displayIndex,
       x,
-      y: padding + usableHeight * (scaleMax - record.score) / scaleMax,
-      leftPercent: x / safeWidth * 100,
+      y: safePadding + usableHeight * (scaleMax - record.score) / scaleMax,
+      leftPercent,
       labelWidth
     }
   })
@@ -131,6 +166,7 @@ module.exports = {
   sortScoreRecords,
   getVisibleTrendRecords,
   calculateScoreStatistics,
+  calculateTrendXPositions,
   calculateChartPoints,
   prepareScoreTrendData,
   summarizeScoreRecords,

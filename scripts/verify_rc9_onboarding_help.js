@@ -55,13 +55,15 @@ assert.deepStrictEqual(harness.memory.get(storage.KEYS.profileData), beforeBusin
 const helpText = `${read('pages/help/help.js')}\n${read('pages/help/help.wxml')}`
 for (const phrase of [
   '分数线从哪里来',
-  '推荐是不是录取预测',
+  '苏程记录会进行录取预测吗',
   '数据保存在哪里',
   '如何备份',
   '如何切换学生',
   '为什么某些学校字段不显示',
   '如何清除数据',
   '如何重新播放教程',
+  '当前提供志愿填报建议吗',
+  '历史分数线仅用于目标规划参考',
   '重播完整 7 步教程'
 ]) {
   assert.ok(helpText.includes(phrase), `帮助中心缺少：${phrase}`)

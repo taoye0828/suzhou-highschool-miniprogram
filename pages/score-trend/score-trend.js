@@ -32,6 +32,7 @@ const { onboardingForPage, handleOnboardingAction } = require('../../utils/onboa
 const { operationOptions } = require('../../utils/operation-context')
 const {
   summarizeScoreRecords,
+  calculateTrendXPositions,
   calculateChartPoints,
   sortScoreRecords
 } = require('../../utils/score-trend')
@@ -969,11 +970,17 @@ Page({
         this.setData({ canvasWidth: width }, () => this.measureTrendChart(token, retryCount))
         return
       }
+      const xPositions = calculateTrendXPositions(
+        this.data.visibleRecords.length,
+        width,
+        CHART_PADDING
+      )
       const points = calculateChartPoints(
         this.data.visibleRecords,
         width,
         CHART_HEIGHT,
-        CHART_PADDING
+        CHART_PADDING,
+        xPositions
       ).map((point) => ({
         ...point,
         labelStyle: `left: ${point.leftPercent}%; width: ${point.labelWidth}px;`

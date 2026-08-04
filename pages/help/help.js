@@ -1,6 +1,6 @@
 const { replayOnboarding, tutorialSteps, resetDynamicHelp } = require('../../utils/onboarding')
 
-const FEEDBACK_URL = 'https://ycn8xfqnmoql.feishu.cn/share/base/form/shrcng2vmqyiVYLULDAEbJNWhtg55'
+const FEEDBACK_URL = 'https://ycn8xfqnmoql.feishu.cn/share/base/form/shrcng2vmqyiVYLULDAEbJNWhtg'
 
 const TUTORIALS = [
   { flow: 'home', label: '首页' },
@@ -21,8 +21,8 @@ Page({
         answer: '来自学校官网、教育局官网和政府公开网站等公开来源；详情页可查看对应来源。'
       },
       {
-        question: '推荐是不是录取预测？',
-        answer: '不是。推荐只按历史参考分和固定分差区间分类，不判断未来录取结果。'
+        question: '苏程记录会进行录取预测吗？',
+        answer: '不会。历史分差参考只按历史参考分和固定分差区间分类，不判断未来录取结果。'
       },
       {
         question: '数据保存在哪里？',
@@ -65,6 +65,14 @@ Page({
         answer: '一条记录可以显示点位和摘要，但至少两条记录才能计算最近变化。'
       },
       {
+        question: '当前提供志愿填报建议吗？',
+        answer: '不提供。当前只整理本机记录和历史公开数据，不给出志愿填报建议或结论。'
+      },
+      {
+        question: '历史分数线可以直接用于填报吗？',
+        answer: '不可以。历史分数线仅用于目标规划参考，不代表未来录取结果。'
+      },
+      {
         question: '为什么不显示住宿未核实等状态？',
         answer: '用户页面只展示已有可靠值，不显示内部核验状态；缺失字段会直接隐藏。'
       }
@@ -101,15 +109,15 @@ Page({
     wx.setClipboardData({
       data: FEEDBACK_URL,
       success: () => {
-        wx.showToast({
-          title: '链接已复制，请在浏览器中打开',
-          icon: 'success',
-          duration: 3000
+        wx.showModal({
+          title: '复制成功',
+          content: '反馈链接已复制，请粘贴到浏览器中打开。',
+          showCancel: false
         })
       },
       fail: () => {
         wx.showToast({
-          title: '复制失败，请重试',
+          title: '复制失败，请稍后重试。',
           icon: 'none'
         })
       }
