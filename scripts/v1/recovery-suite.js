@@ -24,7 +24,7 @@ function run() {
     const { storage } = setup()
     for (let index = 0; index < 105; index += 1) {
       assert.strictEqual(storage.saveScoreRecord(
-        makeExam(`v1-state-${index}`, 600 + index % 100),
+        makeExam('v1-state-record', 600 + index % 100),
         { operationId: `v1-state-op-${index}` }
       ).ok, true)
     }

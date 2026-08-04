@@ -165,6 +165,7 @@ function validateProfileData(raw, profileId, validSchoolIds, errors) {
   const schoolUserStates = Array.isArray(raw.schoolUserStates) ? raw.schoolUserStates : []
   for (const [items, limit, label] of [
     [scoreRecords, PRODUCT_RULES.limits.maxExamRecordsPerProfile, '考试记录'],
+    [targetRecords, PRODUCT_RULES.limits.maxTargetRecordsPerProfile, '目标学校'],
     [learningTasks, PRODUCT_RULES.limits.maxLearningTasksPerProfile, '学习任务'],
     [examTemplates, PRODUCT_RULES.limits.maxCustomExamTemplatesPerProfile, '自定义考试模板'],
     [scoreSchemes, PRODUCT_RULES.limits.maxCustomScoreSchemesPerProfile, '自定义分值方案'],
@@ -561,7 +562,24 @@ function exportBackupFile() {
 function readBackupFile(filePath) {
   if (!filePath || !wx.getFileSystemManager) return { ok: false, message: '未选择备份文件。' }
   try {
-    const content = wx.getFileSystemManager().readFileSync(filePath, 'utf8')
+    const fileSystem = wx.getFileSystemManager()
+    if (typeof fileSystem.statSync !== 'function') {
+      return { ok: false, code: 'FILE_STAT_FAILED', message: '无法确认备份文件大小，文件未读取。' }
+    }
+    const stat = fileSystem.statSync(filePath)
+    const size = Number(stat && stat.size)
+    if (!Number.isFinite(size) || size < 0) {
+      return { ok: false, code: 'FILE_STAT_FAILED', message: '无法确认备份文件大小，文件未读取。' }
+    }
+    if (size > PRODUCT_RULES.limits.maxImportFileBytes) {
+      return {
+        ok: false,
+        code: 'FILE_TOO_LARGE',
+        message: '备份文件超过 4 MB 限制，文件未读取。',
+        errors: ['备份文件超过 4 MB 限制，文件未读取。']
+      }
+    }
+    const content = fileSystem.readFileSync(filePath, 'utf8')
     return validateBackupEnvelope(content)
   } catch (error) {
     return { ok: false, message: '备份文件读取失败。' }

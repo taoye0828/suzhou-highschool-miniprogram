@@ -184,7 +184,8 @@ const PRODUCT_RULES = Object.freeze({
   },
   "limits": {
     "maxProfiles": 10,
-    "maxExamRecordsPerProfile": 500,
+    "maxExamRecordsPerProfile": 100,
+    "maxTargetRecordsPerProfile": 100,
     "maxMistakeRecordsPerProfile": 2000,
     "maxLearningTasksPerProfile": 2000,
     "maxWeeklyPlansPerProfile": 520,

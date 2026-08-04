@@ -83,7 +83,7 @@ JSON 结构均未改变。`verify_rc10_cross_platform_backup.js` 已完成双向
 - `node scripts/verify_dual_rc1_matching_flows.js`：通过。
 - `node scripts/verify_v1_final_ux.js`：通过。
 - `node scripts/verify_rc9_full.js`：14 个 RC9 子门禁通过。
-- `node scripts/verify_v1_full.js --all-verify`：103 个 TEST-ID 通过；递归排除主脚本后 88 个
+- `node scripts/verify_v1_full.js --all-verify`：103 个 TEST-ID 通过；递归排除主脚本后 89 个
   verify 脚本全部通过。
 - `node scripts/verify_rc10_cross_platform_backup.js /Users/tom/Dev/suzhou_highschool_app`：通过。
 - `node scripts/smoke_local_logic.js`：通过。
@@ -99,8 +99,8 @@ JSON 结构均未改变。`verify_rc10_cross_platform_backup.js` 已完成双向
 - 工具：微信开发者工具 RC `2.02.2607171`。
 - 项目路径：`/Users/tom/Dev/suzhou_highschool_miniprogram`。
 - 工具界面识别到正式名称“苏程记录”、五个 Tab 和 `pages/home/home`。
-- 已触发“普通编译”，随后工具弹出：
-  `INVALID_LOGIN, access_token expired [20260805 01:27:48]`。
+- 最终硬化后再次触发“普通编译”，工具仍弹出：
+  `INVALID_LOGIN, access_token expired [20260805 03:58:42]`。
 - 因登录会话过期，本轮不能确认 Problems/Console 清零，也不能完成成绩、目标规划、我的页面的
   真实点击验收。
 - 设备预览、真机、体验版上传、提交审核均未执行。
@@ -137,3 +137,17 @@ external_manual_acceptance：用户重新登录微信开发者工具后，需要
    另建冲突字段或静默迁移清空。
 
 在自动验证和 Codex 可执行验证范围内，零已知 P0/P1；平台人工验收仍受登录过期阻断。
+
+## 10. 2026-08-05 最终数据边界硬化
+
+- `shared-spec/product_rules_v1.json` 的权威规则把每档考试记录上限从历史性能容量 500 统一为
+  正式运行上限 100，并增加每档目标学校上限 100；生成文件由仓库脚本重新生成，未手工漂移。
+- 创建第 11 个学生档案现在返回 `LIMIT_EXCEEDED`，不会写入档案或切换当前档案。
+- `saveScoreRecord` 和 `saveExamWithReview` 不再通过 `slice(-100)` 静默删除旧成绩；第 101 条新
+  成绩明确失败且原 100 条保持不变，满额时编辑已有成绩仍允许。
+- 备份导入先用 `statSync` 检查 4 MB 上限，再调用 `readFileSync`；无法获取文件大小时安全拒绝，
+  避免先把超大文件完整读入内存。备份中每档超过 100 条成绩或 100 个目标学校也会在导入前拒绝。
+- 新增 `scripts/verify_dual_final_hardening.js`，并加强 RC7 与 V1 操作状态测试；最终门禁为
+  `V1 FULL VERIFY PASS (103 TEST-ID)` 和 `ALL VERIFY SCRIPTS PASS (89 scripts)`。
+- 本次没有修改正式学校、分数线、AppID、Storage Schema、Backup 或 Restore Point 版本；
+  微信开发者工具仍需用户重新登录后完成普通编译与人工页面验收。

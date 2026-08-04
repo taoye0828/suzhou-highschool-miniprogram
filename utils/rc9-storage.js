@@ -808,6 +808,9 @@ function createStudentProfile(profile) {
   if (!migration.ok) return migration
   const stateResult = getVersionedState()
   if (!stateResult.ok) return stateResult
+  if (stateResult.state.profiles.length >= PRODUCT_RULES.limits.maxProfiles) {
+    return { ok: false, code: 'LIMIT_EXCEEDED', message: '最多创建 10 个学生档案，原数据未修改。' }
+  }
   const now = new Date().toISOString()
   const id = text(profile && profile.id, 120) ||
     `profile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -1169,6 +1172,9 @@ function saveScoreRecord(record) {
   const current = existing.records.find((item) => item.id === normalized.id)
   const conflict = versionConflict(current, record && (record.expectedVersion ?? record.version))
   if (conflict) return conflict
+  if (!current && existing.records.length >= PRODUCT_RULES.limits.maxExamRecordsPerProfile) {
+    return { ok: false, code: 'LIMIT_EXCEEDED', message: '每个学生档案最多记录 100 次考试，原记录未修改。' }
+  }
   const saved = current
     ? {
         ...current,
@@ -1181,7 +1187,7 @@ function saveScoreRecord(record) {
   const records = [
     ...existing.records.filter((item) => item.id !== saved.id),
     saved
-  ].sort(compareScoreRecords).slice(-APP_CONFIG.scoreRecord.maxRecords)
+  ].sort(compareScoreRecords)
   const result = updateActiveProfileData((data) => ({
     ...data,
     scoreRecords: records,
@@ -1207,6 +1213,9 @@ function saveExamWithReview(examRecord, reviewRecord) {
   const currentExam = context.data.scoreRecords.find((item) => item.id === normalizedExam.id)
   const examConflict = versionConflict(currentExam, examRecord && (examRecord.expectedVersion ?? examRecord.version))
   if (examConflict) return examConflict
+  if (!currentExam && context.data.scoreRecords.length >= PRODUCT_RULES.limits.maxExamRecordsPerProfile) {
+    return { ok: false, code: 'LIMIT_EXCEEDED', message: '每个学生档案最多记录 100 次考试，原记录未修改。' }
+  }
   const currentReview = context.data.scoreReviews.find((item) => item.id === normalizedReview.id)
   const reviewConflict = versionConflict(currentReview, reviewRecord && (reviewRecord.expectedVersion ?? reviewRecord.version))
   if (reviewConflict) return reviewConflict
@@ -1220,7 +1229,7 @@ function saveExamWithReview(examRecord, reviewRecord) {
   const scoreRecords = [
     ...context.data.scoreRecords.filter((item) => item.id !== savedExam.id),
     savedExam
-  ].sort(compareScoreRecords).slice(-APP_CONFIG.scoreRecord.maxRecords)
+  ].sort(compareScoreRecords)
   const scoreReviews = [
     savedReview,
     ...context.data.scoreReviews.filter((item) => item.id !== savedReview.id)

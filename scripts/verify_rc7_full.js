@@ -119,7 +119,7 @@ assert.deepStrictEqual(storage.getScoreRecords().map((record) => record.score), 
 assert.strictEqual(storage.clearScoreRecords().ok, true)
 assert.deepStrictEqual(storage.getScoreRecords(), [])
 
-for (let index = 0; index < 105; index += 1) {
+for (let index = 0; index < 100; index += 1) {
   assert.strictEqual(storage.saveScoreRecord({
     id: `limit_${index}`,
     date: '2026-10-01',
@@ -129,6 +129,22 @@ for (let index = 0; index < 105; index += 1) {
   }).ok, true)
 }
 assert.strictEqual(storage.getScoreRecords().length, 100)
+const scoreIdsAtLimit = storage.getScoreRecords().map((record) => record.id).sort()
+for (let index = 100; index < 105; index += 1) {
+  const overflow = storage.saveScoreRecord({
+    id: `limit_${index}`,
+    date: '2026-10-01',
+    examName: `第 ${index + 1} 次考试`,
+    score: 500 + index,
+    createdAt: new Date(Date.UTC(2026, 9, 1, 0, 0, index)).toISOString()
+  })
+  assert.strictEqual(overflow.ok, false)
+  assert.strictEqual(overflow.code, 'LIMIT_EXCEEDED')
+}
+assert.deepStrictEqual(
+  storage.getScoreRecords().map((record) => record.id).sort(),
+  scoreIdsAtLimit
+)
 
 const shortSummary = summarizeScoreRecords(storage.getScoreRecords().slice(0, 3))
 assert.strictEqual(shortSummary.recentRecords.length, 3)
