@@ -102,6 +102,7 @@
     "coverView": true,
     "showShadowRootInWxmlPanel": true,
     "compileHotReLoad": false,
+    "ignoreDevUnusedFiles": false,
     "compileWorklet": false,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,

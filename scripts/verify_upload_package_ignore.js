@@ -12,6 +12,7 @@ assert.ok(Array.isArray(ignoreRules), 'packOptions.ignore must be an array')
 assert.strictEqual(projectConfig.appid, 'wxc2a2a94f767438dd')
 assert.strictEqual(projectConfig.compileType, 'miniprogram')
 assert.strictEqual(projectConfig.miniprogramRoot, './')
+assert.strictEqual(projectConfig.setting && projectConfig.setting.ignoreDevUnusedFiles, false, 'runtime pages must not be removed by the DevTools unused-file filter')
 assert.strictEqual(Object.hasOwn(projectConfig, 'cloudfunctionRoot'), false)
 assert.strictEqual(Object.hasOwn(projectConfig, 'cloudfunctionTemplateRoot'), false)
 for (const rule of [
