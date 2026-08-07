@@ -1,61 +1,18 @@
 <view class="page">
-  <view class="card profile-card onboarding-profile" bindtap="openProfiles">
+  <view class="card" bindtap="openProfiles">
     <view class="row between">
-      <view class="grow">
-        <view class="muted small">当前档案</view>
-        <view class="card-title profile-name">{{activeProfile ? activeProfile.nickname : '默认档案'}}</view>
-        <view class="muted small">{{scoreRecordCount}} 次考试 · {{targetCount}} 所目标 · {{learningTargetCount}} 个阶段目标</view>
+      <view>
+        <view class="muted small">当前学生档案</view>
+        <view class="card-title">{{profileName}}</view>
+        <view class="muted small">{{examYear}} 年中考</view>
       </view>
-      <view class="list-arrow">›</view>
+      <view class="list-arrow">管理 ›</view>
     </view>
   </view>
 
-  <view wx:if="{{dynamicHelp}}" class="card">
-    <view class="row between">
-      <view class="card-title">当前步骤提示</view>
-      <button class="text-button" bindtap="dismissDynamicHelp">关闭</button>
-    </view>
-    <view class="muted small">{{dynamicHelp.message}}</view>
-  </view>
-
-  <view class="section-title">我的内容</view>
-  <view class="card menu-card" bindtap="openFavorites">
-    <view class="grow"><view class="card-title">收藏汇总</view><view class="muted small menu-note">{{favoriteCount}} 所学校</view></view>
-    <view class="list-arrow">›</view>
-  </view>
-  <view class="card recent-card">
-    <view class="card-title">最近浏览</view>
-    <view wx:if="{{recentSchools.length === 0}}" class="muted small menu-note">还没有浏览记录</view>
-    <view
-      wx:for="{{recentSchools}}"
-      wx:key="id"
-      class="recent-item row between"
-      data-id="{{item.id}}"
-      bindtap="openRecentSchool"
-    >
-      <view class="grow">{{item.name}}</view>
-      <view class="list-arrow">›</view>
-    </view>
-  </view>
-
-  <view class="section-title">数据</view>
-  <view class="card menu-card" bindtap="openBackupRestore"><view class="grow"><view class="card-title">备份与恢复</view><view class="muted small menu-note">本地 JSON、校验、合并或覆盖</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openDataManagement"><view class="grow"><view class="card-title">数据管理</view><view class="muted small menu-note">清除当前档案或全部本地数据</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openReports"><view class="grow"><view class="card-title">文本和 JSON 报告</view><view class="muted small menu-note">当前档案成绩阶段与目标学校报告</view></view><view class="list-arrow">›</view></view>
-
-  <view class="section-title">考试设置</view>
-  <view class="card menu-card" bindtap="openExamSettings"><view class="grow"><view class="card-title">考试模板与分值方案</view><view class="muted small menu-note">内置模板、自定义满分与历史方案快照</view></view><view class="list-arrow">›</view></view>
-
-  <view class="section-title">帮助</view>
-  <view class="card menu-card" bindtap="openHelp"><view class="grow"><view class="card-title">帮助与反馈</view><view class="muted small menu-note">教程、常见问题、反馈问卷</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openDataInfo"><view class="grow"><view class="card-title">数据说明</view></view><view class="list-arrow">›</view></view>
-  <view class="card menu-card" bindtap="openPrivacy"><view class="grow"><view class="card-title">隐私说明</view></view><view class="list-arrow">›</view></view>
-
-  <view class="section-title">设置</view>
-  <picker range="{{examYears}}" value="{{examYearIndex}}" bindchange="onExamYearChange">
-    <view class="card setting-card row between">
-      <view><view class="card-title">默认目标年份</view><view class="muted small menu-note">用于倒计时、推荐和目标差距</view></view>
-      <view class="setting-value">{{examYear}} 年⌄</view>
-    </view>
-  </picker>
+  <view class="section-title">我的工具</view>
+  <view class="card menu" bindtap="openProfiles"><view><view class="card-title">学生档案管理</view><view class="muted small">创建、切换、改名或删除档案</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu" bindtap="openBackupRestore"><view><view class="card-title">数据备份与恢复</view><view class="muted small">导出、恢复或清理本机数据</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu" bindtap="openHelp"><view><view class="card-title">使用说明与常见问题</view><view class="muted small">查看操作说明并联系人工客服</view></view><view class="list-arrow">›</view></view>
+  <view class="card menu" bindtap="openPrivacy"><view><view class="card-title">隐私说明</view></view><view class="list-arrow">›</view></view>
 </view>

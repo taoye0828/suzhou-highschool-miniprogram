@@ -1,6 +1,29 @@
 {
-  "desc": "本地工具页面索引规则",
+  "desc": "仅允许公开内容页面被索引",
   "rules": [
-    { "action": "allow", "page": "*" }
+    {
+      "action": "allow",
+      "page": "pages/home/home"
+    },
+    {
+      "action": "allow",
+      "page": "pages/schools/schools"
+    },
+    {
+      "action": "allow",
+      "page": "pages/school-detail/school-detail"
+    },
+    {
+      "action": "allow",
+      "page": "pages/help/help"
+    },
+    {
+      "action": "allow",
+      "page": "pages/privacy/privacy"
+    },
+    {
+      "action": "disallow",
+      "page": "*"
+    }
   ]
 }

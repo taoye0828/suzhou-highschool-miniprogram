@@ -1,3 +1,0 @@
-.search-input { margin: 24rpx 0; }
-.menu-card { display: flex; align-items: center; }
-.list-arrow { font-size: 42rpx; color: #94a3b8; }

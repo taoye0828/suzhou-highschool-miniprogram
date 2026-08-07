@@ -1,106 +1,85 @@
-# 苏程记录
+# 苏程记录微信小程序
 
-苏程记录是一个纯本地微信小程序，用于记录成绩、复盘学习过程、整理高中目标，并基于用户选择的合格 740 分考试与学校历史公开分数线提供“历史分差参考”。它不做录取预测，不提供志愿填报结论。
+苏程记录是一个纯本地微信小程序，帮助苏州家长和学生查询学校与历史公开录取分数线、记录考试总分，并把当前总分与手动选择的目标学校做数字对照。历史数据仅供了解，不代表未来录取结果。
 
-## 正式身份与导航
+## 首发核心功能
 
-- 正式名称：苏程记录
-- 正式 AppID：`wxc2a2a94f767438dd`
-- 正式五个 Tab：首页、学校库、成绩、目标规划、我的
-- 公开版本号：2.0.0（本轮未擅自修改）
-- 当前首次上架前证据基线 HEAD：`b8bdb1c4d37352d2ac3bf3cac28c424f7898b4ba`；最终证据提交后的 HEAD 以 `git rev-parse HEAD` 和最终 Git 门禁为准
+- 学校名称、简称和区域查询；
+- 2025、2026 年历史公开录取分数线及来源信息；
+- 考试名称、日期和 0—740 总分记录；
+- 最近最多 10 条总分趋势；
+- 手动加入或移出目标学校；
+- 当前总分与目标学校历史参考分的数学差值；
+- 最多 10 个学生档案，成绩与目标学校彼此独立；
+- 本机数据备份、合并恢复、替换恢复和数据清理；
+- 静态使用说明、常见问题、隐私说明与人工客服联系方式。
 
-## V1 included 功能
+正式导航固定为五个 Tab：首页、学校库、成绩、目标、我的。`app.json` 只注册 10 个正式页面。
 
-- 学校库：搜索、组合筛选、详情、收藏、目标学校、候选状态、标签、备注、最近浏览、最多 3 校对比。
-- 成绩：考试记录、考试模板、分值方案、历史方案快照、不同满分、原始分/得分率/学科趋势、复盘、失分原因和错题。
-- 目标规划：历史分差参考、主要目标、情景规划、学习任务、周计划、多指标阶段目标和阶段复盘。
-- 我的：多学生档案、考试设置、Backup v3 导出/导入/主动分享、Restore Point v2、数据管理、数据检查、启动恢复、纯文本/JSON 报告、数据与隐私说明。
-- 首页：当前进展、最近成绩、参考成绩、主要目标、本周任务、阶段目标、全局搜索和高频入口。
+## 首发不包含
 
-小程序不会自动把用户数据上传到开发者服务器；不主动分享时，用户数据只保存在本机。备份或报告只有在用户主动点击发送并确认数据范围与隐私提示后，才通过微信系统能力交给用户选择的接收方；取消不记录为成功，失败不修改用户数据。
+首发不包含自动推荐、冲刺/目标/保底分类、录取概率、单科成绩、考试模板、分值方案、排名、得分率、考试复盘、错题、学习任务、周计划、阶段目标、学校收藏、学校对比、个人标签、个人备注、全局搜索、报告、自动教程或用户可见的技术维护页面。
 
-## 数据结构与安全
+小程序也不接入登录、手机号、openid、unionid、后台、云开发、Supabase、AI、支付、广告、定位、地图 SDK、推送、统计 SDK 或云同步。
 
-- Storage Schema v5，兼容读取 Schema v4。
-- Backup v3 使用 canonical JSON + SHA-256，兼容读取 Backup v2 FNV-1a。
-- Restore Point v2 使用统一 SHA-256，兼容读取 Restore Point v1。
-- 写操作统一经过 OperationContext、幂等、操作锁、事务日志、最终回读和 dataRevision；页面不直接写正式 Storage。
-- 危险操作前创建恢复点；单档案恢复默认不修改共享收藏；删除档案后可恢复为新档案。
-- operation state 最多 100 条、单条不超过 2048 字节，不保存完整用户状态、payload、备份或报告。
+## 本地数据与兼容性
 
-## 历史分差与不同满分
+- 用户数据默认只保存在微信小程序本机存储；
+- 新成绩只写入考试名称、日期和总分；
+- 最多 100 条成绩、100 所目标学校，达到上限时明确拒绝新增并保留原数据；
+- 备份文件最大 4 MB，导入前先做大小与结构校验；
+- 当前兼容 Storage Schema 5、Backup Format 3、Restore Point Format 2；
+- 旧备份中的单科、复盘、错题、学习任务、周计划、收藏、对比、学校个人状态和教程字段仍可安全解析与恢复，但不会重新出现在正式 UI。
 
-`difference = userScore - referenceScore`：
+危险数据操作继续使用事务保护和失败回滚。普通用户界面不会显示 Schema、checksum、Restore Point、内部路径或 operation id 等维护术语。
 
-- 冲刺：`-30 <= difference < 0`
-- 目标：`0 <= difference <= 15`
-- 保底：`difference > 15`
-- 每组最多 5 所学校
+## 正式数据基线
 
-只有 `full_total`、`totalMaxScore = 740`、`admissionScaleMax = 740`、资格规则允许、方案快照完整、总分合法且数据健康无阻断的考试能用于历史分差参考。周测、单科、部分学科、非 740 方案、得分率、自动换算值和快照缺失记录均不可使用。其他满分考试仍可显示原始分和得分率，但不会自动换算成 740。
+- 学校：55 所；
+- 2025 年历史分数线：103 条；
+- 2026 年历史分数线：43 条；
+- 合计：146 条；
+- 超过 740 分：0 条；
+- AppID：`wxc2a2a94f767438dd`。
 
-分组仅根据用户选择的历史成绩与学校历史公开分数线计算分差，不考虑招生计划、排名、指标生、批次变化、政策变化和当年试卷难度，不构成录取判断或志愿建议。
+正式数据文件的 SHA-256 基线记录在 `scripts/verify_fcp_mp_first_release.js`，不得在功能收口任务中漂移。
 
-历史公开数据整理，仅供目标规划参考。
+## 上传包边界
 
-## 正式数据
+`project.config.json` 必须保持：
 
-- 正式学校数据：55 条
-- 2025 年历史分数线：103 条
-- 2026 年历史分数线：43 条
-- 历史录取分数线：146 条
-- 正式 2027 年分数线：0 条
-- 当前完整中考体系最高分：740
+- `ignoreDevUnusedFiles: false`，避免开发者工具错误裁剪运行时模块；
+- `uploadWithSourceMap: false`；
+- `docs/`、`scripts/`、`shared-spec/`、`utils/generated/`、README、Git 元数据和常见开发产物不进入微信上传包。
 
-当前收录 2025、2026 年官方历史分数线，所有条目均保留来源与核对信息。
+Sitemap 只允许首页、学校库、学校详情、帮助和隐私页面被索引；成绩、目标、我的、档案和备份恢复等个人数据页面不公开索引。
 
-2027 候选资料只用于开发维护，位于 `docs/` 与 `scripts/`，不接入正式运行页面，并被上传包排除。
+## 验证
 
-## excluded 功能
-
-V1 不包含登录/注册/手机号/openid/unionid、后台、云开发、Supabase、AI、网络推荐、自动上传、云同步、支付、广告、定位、推送、统计 SDK、社区、公开排名、图片上传、PDF、PIN、Face ID、Touch ID 或正式 2027 数据。
-
-## 测试与冻结状态
-
-- V1 自动测试：92 个核心 TEST-ID + 11 个冻结 TEST-ID，共 103 个唯一 TEST-ID。
-- 历史回归：当前 86 个 `verify_*.js`、两个 smoke、全仓 JavaScript/JSON、上传包、身份/禁用能力、产品规则和正式数据 raw/semantic hash 全部通过。
-- 代码状态：`V1_CODE_FREEZE_READY`。
-- 体验状态：`PRE_RELEASE_UX_FREEZE_CONFIRMED = false`。
-
-自动测试不能替代微信开发者工具和人工验收。PRELAUNCH-FINAL-MP 已确认正确项目路径与正式 AppID，但当前登录微信号不是该 AppID 的开发者，模拟器创建失败；普通编译、Problems、Console、320/375/390/414/430/iPad、多页面真实点击、真实数据恢复 checksum、备份和报告真实发送、手机预览均未完成。体验版上传和审核还需要用户授权。
-
-当前状态：`V1_CODE_FREEZE_READY`；`PRE_RELEASE_UX_FREEZE_CONFIRMED = false`；`FIRST_SUBMISSION_CODE_READY = false`。不能把账号阻断写成编译通过，也不能把自动契约写成真机或开发者工具验收。
-
-代码冻结后，上架前只处理布局、视觉、文案、操作步骤、空/加载/错误状态、安全区、多尺寸/iPad、性能、卡顿、崩溃、数据丢失缺陷、审核合规、真机问题、正式官方数据更新和上架材料。新业务建议只记录到 `docs/post_launch_feature_candidates.md`。
-
-## MP12 页面收口兼容说明
-
-早期 MP12 已移除开发阶段用户文案，并用上传包规则排除开发资料；当前 V1 继续保留这些门禁，但以本 README 的冻结范围、正式身份和人工验收状态为准。
-
-## 证据与验证
-
-- 完整报告：`docs/rc11_final_full_report.md`
-- 机器证据：`docs/rc11_final_evidence.json`
-- 证据索引：`docs/rc11_final_evidence_index.md`
-- 测试覆盖：`docs/v1_test_coverage_matrix.json`
-- 生命周期：`docs/v1_entity_lifecycle_matrix.json`
-- 功能冻结：`docs/v1_feature_freeze_manifest.json`
-- 首次上架前最终报告：`docs/prelaunch_final_report.md`
-- 首次上架前机器证据：`docs/prelaunch_final_evidence.json`
-- 开发者工具真实结果：`docs/prelaunch_devtools_acceptance.md`
-- 人工剩余事项：`docs/prelaunch_manual_acceptance_remaining.md`
-
-完整验证入口：
+核心验证命令：
 
 ```bash
+node scripts/verify_fcp_mp_first_release.js
+node scripts/verify_dual_final_hardening.js
+node scripts/verify_dual_rc1_matching_flows.js
+node scripts/verify_v1_final_ux.js
+node scripts/verify_rc9_full.js
 node scripts/verify_v1_full.js --all-verify
 node scripts/smoke_local_logic.js
 node scripts/smoke_page_logic.js
-find . -type f -name '*.js' -not -path './.git/*' -print0 | xargs -0 -n1 node --check
+node scripts/verify_upload_package_ignore.js
+find . -name "*.js" -not -path "./node_modules/*" -print0 | xargs -0 -n1 node --check
 git diff --check
 ```
 
-## 回滚
+自动脚本、微信开发者工具普通编译、模拟器人工验收、真机调试、体验版上传和审核是不同证据层级，必须分别记录，不能互相替代。
 
-撤销某个逻辑提交使用普通 `git revert <commit-sha>`。单文件可从仓库外备份 `/Users/tom/WorkData/05_Backups/suzhou_highschool_miniprogram/PRELAUNCH_FINAL_MP_20260801_224816` 恢复后重新验证。不要使用 reset、clean、rebase、stash、amend 或 force push。
+## 文档与回滚
+
+本轮范围与证据见 `docs/fcp_mp_first_release_consolidation_report.md`。
+
+代码回滚使用普通 `git revert <commit-sha>`。文件级恢复可使用本轮仓库外备份：
+
+`/Users/tom/WorkData/05_Backups/FCP-MP-FIRST-RELEASE-CONSOLIDATION_20260807_183721`
+
+不要使用 `reset`、`clean`、`rebase`、`git add .` 或 force push。

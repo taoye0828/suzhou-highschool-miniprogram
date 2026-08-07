@@ -1,7 +1,4 @@
-.profile-intro { margin-top: 24rpx; }
-.create-button { margin-top: 24rpx; }
-.profile-card { margin-top: 20rpx; }
-.active-badge { padding: 8rpx 16rpx; color: #0f766e; background: #dff5ef; border-radius: 999rpx; font-size: 24rpx; font-weight: 700; }
-.profile-actions { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 22rpx; }
-.profile-actions button, .profile-actions picker { margin: 0; }
-.mode-button { box-sizing: border-box; line-height: 64rpx; }
+.intro { margin-top: 10rpx; }
+.picker { display: flex; align-items: center; }
+.create { margin-top: 24rpx; }
+.year-picker { margin-top: 22rpx; }

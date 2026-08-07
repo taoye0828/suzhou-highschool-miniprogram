@@ -4,17 +4,36 @@ const {
   readBackupFile,
   importBackupEnvelope
 } = require('../../utils/backup-restore')
+const { clearCurrentProfileData, clearLocalData } = require('../../utils/storage')
 const { FileShareAdapter } = require('../../utils/file-share')
+const { operationOptions } = require('../../utils/operation-context')
 
 const fileShare = new FileShareAdapter()
+
+function corePreview(result) {
+  const profiles = result.backup.profiles
+  const profileData = result.backup.profileData
+  return {
+    profileCount: profiles.length,
+    scoreCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].scoreRecords.length, 0),
+    targetCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].targetRecords.length, 0)
+  }
+}
+
+function safeImportMessage(validation) {
+  const detail = String(validation.message || (validation.errors && validation.errors[0]) || '')
+  return detail.includes('4 MB')
+    ? detail
+    : '备份文件无法使用，请确认文件完整且来自本小程序。'
+}
 
 Page({
   data: {
     exportPreview: null,
-    exportPath: '',
+    exportReady: false,
     importPreview: null,
     importFileName: '',
-    importErrors: [],
+    importError: '',
     hasPendingImport: false
   },
 
@@ -24,18 +43,7 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
-    const profiles = result.backup.profiles
-    const profileData = result.backup.profileData
-    this.setData({
-      exportPreview: {
-        profileCount: profiles.length,
-        scoreCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].scoreRecords.length, 0),
-        targetCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].targetRecords.length, 0),
-        stageGoalCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].stageGoals.length, 0),
-        taskCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].learningTasks.length, 0),
-        checksum: result.backup.checksum.value
-      }
-    })
+    this.setData({ exportPreview: corePreview(result) })
   },
 
   exportBackup() {
@@ -44,36 +52,31 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
+    this._exportPath = result.filePath
     this.setData({
-      exportPath: result.filePath,
+      exportReady: true,
       exportPreview: {
-        ...result.preview,
-        checksum: result.backup.checksum.value
+        profileCount: result.preview.profileCount,
+        scoreCount: result.preview.scoreCount,
+        targetCount: result.preview.targetCount
       }
     })
-    wx.showModal({
-      title: '本地备份已生成',
-      content: '文件已在本机生成。小程序不会自动上传到开发者服务器；不主动分享时，文件只保存在本机。你可以主动发送给自己选择的微信接收方。',
-      showCancel: false
-    })
+    wx.showToast({ title: '备份已生成', icon: 'success' })
   },
 
   sendBackupFile() {
-    if (!this.data.exportPath) return
-    const preview = this.data.exportPreview || {}
+    if (!this._exportPath) return
     wx.showModal({
       title: '发送备份文件',
-      content: `文件包含 ${preview.profileCount || 0} 个档案、${preview.scoreCount || 0} 条成绩、${preview.targetCount || 0} 所目标学校及其他本机用户数据。小程序不会自动上传到开发者服务器；确认后文件会通过微信系统能力交给你选择的接收方，请只发送给可信接收方。`,
+      content: '备份包含本机学生档案、考试成绩、目标学校和必要设置。请只发送给可信接收方。',
       confirmText: '选择接收方',
       success: (modal) => {
         if (!modal.confirm) return
-        fileShare.shareFile({ filePath: this.data.exportPath, fileName: '苏程记录本地备份.json' })
-          .then((result) => {
-            wx.showToast({
-              title: result.ok ? '文件已发送' : result.message || '发送失败，可重试',
-              icon: result.ok ? 'success' : 'none'
-            })
-          })
+        fileShare.shareFile({ filePath: this._exportPath, fileName: '苏程记录本地备份.json' })
+          .then((result) => wx.showToast({
+            title: result.ok ? '文件已发送' : result.message || '发送失败，可重试',
+            icon: result.ok ? 'success' : 'none'
+          }))
       }
     })
   },
@@ -96,7 +99,7 @@ Page({
           this.setData({
             importFileName: file.name || '备份文件',
             importPreview: null,
-            importErrors: validation.errors || [validation.message || '备份校验失败'],
+            importError: safeImportMessage(validation),
             hasPendingImport: false
           })
           return
@@ -104,12 +107,15 @@ Page({
         this._pendingBackup = validation.backup
         this.setData({
           importFileName: file.name || '备份文件',
-          importPreview: validation.preview,
-          importErrors: [],
+          importPreview: {
+            profileCount: validation.preview.profileCount,
+            scoreCount: validation.preview.scoreCount,
+            targetCount: validation.preview.targetCount
+          },
+          importError: '',
           hasPendingImport: true
         })
-      },
-      fail: () => wx.showToast({ title: '未选择备份文件', icon: 'none' })
+      }
     })
   },
 
@@ -118,27 +124,55 @@ Page({
     const mode = event.currentTarget.dataset.mode
     const overwrite = mode === 'overwrite'
     wx.showModal({
-      title: overwrite ? '覆盖本机用户数据' : '合并本机用户数据',
+      title: overwrite ? '替换本机数据' : '合并本机数据',
       content: overwrite
-        ? '覆盖会以备份中的档案和用户数据替换当前本机用户数据。导入前会自动创建安全快照。正式学校和分数线不会被导入或修改。'
-        : '同 ID 记录以更新时间较新的为准，不同 ID 新增；收藏合并去重，档案不会串档。导入前会自动创建安全快照。',
-      confirmText: overwrite ? '确认覆盖' : '确认合并',
+        ? '将用备份中的学生档案、考试成绩和目标学校替换当前本机数据。操作失败时原数据不会被修改。'
+        : '将备份内容合并到本机，同一条记录以更新时间较新的内容为准。操作失败时原数据不会被修改。',
+      confirmText: overwrite ? '确认替换' : '确认合并',
       confirmColor: overwrite ? '#b42318' : '#0f766e',
       success: (modal) => {
         if (!modal.confirm) return
         const result = importBackupEnvelope(this._pendingBackup, { mode })
         if (!result.ok) {
-          wx.showToast({ title: result.message, icon: 'none' })
+          wx.showToast({ title: '数据操作失败，原数据未被修改。', icon: 'none' })
           return
         }
         this._pendingBackup = null
         this.setData({
           importFileName: '',
           importPreview: null,
-          importErrors: [],
+          importError: '',
           hasPendingImport: false
         })
-        wx.showToast({ title: overwrite ? '备份已覆盖恢复' : '备份已合并', icon: 'success' })
+        wx.showToast({ title: overwrite ? '备份已恢复' : '备份已合并', icon: 'success' })
+      }
+    })
+  },
+
+  clearCurrentProfile() {
+    wx.showModal({
+      title: '清除当前档案数据',
+      content: '将清除当前档案的考试成绩和目标学校，且无法撤销。其他学生档案不受影响。',
+      confirmText: '确认清除',
+      confirmColor: '#b42318',
+      success: (modal) => {
+        if (!modal.confirm) return
+        const result = clearCurrentProfileData(operationOptions('clear_profile_data', 'current'))
+        if (!result.ok) wx.showToast({ title: '数据操作失败，原数据未被修改。', icon: 'none' })
+      }
+    })
+  },
+
+  clearAllData() {
+    wx.showModal({
+      title: '清除全部本机数据',
+      content: '将清除本机所有学生档案、考试成绩和目标学校，且无法撤销。建议先导出备份。',
+      confirmText: '确认清除',
+      confirmColor: '#b42318',
+      success: (modal) => {
+        if (!modal.confirm) return
+        const result = clearLocalData(operationOptions('clear_all_data', 'all'))
+        if (!result.ok) wx.showToast({ title: '数据操作失败，原数据未被修改。', icon: 'none' })
       }
     })
   }

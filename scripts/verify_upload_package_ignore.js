@@ -13,6 +13,7 @@ assert.strictEqual(projectConfig.appid, 'wxc2a2a94f767438dd')
 assert.strictEqual(projectConfig.compileType, 'miniprogram')
 assert.strictEqual(projectConfig.miniprogramRoot, './')
 assert.strictEqual(projectConfig.setting && projectConfig.setting.ignoreDevUnusedFiles, false, 'runtime pages must not be removed by the DevTools unused-file filter')
+assert.strictEqual(projectConfig.setting && projectConfig.setting.uploadWithSourceMap, false, 'release uploads must not include source maps')
 assert.strictEqual(Object.hasOwn(projectConfig, 'cloudfunctionRoot'), false)
 assert.strictEqual(Object.hasOwn(projectConfig, 'cloudfunctionTemplateRoot'), false)
 for (const rule of [
@@ -70,6 +71,7 @@ function assertNotIgnored(relativePath) {
 assert.ok(hasRule('folder', 'docs'), 'docs folder ignore rule missing')
 assert.ok(hasRule('folder', 'scripts'), 'scripts folder ignore rule missing')
 assert.ok(hasRule('folder', 'shared-spec'), 'shared-spec folder ignore rule missing')
+assert.ok(hasRule('folder', 'utils/generated'), 'generated development rules ignore missing')
 assert.ok(hasRule('file', 'README.md'), 'README.md ignore rule missing')
 assert.ok(hasRule('suffix', '.md'), '*.md suffix ignore rule missing')
 assert.ok(hasRule('folder', 'docs/mp5_official_images'), 'official image cache ignore rule missing')
@@ -92,6 +94,7 @@ assert.ok(hasRule('suffix', '.log'), '*.log ignore rule missing')
   'docs/mp5_scores_to_confirm.md',
   'scripts/verify_mp1.js',
   'shared-spec/product_rules_v1.json',
+  'utils/generated/product-rules.js',
   'README.md',
   '.git/config',
   '.DS_Store',
@@ -113,12 +116,13 @@ assert.ok(hasRule('suffix', '.log'), '*.log ignore rule missing')
   'sitemap.json',
   'pages/home/home.js',
   'pages/schools/schools.wxml',
-  'pages/web-view/web-view.js',
+  'pages/help/help.js',
+  'pages/privacy/privacy.wxml',
   'data/schools.js',
   'data/admission-scores.js',
   'data/admission-scores-2026.js',
-  'utils/school.js',
-  'utils/external-link.js',
+  'utils/storage.js',
+  'utils/runtime-constants.js',
   'config/app-config.js',
   'styles/common.wxss'
 ].forEach(assertNotIgnored)

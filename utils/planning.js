@@ -1,5 +1,5 @@
 const { APP_CONFIG, EXAM_TOTAL_SCORE } = require('../config/app-config')
-const { PRODUCT_RULES } = require('./generated/product-rules')
+const { PRODUCT_RULES } = require('./runtime-constants')
 const { isRecommendationEligibleExam } = require('./v1-domain')
 
 const DEFAULT_LEVEL_RULES = Object.freeze({

@@ -1,6 +1,3 @@
 {
-  "navigationBarTitleText": "学校库",
-  "usingComponents": {
-    "onboarding-overlay": "/components/onboarding-overlay/onboarding-overlay"
-  }
+  "navigationBarTitleText": "学校库"
 }

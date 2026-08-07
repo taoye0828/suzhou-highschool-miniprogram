@@ -75,8 +75,7 @@ function loadStorageFresh() {
   for (const relative of [
     '../utils/storage',
     '../utils/rc9-storage',
-    '../utils/backup-restore',
-    '../utils/onboarding'
+    '../utils/backup-restore'
   ]) {
     const resolved = require.resolve(relative)
     delete require.cache[resolved]

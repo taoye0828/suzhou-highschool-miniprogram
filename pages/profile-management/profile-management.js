@@ -1,6 +1,5 @@
 const {
   getProfilesResult,
-  getActiveProfile,
   createStudentProfile,
   updateStudentProfile,
   switchStudentProfile,
@@ -8,25 +7,24 @@ const {
 } = require('../../utils/storage')
 const { operationOptions } = require('../../utils/operation-context')
 
-const FAVORITES_MODES = [
-  { value: 'independent', label: '收藏独立' },
-  { value: 'shared', label: '收藏共享' }
-]
+const currentYear = new Date().getFullYear()
+const EXAM_YEARS = Array.from({ length: 13 }, (_, index) => currentYear + index)
 
 function presentProfiles(result) {
   return result.profiles.map((profile) => ({
     ...profile,
-    isActive: profile.id === result.activeProfileId,
-    favoritesModeLabel: profile.favoritesMode === 'shared' ? '收藏共享' : '收藏独立'
+    examYearIndex: Math.max(0, EXAM_YEARS.indexOf(profile.examYear)),
+    isActive: profile.id === result.activeProfileId
   }))
 }
 
 Page({
   data: {
     profiles: [],
-    activeProfile: null,
-    favoritesModes: FAVORITES_MODES,
-    creatingProfile: false
+    examYears: EXAM_YEARS,
+    draftNickname: '',
+    draftYearIndex: Math.max(0, EXAM_YEARS.indexOf(2027)),
+    creating: false
   },
 
   onShow() {
@@ -39,52 +37,44 @@ Page({
       wx.showToast({ title: result.message || '档案读取失败', icon: 'none' })
       return
     }
-    this.setData({
-      profiles: presentProfiles(result),
-      activeProfile: getActiveProfile()
-    })
+    this.setData({ profiles: presentProfiles(result) })
+  },
+
+  onNicknameInput(event) {
+    this.setData({ draftNickname: event.detail.value })
+  },
+
+  onDraftYearChange(event) {
+    this.setData({ draftYearIndex: Number(event.detail.value) })
   },
 
   createProfile() {
-    if (this.data.creatingProfile) return
-    this.setData({ creatingProfile: true })
-    wx.showModal({
-      title: '新建学生档案',
-      content: '',
-      editable: true,
-      placeholderText: '输入昵称，不需要真实姓名',
-      confirmText: '创建',
-      success: (modal) => {
-        if (!modal.confirm) return
-        const nickname = String(modal.content || '').trim()
-        if (!nickname) {
-          wx.showToast({ title: '请填写档案昵称', icon: 'none' })
-          return
-        }
-        const result = createStudentProfile(
-          { nickname },
-          operationOptions('create_profile', nickname)
-        )
-        if (!result.ok) {
-          wx.showToast({ title: result.message, icon: 'none' })
-          return
-        }
-        this.refresh()
-        wx.showToast({ title: '档案已创建并切换', icon: 'success' })
-      },
-      complete: () => this.setData({ creatingProfile: false })
-    })
+    if (this.data.creating) return
+    const nickname = String(this.data.draftNickname || '').trim()
+    if (!nickname) {
+      wx.showToast({ title: '请填写档案昵称', icon: 'none' })
+      return
+    }
+    this.setData({ creating: true })
+    const examYear = EXAM_YEARS[this.data.draftYearIndex]
+    const result = createStudentProfile(
+      { nickname, examYear },
+      operationOptions('create_profile', nickname)
+    )
+    this.setData({ creating: false })
+    if (!result.ok) {
+      wx.showToast({ title: result.message, icon: 'none' })
+      return
+    }
+    this.setData({ draftNickname: '' })
+    this.refresh()
   },
 
   switchProfile(event) {
     const id = event.currentTarget.dataset.id
     const result = switchStudentProfile(id, operationOptions('switch_profile', id))
-    if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
-      return
-    }
-    this.refresh()
-    wx.showToast({ title: '已切换档案', icon: 'success' })
+    if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
+    else this.refresh()
   },
 
   renameProfile(event) {
@@ -108,30 +98,22 @@ Page({
           { nickname },
           operationOptions('update_profile', profile.id)
         )
-        if (!result.ok) {
-          wx.showToast({ title: result.message, icon: 'none' })
-          return
-        }
-        this.refresh()
+        if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
+        else this.refresh()
       }
     })
   },
 
-  changeFavoritesMode(event) {
+  changeExamYear(event) {
     const profileId = event.currentTarget.dataset.id
-    const mode = FAVORITES_MODES[Number(event.detail.value)]
-    if (!mode) return
+    const examYear = EXAM_YEARS[Number(event.detail.value)]
     const result = updateStudentProfile(
       profileId,
-      { favoritesMode: mode.value },
+      { examYear },
       operationOptions('update_profile', profileId)
     )
-    if (!result.ok) {
-      wx.showToast({ title: result.message, icon: 'none' })
-      return
-    }
-    this.refresh()
-    wx.showToast({ title: mode.label, icon: 'success' })
+    if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
+    else this.refresh()
   },
 
   deleteProfile(event) {
@@ -139,7 +121,7 @@ Page({
     if (!profile) return
     wx.showModal({
       title: '删除学生档案',
-      content: `将删除“${profile.nickname}”的成绩、复盘、目标学校和阶段目标，其他档案不受影响。`,
+      content: `将删除“${profile.nickname}”的考试成绩和目标学校，且无法撤销。`,
       confirmText: '确认删除',
       confirmColor: '#b42318',
       success: (modal) => {
@@ -148,12 +130,8 @@ Page({
           profile.id,
           operationOptions('delete_profile', profile.id)
         )
-        if (!result.ok) {
-          wx.showToast({ title: result.message, icon: 'none' })
-          return
-        }
-        this.refresh()
-        wx.showToast({ title: '档案已删除', icon: 'success' })
+        if (!result.ok) wx.showToast({ title: result.message, icon: 'none' })
+        else this.refresh()
       }
     })
   }

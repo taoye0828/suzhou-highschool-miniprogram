@@ -1,5 +1,5 @@
 const { schools } = require('../data/schools')
-const { PRODUCT_RULES } = require('./generated/product-rules')
+const { PRODUCT_RULES } = require('./runtime-constants')
 const { canonicalJson, assertSafeJsonValue } = require('./canonical-json')
 const {
   CHECKSUM_ALGORITHM,

@@ -1,10 +1,1 @@
-.profile-card { margin-top: 24rpx; }
-.profile-name { margin: 8rpx 0; font-size: 36rpx; }
-.menu-card { display: flex; align-items: center; margin-top: 14rpx; }
-.menu-card:active { background: #f0f8f6; }
-.menu-note { margin-top: 6rpx; }
-.recent-card { margin-top: 14rpx; }
-.recent-item { min-height: 76rpx; border-top: 1rpx solid #e2e8f0; }
-.recent-item:first-of-type { margin-top: 14rpx; }
-.setting-card { margin-top: 14rpx; }
-.setting-value { color: #0f766e; font-weight: 700; }
+.menu { display: flex; align-items: center; justify-content: space-between; }

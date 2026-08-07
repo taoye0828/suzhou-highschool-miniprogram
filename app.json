@@ -3,23 +3,13 @@
     "pages/home/home",
     "pages/schools/schools",
     "pages/school-detail/school-detail",
-    "pages/target-analysis/target-analysis",
-    "pages/school-compare/school-compare",
     "pages/score-trend/score-trend",
-    "pages/web-view/web-view",
-    "pages/favorites/favorites",
     "pages/targets/targets",
-    "pages/data-info/data-info",
-    "pages/privacy/privacy",
-    "pages/data-management/data-management",
-    "pages/restore-points/restore-points",
-    "pages/exam-settings/exam-settings",
-    "pages/global-search/global-search",
-    "pages/reports/reports",
+    "pages/profile/profile",
     "pages/profile-management/profile-management",
     "pages/backup-restore/backup-restore",
     "pages/help/help",
-    "pages/profile/profile"
+    "pages/privacy/privacy"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0f766e",
@@ -37,7 +27,7 @@
       { "pagePath": "pages/home/home", "text": "首页" },
       { "pagePath": "pages/schools/schools", "text": "学校库" },
       { "pagePath": "pages/score-trend/score-trend", "text": "成绩" },
-      { "pagePath": "pages/targets/targets", "text": "目标规划" },
+      { "pagePath": "pages/targets/targets", "text": "目标" },
       { "pagePath": "pages/profile/profile", "text": "我的" }
     ]
   },

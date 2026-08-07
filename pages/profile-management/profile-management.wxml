@@ -1,19 +1,29 @@
 <view class="page">
-  <view class="card profile-intro">
-    <view class="card-title">纯本地学生档案</view>
-    <view class="muted small">昵称不要求真实姓名。每个档案的成绩、复盘、目标和学习计划彼此独立。</view>
-    <button class="button create-button" bindtap="createProfile">新建档案</button>
+  <view class="card">
+    <view class="card-title">新建学生档案</view>
+    <view class="muted small intro">昵称不需要使用真实姓名。每个档案的成绩和目标学校彼此独立。</view>
+    <text class="field-label">档案昵称</text>
+    <input class="input" maxlength="20" value="{{draftNickname}}" placeholder="例如：学生 A" bindinput="onNicknameInput" />
+    <text class="field-label">中考年份</text>
+    <picker range="{{examYears}}" value="{{draftYearIndex}}" bindchange="onDraftYearChange">
+      <view class="input picker">{{examYears[draftYearIndex]}} 年⌄</view>
+    </picker>
+    <button class="button create" loading="{{creating}}" disabled="{{creating}}" bindtap="createProfile">新建档案</button>
   </view>
 
-  <view class="card profile-card" wx:for="{{profiles}}" wx:key="id">
+  <view class="section-title">已有档案</view>
+  <view class="card" wx:for="{{profiles}}" wx:key="id">
     <view class="row between">
-      <view class="grow">
+      <view>
         <view class="card-title">{{item.nickname}}</view>
-        <view class="muted small">{{item.examYear}} 年</view>
+        <view class="muted small">{{item.examYear}} 年中考</view>
       </view>
-      <text wx:if="{{item.isActive}}" class="active-badge">当前</text>
+      <text wx:if="{{item.isActive}}" class="badge">当前</text>
     </view>
-    <view class="profile-actions">
+    <picker range="{{examYears}}" value="{{item.examYearIndex}}" data-id="{{item.id}}" bindchange="changeExamYear">
+      <view class="input picker year-picker">修改中考年份：{{item.examYear}} 年⌄</view>
+    </picker>
+    <view class="button-row">
       <button wx:if="{{!item.isActive}}" class="button secondary small-button" data-id="{{item.id}}" bindtap="switchProfile">切换</button>
       <button class="button secondary small-button" data-id="{{item.id}}" bindtap="renameProfile">改名</button>
       <button class="button danger small-button" data-id="{{item.id}}" bindtap="deleteProfile">删除</button>

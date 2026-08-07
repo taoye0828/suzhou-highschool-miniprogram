@@ -1,126 +1,60 @@
-const { replayOnboarding, tutorialSteps, resetDynamicHelp } = require('../../utils/onboarding')
-
-const FEEDBACK_URL = 'https://ycn8xfqnmoql.feishu.cn/share/base/form/shrcng2vmqyiVYLULDAEbJNWhtg'
-
-const TUTORIALS = [
-  { flow: 'home', label: '首页' },
-  { flow: 'school_filters', label: '学校筛选' },
-  { flow: 'score_records', label: '成绩记录' },
-  { flow: 'score_trend', label: '成绩趋势' },
-  { flow: 'target_planning', label: '目标规划' },
-  { flow: 'backup_restore', label: '备份恢复' },
-  { flow: 'student_profiles', label: '多学生档案' }
-]
+const CUSTOMER_EMAIL = '3341251927@qq.com'
+const CUSTOMER_WECHAT = 'shsz1610'
 
 Page({
   data: {
-    tutorials: TUTORIALS,
+    email: CUSTOMER_EMAIL,
+    wechat: CUSTOMER_WECHAT,
+    instructions: [
+      '在“学校库”按学校名称或简称搜索，并可按区域等条件筛选。',
+      '进入学校详情查看已收录的历史公开录取分数线和来源。',
+      '在学校详情手动加入目标学校。',
+      '在“成绩”记录考试名称、日期和总分。',
+      '成绩页会展示最近最多 10 次总分趋势。',
+      '在“我的 → 学生档案管理”创建或切换档案。',
+      '在“我的 → 数据备份与恢复”导出备份并在需要时恢复。'
+    ],
     faqs: [
       {
-        question: '分数线从哪里来？',
-        answer: '来自学校官网、教育局官网和政府公开网站等公开来源；详情页可查看对应来源。'
+        question: '学校和历史分数线来自哪里？',
+        answer: '来自学校官网、教育局官网和政府公开网站等公开来源；学校详情会显示来源名称和核对日期。'
       },
       {
-        question: '苏程记录会进行录取预测吗？',
-        answer: '不会。历史分差参考只按历史参考分和固定分差区间分类，不判断未来录取结果。'
+        question: '历史分数线应该怎么理解？',
+        answer: '历史分数线按年份、招生区域、批次和招生类型区分，只用于了解过去公开信息。'
       },
       {
-        question: '数据保存在哪里？',
-        answer: '小程序不会自动把学生档案、成绩、收藏或目标上传到开发者服务器；不主动分享备份或报告时，这些数据只保存在当前设备。'
+        question: '成绩和目标学校保存在哪里？',
+        answer: '默认只保存在当前设备，不会自动上传到互联网。'
       },
       {
-        question: '如何备份？',
-        answer: '进入“我的 → 备份与恢复”，先预览范围，再生成带版本和校验摘要的 JSON；只有你主动点击发送并选择接收方时，微信系统才会处理该文件。'
+        question: '如何备份和恢复？',
+        answer: '进入“我的 → 数据备份与恢复”导出备份；恢复时选择备份文件，再选择合并或替换本机数据。'
       },
       {
-        question: '如何生成和发送报告？',
-        answer: '进入“我的 → 文本和 JSON 报告”，选择成绩阶段或目标学校以及文件格式。本机生成后会先显示数据范围和隐私提醒；取消或发送失败都不会修改用户数据。'
+        question: '如何删除本机数据？',
+        answer: '进入“我的 → 数据备份与恢复”，在“数据清理”中选择清除当前档案或清除全部本机数据。'
       },
       {
-        question: '如何切换学生？',
-        answer: '进入“我的 → 学生档案”，选择目标档案后切换；各档案业务数据互不串用。'
-      },
-      {
-        question: '为什么某些学校字段不显示？',
-        answer: '只有已有可靠值的字段才展示；空值或未确认字段会直接隐藏。'
-      },
-      {
-        question: '如何清除数据？',
-        answer: '进入“我的 → 数据管理”，可单独清除当前档案或二次确认后清除全部本地数据。'
-      },
-      {
-        question: '如何重新播放教程？',
-        answer: '在本页选择完整教程或某个功能教程；教程不会创建或修改业务数据。'
-      },
-      {
-        question: '如何恢复本地数据？',
-        answer: '在“我的 → 备份与恢复”选择 JSON，校验通过后选择合并或覆盖；导入前会创建安全快照。'
-      },
-      {
-        question: '如何修复本地数据？',
-        answer: '进入“我的 → 数据管理 → 数据检查”先只读扫描，再确认是否修复可安全判断的项目。'
-      },
-      {
-        question: '为什么趋势需要至少两条记录？',
-        answer: '一条记录可以显示点位和摘要，但至少两条记录才能计算最近变化。'
-      },
-      {
-        question: '当前提供志愿填报建议吗？',
-        answer: '不提供。当前只整理本机记录和历史公开数据，不给出志愿填报建议或结论。'
-      },
-      {
-        question: '历史分数线可以直接用于填报吗？',
-        answer: '不可以。历史分数线仅用于目标规划参考，不代表未来录取结果。'
-      },
-      {
-        question: '为什么不显示住宿未核实等状态？',
-        answer: '用户页面只展示已有可靠值，不显示内部核验状态；缺失字段会直接隐藏。'
+        question: '为什么历史分数线不能代表未来录取结果？',
+        answer: '招生计划、试卷难度、报名人数和政策都可能变化，因此历史数据不代表未来录取结果。'
       }
     ]
   },
 
-  replayFullTutorial() {
-    replayOnboarding('full')
-    wx.switchTab({ url: '/pages/home/home' })
-  },
-
-  replayFeatureTutorial(event) {
-    const flow = event.currentTarget.dataset.flow
-    const steps = tutorialSteps(flow)
-    replayOnboarding(flow)
-    const first = steps[0]
-    const tabPages = [
-      '/pages/home/home',
-      '/pages/schools/schools',
-      '/pages/score-trend/score-trend',
-      '/pages/targets/targets',
-      '/pages/profile/profile'
-    ]
-    if (tabPages.includes(first.page)) wx.switchTab({ url: first.page })
-    else wx.navigateTo({ url: first.page })
-  },
-
-  replayDynamicHelp() {
-    resetDynamicHelp()
-    wx.showToast({ title: '状态提示已重置', icon: 'success' })
-  },
-
-  copyFeedbackLink() {
+  copyEmail() {
     wx.setClipboardData({
-      data: FEEDBACK_URL,
-      success: () => {
-        wx.showModal({
-          title: '复制成功',
-          content: '反馈链接已复制，请粘贴到浏览器中打开。',
-          showCancel: false
-        })
-      },
-      fail: () => {
-        wx.showToast({
-          title: '复制失败，请稍后重试。',
-          icon: 'none'
-        })
-      }
+      data: CUSTOMER_EMAIL,
+      success: () => wx.showToast({ title: '邮箱已复制', icon: 'success' }),
+      fail: () => wx.showToast({ title: '复制失败，请稍后重试', icon: 'none' })
+    })
+  },
+
+  copyWechat() {
+    wx.setClipboardData({
+      data: CUSTOMER_WECHAT,
+      success: () => wx.showToast({ title: '微信号已复制', icon: 'success' }),
+      fail: () => wx.showToast({ title: '复制失败，请稍后重试', icon: 'none' })
     })
   }
 })

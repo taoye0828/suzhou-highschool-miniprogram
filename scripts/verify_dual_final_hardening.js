@@ -74,6 +74,36 @@ console.log('✓ 第 101 条成绩明确拒绝且原 100 条不变；满额时�
 installWxStorage()
 storage = loadStorageFresh()
 assert.strictEqual(storage.ensureStorageMigrated().ok, true)
+for (let index = 0; index < APP_CONFIG.targetScore.maxRecords; index += 1) {
+  assert.strictEqual(storage.saveTargetRecord({
+    id: `target-limit-${index}`,
+    schoolId: `school-${index}`,
+    schoolName: `学校 ${index}`,
+    createdAt: '2026-08-07T00:00:00.000Z'
+  }).ok, true)
+}
+const targetIdsBeforeOverflow = storage.getTargetRecords().map((item) => item.id).sort()
+const targetOverflow = storage.saveTargetRecord({
+  id: 'target-limit-100',
+  schoolId: 'school-100',
+  schoolName: '第 101 所学校',
+  createdAt: '2026-08-07T00:00:00.000Z'
+})
+assert.strictEqual(targetOverflow.ok, false)
+assert.strictEqual(targetOverflow.code, 'LIMIT_EXCEEDED')
+assert.deepStrictEqual(storage.getTargetRecords().map((item) => item.id).sort(), targetIdsBeforeOverflow)
+const targetToEdit = storage.getTargetRecords().find((item) => item.schoolId === 'school-99')
+assert.strictEqual(storage.saveTargetRecord({
+  ...targetToEdit,
+  schoolName: '学校 99（已编辑）',
+  expectedVersion: targetToEdit.version
+}).ok, true)
+assert.strictEqual(storage.getTargetRecords().length, APP_CONFIG.targetScore.maxRecords)
+console.log('✓ 第 101 所目标学校明确拒绝且原 100 所不变；满额时仍可编辑已有目标')
+
+installWxStorage()
+storage = loadStorageFresh()
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
 delete require.cache[require.resolve('../utils/backup-restore')]
 const backup = require('../utils/backup-restore')
 const envelope = backup.createBackupEnvelope({ exportedAt: '2026-08-05T00:00:00.000Z' })

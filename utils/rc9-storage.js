@@ -1,5 +1,5 @@
 const { APP_CONFIG } = require('../config/app-config')
-const { PRODUCT_RULES } = require('./generated/product-rules')
+const { PRODUCT_RULES } = require('./runtime-constants')
 const {
   STORAGE_SCHEMA_VERSION,
   DEFAULT_PROFILE_ID,
@@ -996,6 +996,9 @@ function saveTargetRecord(record) {
   const current = existing.records.find((item) => item.schoolId === normalized.schoolId)
   const conflict = versionConflict(current, record && (record.expectedVersion ?? record.version))
   if (conflict) return conflict
+  if (!current && existing.records.length >= PRODUCT_RULES.limits.maxTargetRecordsPerProfile) {
+    return { ok: false, code: 'LIMIT_EXCEEDED', message: '每个学生档案最多添加 100 所目标学校，原记录未修改。' }
+  }
   const merged = current ? normalizeTargetRecord({ ...current, ...record, id: current.id }, profileId) : normalized
   const recordToSave = current
     ? {
@@ -1012,7 +1015,7 @@ function saveTargetRecord(record) {
   const records = [
     recordToSave,
     ...existing.records.filter((item) => item.schoolId !== recordToSave.schoolId)
-  ].slice(0, APP_CONFIG.targetScore.maxRecords)
+  ]
   const result = updateActiveProfileData((data) => ({ ...data, targetRecords: records }))
   return result.ok ? { ok: true, records } : result
 }

@@ -1,23 +1,7 @@
-.detail-hero { margin-bottom: 24rpx; }
-.detail-badges { margin-top: 22rpx; }
-.detail-card { margin-top: 0; }
-.section-heading { margin-bottom: 14rpx; font-size: 30rpx; font-weight: 700; }
-.detail-notice { margin-top: 18rpx; }
-.tag-line { margin-top: 18rpx; }
-.link-text { color: #0f766e; word-break: break-all; }
+.school-name { margin-bottom: 8rpx; font-size: 36rpx; }
+.target-action { margin: 26rpx 0; }
+.score-notice { margin: -8rpx 0 18rpx; }
+.score-value { color: #0f766e; font-size: 34rpx; font-weight: 700; }
+.source-title { margin-top: 18rpx; color: #475569; font-size: 24rpx; line-height: 1.6; }
 .source-note { margin-top: 16rpx; }
-.score-card { border-left: 8rpx solid #0f766e; }
-.safety-card { border-left: 8rpx solid #f59e0b; }
-.score-year { margin-top: 18rpx; }
-.score-year-title { margin-bottom: 12rpx; font-weight: 700; }
-.score-item { padding: 18rpx 0; border-top: 1rpx solid #eef2f1; }
-.score-main { margin-bottom: 8rpx; font-weight: 650; }
-.list-item { margin-top: 10rpx; }
-.copy-source { margin-top: 20rpx; }
-.empty-button { margin: 24rpx auto 0; width: 320rpx; }
-.target-plan-card { border-left: 8rpx solid #0f766e; }
-.my-target-card { border-left: 8rpx solid #14b8a6; }
-.target-analysis-note { margin-top: 18rpx; }
-.target-plan-note { margin-bottom: 18rpx; }
-.picker-input { display: flex; align-items: center; color: #334155; }
-.target-save-button { margin-top: 18rpx; }
+.source-button { margin-top: 20rpx; }

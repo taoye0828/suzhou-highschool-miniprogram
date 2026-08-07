@@ -1,38 +1,36 @@
 <view class="page">
-  <view class="card export-card onboarding-backup">
-    <view class="card-title">导出本地用户数据</view>
-    <view class="muted small">包含学生档案、成绩与复盘、收藏、目标学校、阶段目标、历史分差参考设置、教程状态和存储版本；不包含正式学校或分数线数据。</view>
+  <view class="card">
+    <view class="card-title">备份本机数据</view>
+    <view class="muted small intro">备份当前设备中的学生档案、考试成绩和目标学校。</view>
+    <view wx:if="{{exportPreview}}" class="summary">档案 {{exportPreview.profileCount}} 个 · 成绩 {{exportPreview.scoreCount}} 条 · 目标学校 {{exportPreview.targetCount}} 所</view>
     <view class="button-row">
-      <button class="button secondary grow" bindtap="previewExport">预览范围</button>
-      <button class="button grow" bindtap="exportBackup">生成 JSON 备份</button>
+      <button class="button secondary" bindtap="previewExport">查看备份范围</button>
+      <button class="button" bindtap="exportBackup">导出备份</button>
     </view>
-    <view wx:if="{{exportPreview}}" class="preview-box">
-      <view>档案 {{exportPreview.profileCount}} 个 · 成绩 {{exportPreview.scoreCount}} 条</view>
-      <view>目标学校 {{exportPreview.targetCount}} 所 · 阶段目标 {{exportPreview.stageGoalCount}} 条</view>
-      <view>学习任务 {{exportPreview.taskCount}} 条</view>
-      <view class="muted small">校验摘要：{{exportPreview.checksum}}</view>
-    </view>
-    <view wx:if="{{exportPath}}" class="muted small path-text">本地路径：{{exportPath}}</view>
-    <button wx:if="{{exportPath}}" class="button send-backup" bindtap="sendBackupFile">发送备份文件</button>
-    <view wx:if="{{exportPath}}" class="muted tiny">不主动发送时文件只保存在本机，小程序不会自动上传到开发者服务器；主动发送会通过微信系统能力交给你选择的接收方。取消或失败不会修改本机数据，也不会记录为成功。</view>
+    <button wx:if="{{exportReady}}" class="button secondary send" bindtap="sendBackupFile">发送备份</button>
   </view>
 
-  <view class="card import-card">
-    <view class="card-title">导入与恢复</view>
-    <view class="muted small">选择 JSON 后先校验格式、版本、分数、schoolId、重复 ID 和摘要，再决定合并或覆盖。校验失败不会修改现有数据。</view>
-    <button class="button secondary choose-button" bindtap="chooseImportFile">选择 JSON 备份</button>
-    <view wx:if="{{importErrors.length}}" class="error-box">
-      <view wx:for="{{importErrors}}" wx:key="*this">{{item}}</view>
-    </view>
-    <view wx:if="{{hasPendingImport}}" class="preview-box">
+  <view class="card">
+    <view class="card-title">从备份恢复</view>
+    <view class="muted small intro">选择此前导出的备份文件，再决定合并或替换本机数据。</view>
+    <button class="button secondary choose" bindtap="chooseImportFile">选择备份文件</button>
+    <view wx:if="{{importError}}" class="error">{{importError}}</view>
+    <view wx:if="{{hasPendingImport}}" class="summary">
       <view class="card-title">{{importFileName}}</view>
-      <view>档案 {{importPreview.profileCount}} 个 · 成绩 {{importPreview.scoreCount}} 条</view>
-      <view>目标学校 {{importPreview.targetCount}} 所 · 阶段目标 {{importPreview.stageGoalCount}} 条</view>
-      <view>学习任务 {{importPreview.taskCount}} 条</view>
+      <view class="muted small">档案 {{importPreview.profileCount}} 个 · 成绩 {{importPreview.scoreCount}} 条 · 目标学校 {{importPreview.targetCount}} 所</view>
       <view class="button-row">
-        <button class="button secondary grow" data-mode="merge" bindtap="confirmImport">合并</button>
-        <button class="button danger grow" data-mode="overwrite" bindtap="confirmImport">覆盖</button>
+        <button class="button secondary" data-mode="merge" bindtap="confirmImport">合并到现有数据</button>
+        <button class="button danger" data-mode="overwrite" bindtap="confirmImport">替换本机数据</button>
       </view>
+    </view>
+  </view>
+
+  <view class="section-title">数据清理</view>
+  <view class="card">
+    <view class="muted small">清理操作无法撤销，建议先导出备份。</view>
+    <view class="button-row">
+      <button class="button danger" bindtap="clearCurrentProfile">清除当前档案数据</button>
+      <button class="button danger" bindtap="clearAllData">清除全部本机数据</button>
     </view>
   </view>
 </view>

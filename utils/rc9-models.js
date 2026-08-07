@@ -1,5 +1,5 @@
 const { APP_CONFIG } = require('../config/app-config')
-const { PRODUCT_RULES } = require('./generated/product-rules')
+const { PRODUCT_RULES } = require('./runtime-constants')
 const { assertSafeJsonValue } = require('./canonical-json')
 
 const STORAGE_SCHEMA_VERSION = PRODUCT_RULES.storageSchemaVersion

@@ -1,9 +1,6 @@
-.tutorial-card { margin-top: 24rpx; }
-.full-button { margin-top: 24rpx; }
-.tutorial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14rpx; margin-top: 18rpx; }
-.tutorial-button { width: 100%; margin: 0; }
-.faq-card { margin-top: 16rpx; }
-.faq-answer { margin-top: 12rpx; line-height: 1.7; }
-@media (min-width: 700px) {
-  .tutorial-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
+.first-title { margin-top: 0; }
+.instruction { display: flex; align-items: flex-start; gap: 18rpx; padding: 12rpx 0; line-height: 1.65; }
+.step-number { display: flex; align-items: center; justify-content: center; width: 42rpx; height: 42rpx; color: #0f766e; background: #e7f6f3; border-radius: 50%; font-size: 23rpx; }
+.answer { margin-top: 12rpx; }
+.contact-row { display: flex; align-items: center; gap: 20rpx; margin-top: 24rpx; }
+.contact-value { margin-top: 6rpx; font-weight: 600; }

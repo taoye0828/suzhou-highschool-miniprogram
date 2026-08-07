@@ -1,8 +1,0 @@
-@import "../../styles/common.wxss";
-
-.profile-strip { margin-bottom: 18rpx; color: #64748b; font-size: 24rpx; }
-.form-card, .list-card { margin-top: 18rpx; }
-.form-card .muted { margin-top: 10rpx; line-height: 1.6; }
-.switch-row { min-height: 82rpx; border-bottom: 1rpx solid #e2e8f0; }
-.button-row { display: flex; gap: 12rpx; margin-top: 20rpx; }
-.textarea { min-height: 220rpx; line-height: 1.6; }

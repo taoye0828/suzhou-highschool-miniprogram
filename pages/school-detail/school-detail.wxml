@@ -1,127 +1,40 @@
-<view class="page">
-  <view wx:if="{{loading}}" class="card muted">正在读取学校与当前档案数据…</view>
-  <view wx:if="{{pageError}}" class="input-error">{{pageError}}</view>
-  <view class="card muted small boundary-card">
-    <view>分组仅根据用户选择的历史成绩与学校历史公开分数线计算分差，不考虑招生计划、排名、指标生、批次变化、政策变化和当年试卷难度，不构成录取判断或志愿建议。</view>
-    <view>历史公开数据整理，仅供目标规划参考。</view>
+<view class="page" wx:if="{{school}}">
+  <view class="card">
+    <view class="card-title school-name">{{school.name}}</view>
+    <view class="muted">{{school.district}} · {{school.schoolType}}{{school.ownership ? ' · ' + school.ownership : ''}}</view>
+    <view wx:if="{{school.campus}}" class="info-row"><text class="info-label">校区</text><text class="info-value">{{school.campus}}</text></view>
+    <view wx:if="{{school.address}}" class="info-row"><text class="info-label">地址</text><text class="info-value">{{school.address}}</text></view>
+    <view wx:if="{{school.phone}}" class="info-row"><text class="info-label">电话</text><text class="info-value">{{school.phone}}</text></view>
+    <view wx:if="{{aliasesText}}" class="info-row"><text class="info-label">别名</text><text class="info-value">{{aliasesText}}</text></view>
+    <view wx:if="{{school.description}}" class="info-row"><text class="info-label">简介</text><text class="info-value">{{school.description}}</text></view>
+    <view wx:if="{{programsText}}" class="info-row"><text class="info-label">课程/项目</text><text class="info-value">{{programsText}}</text></view>
+    <view class="button-row">
+      <button class="button secondary small-button" data-value="{{school.name}}" data-success="学校名称已复制" bindtap="copyText">复制学校名称</button>
+      <button class="button secondary small-button" data-value="{{mapSearchText}}" data-success="地图搜索词已复制" bindtap="copyText">复制地图搜索词</button>
+      <button wx:if="{{school.address}}" class="button secondary small-button" data-value="{{school.address}}" data-success="地址已复制" bindtap="copyText">复制地址</button>
+      <button wx:if="{{school.website || school.officialUrl}}" class="button secondary small-button" data-value="{{school.website || school.officialUrl}}" data-success="官网链接已复制" bindtap="copyText">复制官网链接</button>
+    </view>
   </view>
-  <view wx:if="{{!school}}" class="card empty">
-    <view class="card-title">未找到学校数据，请返回学校库重新选择</view>
-    <button class="button empty-button" bindtap="openSchools">返回学校库</button>
+
+  <button wx:if="{{!targetRecord}}" class="button target-action" bindtap="addTarget">加入目标学校</button>
+  <button wx:else class="button danger target-action" bindtap="removeTarget">移出目标学校</button>
+
+  <view class="section-title">历史公开录取分数线</view>
+  <view class="muted small score-notice">历史数据仅供了解，不代表未来录取结果。</view>
+  <view class="card score-card" wx:for="{{scores}}" wx:key="id">
+    <view class="row between"><view class="card-title">{{item.year}} 年</view><view class="score-value">{{item.minScore}} 分</view></view>
+    <view class="muted small">{{item.detail}}</view>
+    <view wx:if="{{item.sameScoreRule}}" class="muted small">{{item.sameScoreRule}}</view>
+    <view class="source-title">{{item.sourceTitle}}</view>
+    <button class="button secondary small-button source-button" data-value="{{item.sourceUrl}}" data-success="来源链接已复制" bindtap="copyText">复制来源链接</button>
   </view>
+  <view wx:if="{{scores.length === 0}}" class="card empty">本校暂未收录已核实历史录取分数线。</view>
 
-  <block wx:if="{{school}}">
-    <view class="hero detail-hero">
-      <view class="hero-title">{{school.name}}</view>
-      <view class="hero-subtitle">{{school.district}} · {{school.schoolType}}</view>
-    </view>
-
-    <view class="card detail-card">
-      <view class="section-heading">基础信息</view>
-      <view class="info-row"><text class="info-label">区域</text><text class="info-value">{{school.district}}</text></view>
-      <view class="info-row"><text class="info-label">类型</text><text class="info-value">{{school.schoolType}}</text></view>
-      <view wx:if="{{school.aliasesText}}" class="info-row"><text class="info-label">别名</text><text class="info-value">{{school.aliasesText}}</text></view>
-      <view wx:if="{{school.ownership}}" class="info-row"><text class="info-label">办学性质</text><text class="info-value">{{school.ownership}}</text></view>
-      <view wx:if="{{school.campus}}" class="info-row"><text class="info-label">校区</text><text class="info-value">{{school.campus}}</text></view>
-      <view wx:if="{{school.address}}" class="info-row"><text class="info-label">地址</text><text class="info-value">{{school.address}}</text></view>
-      <view wx:if="{{school.phone}}" class="info-row"><text class="info-label">电话</text><text class="info-value">{{school.phone}}</text></view>
-      <view class="tag-line">
-        <text class="badge" wx:for="{{school.tags}}" wx:key="*this">{{item}}</text>
-      </view>
-    </view>
-
-    <view wx:if="{{targetAnalysis}}" class="card my-target-card">
-      <view class="section-heading">我的目标分析</view>
-      <view class="info-row"><text class="info-label">当前成绩</text><text class="info-value">{{targetAnalysis.currentScoreText}}</text></view>
-      <view class="info-row"><text class="info-label">历史参考分</text><text class="info-value">{{targetAnalysis.referenceScoreText}}</text></view>
-      <view class="info-row"><text class="info-label">参考年份</text><text class="info-value">{{targetAnalysis.referenceYearText}}</text></view>
-      <view class="info-row"><text class="info-label">当前差距</text><text class="info-value">{{targetAnalysis.gapText}}</text></view>
-      <view class="info-row"><text class="info-label">阶段目标下分差</text><text class="info-value">{{targetAnalysis.stageGapText}}</text></view>
-      <view class="info-row"><text class="info-label">中考目标下分差</text><text class="info-value">{{targetAnalysis.finalGapText}}</text></view>
-      <view class="info-row"><text class="info-label">目标等级</text><text class="info-value">{{targetAnalysis.targetLevelText}}</text></view>
-    </view>
-
-    <view class="card target-plan-card">
-      <view class="section-heading">目标规划</view>
-      <view class="muted small target-plan-note">为 {{school.name}} 选择一个目标等级，保存后可在“目标规划”查看。</view>
-      <picker range="{{targetLevels}}" range-key="label" value="{{targetLevelIndex}}" bindchange="onTargetLevelChange">
-        <view class="input picker-input">{{targetLevels[targetLevelIndex].label}}⌄</view>
-      </picker>
-      <button class="button target-save-button" disabled="{{saving}}" loading="{{saving}}" bindtap="saveSchoolTarget">{{isTargetSchool ? '更新目标等级' : '加入目标'}}</button>
-    </view>
-
-    <view class="card">
-      <view class="section-heading">我的学校状态</view>
-      <view class="muted small">候选状态、标签和备注只属于当前档案，不参与历史分差计算。</view>
-      <text class="field-label">候选状态</text><picker range="{{candidateStatusOptions}}" range-key="label" value="{{candidateStatusIndex}}" bindchange="onCandidateStatusChange"><view class="input picker-input">{{candidateStatusOptions[candidateStatusIndex].label}}⌄</view></picker>
-      <text class="field-label">个人标签</text><input class="input" maxlength="400" value="{{schoolTagsInput}}" data-field="schoolTagsInput" bindinput="onSchoolUserInput" placeholder="用逗号或顿号分隔，最多 20 个" />
-      <text class="field-label">个人备注</text><textarea class="input textarea" maxlength="1000" value="{{schoolNoteInput}}" data-field="schoolNoteInput" bindinput="onSchoolUserInput" placeholder="仅保存在当前本机档案"></textarea>
-      <button class="button" disabled="{{saving}}" bindtap="saveSchoolUserState">保存学校状态</button>
-    </view>
-
-    <view wx:if="{{school.intro}}" class="card">
-      <view class="section-heading">学校简介</view>
-      <view class="notice">{{school.intro}}</view>
-    </view>
-
-    <view wx:if="{{school.features && school.features.length}}" class="card">
-      <view class="section-heading">办学特色</view>
-      <view class="notice list-item" wx:for="{{school.features}}" wx:key="*this">{{item}}</view>
-    </view>
-
-    <view wx:if="{{school.programs && school.programs.length}}" class="card">
-      <view class="section-heading">课程/项目</view>
-      <view class="notice list-item" wx:for="{{school.programs}}" wx:key="*this">{{item}}</view>
-    </view>
-
-    <view class="card score-card">
-      <view class="section-heading">历史录取分数线</view>
-      <view wx:if="{{scoreTrend.length}}" class="preview-box">
-        <view class="field-label">历年趋势（仅真实年份，不平均不同项目）</view>
-        <view wx:for="{{scoreTrend}}" wx:key="id" class="info-row">
-          <text>{{item.year}} · {{item.itemName}}</text>
-          <text>{{item.score}} 分</text>
-        </view>
-      </view>
-      <view wx:if="{{scoreGroups.length === 0}}" class="notice">{{emptyScoreText}}</view>
-      <view wx:for="{{scoreGroups}}" wx:key="year" class="score-year">
-        <view class="score-year-title">{{item.year}} 年</view>
-        <view wx:for="{{item.items}}" wx:for-item="score" wx:key="id" class="score-item">
-          <view class="score-main">{{score.region}} · {{score.batch}}</view>
-          <view class="muted small">{{score.admissionType}} · {{score.scoreType}}：{{score.minScore}}</view>
-          <view wx:if="{{score.sameScoreRule}}" class="muted small">{{score.sameScoreRule}}</view>
-          <view class="muted small">{{score.sourceTitle}}</view>
-          <view class="muted small">核对日期：{{score.sourceCheckedAt}}</view>
-          <view class="button-row">
-            <button class="button secondary small-button copy-source" data-url="{{score.sourceUrl}}" catchtap="openScoreSource">打开分数线来源</button>
-            <button class="button secondary small-button copy-source" data-url="{{score.sourceUrl}}" catchtap="copyScoreSource">复制来源链接</button>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <view class="card">
-      <view class="section-heading">数据来源</view>
-      <view class="info-row"><text class="info-label">来源标题</text><text class="info-value">{{school.sourceTitle}}</text></view>
-      <view class="info-row"><text class="info-label">核对日期</text><text class="info-value">{{school.sourceCheckedAt}}</text></view>
-      <view class="notice source-note">{{school.sourceNote}}</view>
-      <view class="button-row">
-        <button class="button secondary copy-source" bindtap="openSourceLink">打开官方来源</button>
-        <button class="button secondary copy-source" bindtap="copySourceLink">复制来源链接</button>
-      </view>
-    </view>
-
-    <view class="card">
-      <view class="section-heading">操作</view>
-      <view class="button-row">
-        <button class="button" disabled="{{saving}}" bindtap="toggleFavorite">{{isFavorite ? '取消收藏' : '收藏学校'}}</button>
-        <button class="button secondary" disabled="{{saving}}" bindtap="toggleCompare">{{isCompared ? '取消对比' : '加入对比'}}</button>
-        <button class="button secondary" bindtap="copySchoolName">复制学校名称</button>
-        <button class="button secondary" bindtap="copyMapKeyword">复制地图搜索词</button>
-        <button wx:if="{{school.address}}" class="button secondary" bindtap="copyAddress">复制地址</button>
-        <button wx:if="{{school.officialWebsite}}" class="button secondary" bindtap="openOfficialWebsite">打开学校官网</button>
-        <button wx:if="{{school.officialWebsite}}" class="button secondary" bindtap="copyOfficialWebsite">复制官网链接</button>
-      </view>
-    </view>
-  </block>
+  <view class="section-title">学校信息来源</view>
+  <view class="card">
+    <view class="card-title">{{school.sourceTitle}}</view>
+    <view class="muted small">核对日期：{{school.sourceCheckedAt}}</view>
+    <view wx:if="{{school.sourceNote}}" class="muted source-note">{{school.sourceNote}}</view>
+    <button class="button secondary source-button" data-value="{{school.sourceUrl}}" data-success="来源链接已复制" bindtap="copyText">复制来源链接</button>
+  </view>
 </view>

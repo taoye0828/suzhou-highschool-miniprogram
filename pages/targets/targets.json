@@ -1,6 +1,3 @@
 {
-  "navigationBarTitleText": "目标规划",
-  "usingComponents": {
-    "onboarding-overlay": "/components/onboarding-overlay/onboarding-overlay"
-  }
+  "navigationBarTitleText": "目标"
 }

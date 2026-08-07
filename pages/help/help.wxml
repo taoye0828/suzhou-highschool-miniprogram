@@ -1,30 +1,29 @@
 <view class="page">
-  <view class="card help-intro-card">
-    <view class="card-title">帮助与反馈</view>
-    <view class="muted small">如果您遇到功能问题、页面显示异常、数据问题或有功能建议，可以通过反馈问卷告诉我们。</view>
-    <view class="muted tiny privacy-note">提交截图前，请注意遮挡姓名、联系方式等个人信息。请勿提交密码、身份证号等敏感信息。</view>
-    <button class="button feedback-button" bindtap="copyFeedbackLink">复制反馈问卷链接</button>
-  </view>
-
-  <view class="card tutorial-card">
-    <view class="card-title">使用说明</view>
-    <view class="muted small">可重播完整教程或按功能查看操作说明。教程不会创建成绩、收藏或目标，也不会更改已有数据。</view>
-    <button class="button full-button" bindtap="replayFullTutorial">重播完整 7 步教程</button>
-    <button class="button secondary full-button" bindtap="replayDynamicHelp">重播状态型帮助</button>
-    <view class="tutorial-grid">
-      <button
-        class="button secondary tutorial-button"
-        wx:for="{{tutorials}}"
-        wx:key="flow"
-        data-flow="{{item.flow}}"
-        bindtap="replayFeatureTutorial"
-      >{{item.label}}</button>
+  <view class="section-title first-title">使用说明</view>
+  <view class="card">
+    <view class="instruction" wx:for="{{instructions}}" wx:key="*this">
+      <text class="step-number">{{index + 1}}</text>
+      <text class="grow">{{item}}</text>
     </view>
   </view>
 
   <view class="section-title">常见问题</view>
-  <view class="card faq-card" wx:for="{{faqs}}" wx:key="question">
+  <view class="card" wx:for="{{faqs}}" wx:key="question">
     <view class="card-title">{{item.question}}</view>
-    <view class="muted faq-answer">{{item.answer}}</view>
+    <view class="muted answer">{{item.answer}}</view>
+  </view>
+
+  <view class="section-title">联系人工客服</view>
+  <view class="card customer-service">
+    <view class="muted">使用中遇到问题或有功能建议，可以通过以下方式联系我们。请勿发送身份证号、手机号等敏感个人信息。</view>
+    <view class="contact-row">
+      <view class="grow"><view class="muted small">邮箱反馈</view><view class="contact-value">{{email}}</view></view>
+      <button class="button secondary small-button" bindtap="copyEmail">复制邮箱</button>
+    </view>
+    <view class="divider"></view>
+    <view class="contact-row">
+      <view class="grow"><view class="muted small">微信客服</view><view class="contact-value">微信号：{{wechat}}</view></view>
+      <button class="button secondary small-button" bindtap="copyWechat">复制微信号</button>
+    </view>
   </view>
 </view>

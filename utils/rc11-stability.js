@@ -1,4 +1,4 @@
-const { PRODUCT_RULES } = require('./generated/product-rules')
+const { PRODUCT_RULES } = require('./runtime-constants')
 const { canonicalJson } = require('./canonical-json')
 const { CHECKSUM_ALGORITHM, checksumFor, sha256 } = require('./checksum')
 

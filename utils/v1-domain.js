@@ -1,4 +1,4 @@
-const { PRODUCT_RULES } = require('./generated/product-rules')
+const { PRODUCT_RULES } = require('./runtime-constants')
 
 const EXAM_TYPE_LABELS = Object.freeze({
   weekly_test: '周测',

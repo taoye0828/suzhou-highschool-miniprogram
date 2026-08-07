@@ -1,4 +1,4 @@
-const { PRODUCT_RULES } = require('./generated/product-rules')
+const { PRODUCT_RULES } = require('./runtime-constants')
 
 const FORBIDDEN_KEYS = new Set(PRODUCT_RULES.forbiddenObjectKeys)
 

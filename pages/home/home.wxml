@@ -1,78 +1,50 @@
 <view class="page">
-  <view class="card countdown-card onboarding-home-overview" wx:if="{{countdown}}">
-    <view class="row between countdown-head">
-      <view class="grow">
-        <view class="muted small">中考倒计时</view>
-        <view class="card-title">{{countdown.daysText}}</view>
-        <view class="muted small countdown-date">目标日期：{{countdown.targetDateText}}</view>
+  <view class="card" bindtap="openProfiles">
+    <view class="row between">
+      <view>
+        <view class="muted small">当前档案</view>
+        <view class="card-title">{{profileName}}</view>
       </view>
-      <picker range="{{examYears}}" value="{{examYearIndex}}" bindchange="onExamYearChange">
-        <view class="year-picker">{{examYears[examYearIndex]}} 年⌄</view>
-      </picker>
+      <view class="list-arrow">切换 ›</view>
     </view>
   </view>
 
-  <view class="section-title">当前进展</view>
-  <view wx:if="{{!hasScores}}" class="card empty-state-card">
-    <view class="card-title">从第一次考试记录开始</view>
-    <view class="muted empty-state-text">记录总分后，这里会显示最近变化与趋势摘要。</view>
-    <button class="button" bindtap="openScoreCenter">记录第一次成绩</button>
+  <view class="card">
+    <view class="muted small">中考倒计时 · {{examYear}} 年</view>
+    <view class="countdown">{{countdown.daysText}}</view>
+    <view class="muted small">{{countdown.targetDateText}}</view>
   </view>
-  <view wx:else class="card score-card onboarding-score-record">
-    <view class="row between score-head">
-      <view class="grow">
-        <view class="muted small">{{latestExamDate}}</view>
-        <view class="card-title">{{latestExamName}}</view>
+
+  <view class="section-title">最近成绩</view>
+  <view class="card" wx:if="{{latestScore}}">
+    <view class="row between">
+      <view>
+        <view class="card-title">{{latestScore.examName}}</view>
+        <view class="muted small">{{latestScore.examDate}}</view>
       </view>
-      <view class="score-value">{{latestScoreText}}</view>
+      <view class="score">{{latestScore.totalScore}} 分</view>
     </view>
-    <view class="status-line">{{scoreChangeText}}</view>
-    <view class="muted small">{{trendSummary}}</view>
-    <button class="button secondary card-action" bindtap="openScoreCenter">查看成绩中心</button>
+    <button class="button secondary card-action" bindtap="openScores">记录成绩</button>
+  </view>
+  <view class="card empty" wx:else>
+    <view>还没有考试记录。</view>
+    <button class="button card-action" bindtap="openScores">记录成绩</button>
   </view>
 
-  <view wx:if="{{!hasTarget}}" class="card empty-state-card">
-    <view class="card-title">选择一所目标学校</view>
-    <view class="muted empty-state-text">加入目标后，可在首页持续查看参考分与当前分差。</view>
-    <button class="button secondary" bindtap="openRecommendations">查看历史分差参考</button>
+  <view class="section-title">目标学校</view>
+  <view class="card" wx:if="{{targetCount}}">
+    <view class="card-title">已加入 {{targetCount}} 所</view>
+    <view class="muted target-names">{{targetNames}}</view>
+    <button class="button secondary card-action" bindtap="openTargets">查看目标</button>
   </view>
-  <view wx:else class="card target-card onboarding-target-planning">
-    <view class="row between target-head">
-      <view class="grow">
-        <view class="muted small">主要目标 · {{targetLevelLabel}}</view>
-        <view class="card-title">{{primaryTargetName}}</view>
-      </view>
-      <view class="target-gap">{{targetDifferenceText}}</view>
-    </view>
-    <view class="muted small">参考分：{{targetReferenceText}}</view>
-    <button class="button secondary card-action" bindtap="openTargetPlanning">查看目标规划</button>
+  <view class="card empty" wx:else>
+    <view>还没有目标学校。</view>
+    <button class="button card-action" bindtap="openSchools">查找学校</button>
   </view>
 
-  <view wx:if="{{hasStageGoal}}" class="card stage-card">
-    <view class="muted small">当前阶段目标</view>
-    <view class="card-title stage-title">{{stageGoalTitle}}</view>
-    <view class="muted small">截止日期：{{stageGoalDeadline}}</view>
-    <view class="status-line">{{stageGoalProgressText}}</view>
-    <button class="button secondary card-action" bindtap="openTargetPlanning">管理学习目标</button>
+  <view class="section-title">快捷入口</view>
+  <view class="button-row">
+    <button class="button" bindtap="openScores">记录成绩</button>
+    <button class="button secondary" bindtap="openSchools">查找学校</button>
   </view>
-
-  <view wx:if="{{thisWeekTasks.length}}" class="card">
-    <view class="card-title">本周任务</view>
-    <view wx:for="{{thisWeekTasks}}" wx:key="id" class="info-row"><text>{{item.title}}</text><text class="muted small">{{item.status === 'completed' ? '已完成' : '待执行'}}</text></view>
-    <view class="muted small">首页最多展示 3 项；未完成任务不会自动移动到下周。</view>
-  </view>
-
-  <view class="section-title">快捷操作</view>
-  <view class="shortcut-grid">
-    <button class="button secondary shortcut-button wide" bindtap="openGlobalSearch">全局搜索</button>
-    <button class="button shortcut-button" bindtap="openScoreCenter">记录成绩</button>
-    <button class="button secondary shortcut-button" bindtap="openRecommendations">历史分差参考</button>
-    <button class="button secondary shortcut-button wide" bindtap="openTargetPlanning">目标规划</button>
-  </view>
-
-  <onboarding-overlay
-    visible="{{onboarding.visible}}"
-    step="{{onboarding.step}}"
-    bind:action="onOnboardingAction"
-  />
 </view>
