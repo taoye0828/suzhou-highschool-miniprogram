@@ -22,7 +22,7 @@ for (const gate of gates) {
   if (result.status !== 0) process.exit(result.status || 1)
 }
 
-console.log('V1 FULL VERIFY PASS (FCP 12 TEST-ID)')
+console.log('V1 FULL VERIFY PASS (FCP 13 TEST-ID)')
 if (process.argv.includes('--all-verify')) {
   console.log(`ALL CURRENT RELEASE GATES PASS (${gates.length} scripts)`)
 }

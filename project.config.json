@@ -47,6 +47,10 @@
         "type": "file"
       },
       {
+        "value": "project.private.config.json",
+        "type": "file"
+      },
+      {
         "value": ".md",
         "type": "suffix"
       },
@@ -56,7 +60,7 @@
       },
       {
         "value": ".DS_Store",
-        "type": "file"
+        "type": "suffix"
       },
       {
         "value": "node_modules",

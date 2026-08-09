@@ -68,6 +68,10 @@ function text(value, maxLength = 500) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
 }
 
+function hasOwn(value, key) {
+  return Object.prototype.hasOwnProperty.call(value || {}, key)
+}
+
 function optionalInteger(value, { min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER } = {}) {
   if (value === null || value === undefined || value === '') return null
   const number = Number(value)
@@ -197,7 +201,7 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
         admissionScaleMax,
         eligibilityRuleId
       }
-  return {
+  const normalized = {
     id,
     examName,
     examDate,
@@ -206,35 +210,46 @@ function normalizeExamRecord(value, profileId = DEFAULT_PROFILE_ID) {
     updatedAt,
     totalScore,
     score: totalScore,
-    examType: PRODUCT_RULES.examTypes.includes(value.examType) ? value.examType : 'custom',
-    examTemplateId: text(value.examTemplateId, 120),
-    scoreSchemeId,
-    scoreSchemeName,
-    scoreSchemeSnapshot,
-    totalMaxScore,
-    metricType,
-    admissionScaleMax,
-    eligibilityRuleId,
-    scoreRateBasisPoints: Math.round(totalScore * PRODUCT_RULES.scoreRateBasis / totalMaxScore),
-    migrationSource: text(value.migrationSource, 120) || 'legacy_740_total',
-    subjectScores,
-    classRank: optionalInteger(value.classRank, { min: 1, max: 100000 }),
-    gradeRank: optionalInteger(value.gradeRank, { min: 1, max: 100000 }),
-    improvementNotes: text(value.improvementNotes, 1000),
-    lossNotes: text(value.lossNotes, 1000),
-    nextActions: text(value.nextActions, 1000),
-    notes: text(value.notes, 1000),
-    legacyExtensions: collectLegacyExtensions(value, [
-      'id', 'examName', 'examDate', 'date', 'totalScore', 'score', 'createdAt', 'updatedAt',
-      'subjectScores', 'classRank', 'gradeRank', 'improvementNotes', 'lossNotes', 'nextActions',
-      'notes', 'profileId', 'version', 'schemaVersion', 'examType', 'examTemplateId', 'scoreSchemeId', 'scoreSchemeName',
-      'scoreSchemeSnapshot', 'totalMaxScore', 'metricType', 'admissionScaleMax', 'eligibilityRuleId',
-      'scoreRateBasisPoints', 'migrationSource'
-    ]),
     profileId: text(profileId, 120) || DEFAULT_PROFILE_ID,
     version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
+  if (hasOwn(value, 'examType')) {
+    normalized.examType = PRODUCT_RULES.examTypes.includes(value.examType) ? value.examType : 'custom'
+  }
+  if (hasOwn(value, 'examTemplateId')) normalized.examTemplateId = text(value.examTemplateId, 120)
+  const hasSchemeMetadata = [
+    'scoreSchemeId', 'scoreSchemeName', 'scoreSchemeSnapshot', 'totalMaxScore', 'metricType',
+    'admissionScaleMax', 'eligibilityRuleId', 'scoreRateBasisPoints', 'migrationSource'
+  ].some((key) => hasOwn(value, key))
+  if (hasSchemeMetadata) {
+    normalized.scoreSchemeId = scoreSchemeId
+    normalized.scoreSchemeName = scoreSchemeName
+    normalized.scoreSchemeSnapshot = scoreSchemeSnapshot
+    normalized.totalMaxScore = totalMaxScore
+    normalized.metricType = metricType
+    normalized.admissionScaleMax = admissionScaleMax
+    normalized.eligibilityRuleId = eligibilityRuleId
+    normalized.scoreRateBasisPoints = Math.round(totalScore * PRODUCT_RULES.scoreRateBasis / totalMaxScore)
+    normalized.migrationSource = text(value.migrationSource, 120) || 'legacy_740_total'
+  }
+  if (hasOwn(value, 'subjectScores')) normalized.subjectScores = subjectScores
+  if (hasOwn(value, 'classRank')) normalized.classRank = optionalInteger(value.classRank, { min: 1, max: 100000 })
+  if (hasOwn(value, 'gradeRank')) normalized.gradeRank = optionalInteger(value.gradeRank, { min: 1, max: 100000 })
+  for (const field of ['improvementNotes', 'lossNotes', 'nextActions', 'notes']) {
+    if (hasOwn(value, field)) normalized[field] = text(value[field], 1000)
+  }
+  const legacyExtensions = collectLegacyExtensions(value, [
+    'id', 'examName', 'examDate', 'date', 'totalScore', 'score', 'createdAt', 'updatedAt',
+    'subjectScores', 'classRank', 'gradeRank', 'improvementNotes', 'lossNotes', 'nextActions',
+    'notes', 'profileId', 'version', 'schemaVersion', 'examType', 'examTemplateId', 'scoreSchemeId', 'scoreSchemeName',
+    'scoreSchemeSnapshot', 'totalMaxScore', 'metricType', 'admissionScaleMax', 'eligibilityRuleId',
+    'scoreRateBasisPoints', 'migrationSource'
+  ])
+  if (hasOwn(value, 'legacyExtensions') || Object.keys(legacyExtensions).length) {
+    normalized.legacyExtensions = legacyExtensions
+  }
+  return normalized
 }
 
 function normalizeTargetLevel(value) {
@@ -248,11 +263,10 @@ function normalizeTargetRecord(value, profileId = DEFAULT_PROFILE_ID) {
   const schoolName = text(value.schoolName, 100)
   if (!schoolId || !schoolName) return null
   const createdAt = isoDate(value.createdAt, new Date(0).toISOString())
-  return {
+  const normalized = {
     id: text(value.id, 120) || `target_${schoolId}`,
     schoolId,
     schoolName,
-    level: normalizeTargetLevel(value.level || value.targetLevel),
     referenceScore: optionalInteger(value.referenceScore, { min: 0, max: APP_CONFIG.targetScore.max }),
     referenceYear: optionalInteger(value.referenceYear, { min: 2000, max: 2200 }),
     createdAt,
@@ -261,6 +275,10 @@ function normalizeTargetRecord(value, profileId = DEFAULT_PROFILE_ID) {
     version: optionalInteger(value.version, { min: 1, max: 2147483647 }) ?? 1,
     schemaVersion: STORAGE_SCHEMA_VERSION
   }
+  if (hasOwn(value, 'level') || hasOwn(value, 'targetLevel')) {
+    normalized.level = normalizeTargetLevel(value.level || value.targetLevel)
+  }
+  return normalized
 }
 
 function normalizeTargetSubject(value, index = 0) {

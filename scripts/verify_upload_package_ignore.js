@@ -73,7 +73,9 @@ assert.ok(hasRule('folder', 'scripts'), 'scripts folder ignore rule missing')
 assert.ok(hasRule('folder', 'shared-spec'), 'shared-spec folder ignore rule missing')
 assert.ok(hasRule('folder', 'utils/generated'), 'generated development rules ignore missing')
 assert.ok(hasRule('file', 'README.md'), 'README.md ignore rule missing')
+assert.ok(hasRule('file', 'project.private.config.json'), 'private DevTools config ignore rule missing')
 assert.ok(hasRule('suffix', '.md'), '*.md suffix ignore rule missing')
+assert.ok(hasRule('suffix', '.DS_Store'), 'nested .DS_Store ignore rule missing')
 assert.ok(hasRule('folder', 'docs/mp5_official_images'), 'official image cache ignore rule missing')
 assert.ok(hasRule('folder', 'docs/mp5_official_pages'), 'official page cache ignore rule missing')
 assert.ok(hasRule('regexp', '^docs/.*\\.html$'), 'docs html regexp ignore rule missing')
@@ -96,8 +98,11 @@ assert.ok(hasRule('suffix', '.log'), '*.log ignore rule missing')
   'shared-spec/product_rules_v1.json',
   'utils/generated/product-rules.js',
   'README.md',
+  'project.private.config.json',
   '.git/config',
   '.DS_Store',
+  'pages/.DS_Store',
+  'utils/.DS_Store',
   'node_modules/example/index.js',
   'package-lock.json',
   'package.json',

@@ -38,3 +38,10 @@
     <button class="button secondary source-button" data-value="{{school.sourceUrl}}" data-success="来源链接已复制" bindtap="copyText">复制来源链接</button>
   </view>
 </view>
+<view class="page" wx:elif="{{notFound}}">
+  <view class="card empty">
+    <view class="card-title">未找到这所学校</view>
+    <view class="muted">该学校可能已从当前数据中移除，请返回学校库重新查找。</view>
+    <button class="button" bindtap="goBack">返回学校库</button>
+  </view>
+</view>

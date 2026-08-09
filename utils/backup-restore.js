@@ -474,26 +474,60 @@ function normalizedStateFromPayload(payload) {
   }
 }
 
+function validateStateLimits(state) {
+  const profiles = Array.isArray(state && state.profiles) ? state.profiles : []
+  if (profiles.length > PRODUCT_RULES.limits.maxProfiles) {
+    return {
+      ok: false,
+      code: 'LIMIT_EXCEEDED',
+      message: '合并后学生档案将超过 10 个，原数据未修改。'
+    }
+  }
+  const profileData = state && state.profileData && typeof state.profileData === 'object'
+    ? state.profileData
+    : {}
+  const limits = [
+    ['scoreRecords', PRODUCT_RULES.limits.maxExamRecordsPerProfile, '考试记录'],
+    ['targetRecords', PRODUCT_RULES.limits.maxTargetRecordsPerProfile, '目标学校'],
+    ['learningTasks', PRODUCT_RULES.limits.maxLearningTasksPerProfile, '学习任务'],
+    ['examTemplates', PRODUCT_RULES.limits.maxCustomExamTemplatesPerProfile, '自定义考试模板'],
+    ['scoreSchemes', PRODUCT_RULES.limits.maxCustomScoreSchemesPerProfile, '自定义分值方案'],
+    ['mistakeRecords', PRODUCT_RULES.limits.maxMistakeRecordsPerProfile, '错题记录'],
+    ['weeklyPlans', PRODUCT_RULES.limits.maxWeeklyPlansPerProfile, '周计划'],
+    ['stageGoals', PRODUCT_RULES.limits.maxStageGoalsPerProfile, '阶段目标'],
+    ['stageReviews', PRODUCT_RULES.limits.maxStageReviewsPerProfile, '阶段复盘'],
+    ['schoolUserStates', PRODUCT_RULES.limits.maxSchoolUserStatesPerProfile, '学校个人状态']
+  ]
+  for (const profile of profiles) {
+    const data = profileData[profile.id] || {}
+    for (const [field, limit, label] of limits) {
+      const count = Array.isArray(data[field]) ? data[field].length : 0
+      if (count > limit) {
+        return {
+          ok: false,
+          code: 'LIMIT_EXCEEDED',
+          message: `合并后档案“${profile.nickname || profile.id}”的${label}将超过数量限制，原数据未修改。`
+        }
+      }
+    }
+  }
+  return { ok: true }
+}
+
 function importBackupEnvelope(input, { mode = 'merge', settingsChoice = 'local', operationId } = {}) {
   if (!['merge', 'overwrite'].includes(mode)) {
     return { ok: false, message: '导入模式必须是 merge 或 overwrite。' }
   }
   const validation = validateBackupEnvelope(input)
   if (!validation.ok) return { ok: false, message: validation.errors.join('；'), errors: validation.errors }
-  const safety = createRestorePoint({
-    reason: 'before_import',
-    profileScope: { type: 'full_user_state' },
-    operationId: `${operationId || `import_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`}_safety`
-  })
-  if (!safety.ok) return safety
+  const migration = ensureStorageMigrated()
+  if (!migration.ok) return migration
+  const localResult = getVersionedState()
+  if (!localResult.ok) return localResult
+  const local = localResult.state
   const incoming = normalizedStateFromPayload(validation.payload)
   let nextState = incoming
   if (mode === 'merge') {
-    const migration = ensureStorageMigrated()
-    if (!migration.ok) return migration
-    const localResult = getVersionedState()
-    if (!localResult.ok) return localResult
-    const local = localResult.state
     const profilesById = new Map(local.profiles.map((profile) => [profile.id, profile]))
     for (const profile of incoming.profiles) {
       profilesById.set(profile.id, newerRecord(profilesById.get(profile.id), profile))
@@ -521,12 +555,20 @@ function importBackupEnvelope(input, { mode = 'merge', settingsChoice = 'local',
       userSettings: settingsChoice === 'backup' ? clone(incoming.userSettings) : clone(local.userSettings)
     }
   }
+  const limits = validateStateLimits(nextState)
+  if (!limits.ok) return limits
+  const safety = createRestorePoint({
+    reason: 'before_import',
+    profileScope: { type: 'full_user_state' },
+    operationId: `${operationId || `import_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`}_safety`
+  })
+  if (!safety.ok) return safety
   const result = replaceVersionedState(nextState, {
     importSnapshot: {
       capturedAt: new Date().toISOString(),
       mode,
       incomingChecksum: validation.backup.checksum.value,
-      previous: getVersionedState().state
+      previous: clone(local)
     }
   })
   return result.ok
@@ -617,6 +659,7 @@ module.exports = {
   backupPreview,
   mergeBy,
   mergeProfileData,
+  validateStateLimits,
   importBackupEnvelope,
   exportBackupFile,
   readBackupFile,

@@ -115,7 +115,26 @@ console.log('✓ FCP-06 静态帮助、六项 FAQ 与两种人工客服复制方
 const privacy = `${read('pages/privacy/privacy.js')}\n${read('pages/privacy/privacy.wxml')}`
 for (const phrase of ['学生档案昵称', '中考年份', '考试总分记录', '目标学校', '必要用户设置']) assert.ok(privacy.includes(phrase))
 for (const phrase of ['openid', 'unionid', '手机号', '身份证', '定位', '支付', '云同步']) assert.ok(privacy.includes(phrase))
+for (const phrase of ['Clipboard', 'MessageFile', '用户主动', '不会自动或在后台读取', '不会后台上传']) assert.ok(privacy.includes(phrase))
+assert.strictEqual(runtimeSurface.includes('wx.getClipboardData'), false)
 console.log('✓ FCP-07 隐私说明与首发实际能力一致')
+
+const schoolDetailJs = read('pages/school-detail/school-detail.js')
+const schoolDetailWxml = read('pages/school-detail/school-detail.wxml')
+assert.ok(schoolDetailJs.includes('notFound: false'))
+assert.ok(schoolDetailJs.includes('goBack()'))
+assert.ok(schoolDetailWxml.includes('wx:elif="{{notFound}}"'))
+assert.ok(schoolDetailWxml.includes('bindtap="goBack"'))
+const profileManagementJs = read('pages/profile-management/profile-management.js')
+assert.ok(profileManagementJs.includes('nickname.length > 20'))
+assert.ok(profileManagementJs.includes('档案昵称最多 20 个字符'))
+const manualChecks = read('docs/manual_wechat_release_checks.md')
+assert.ok(manualChecks.includes('wxc2a2a94f767438dd'))
+assert.strictEqual(manualChecks.includes('wx17e903f81714736f'), false)
+for (const obsoleteInstruction of ['高中对比', '收藏持久化', '最近 12 条']) {
+  assert.strictEqual(manualChecks.includes(obsoleteInstruction), false)
+}
+console.log('✓ FCP-07A 失效学校路由、档案改名上限和当前人工验收清单已纳入门禁')
 
 for (const page of expectedPages) {
   const js = read(`${page}.js`)
@@ -223,4 +242,31 @@ assert.strictEqual(restored.comparisonSchoolIds.length, 1)
 assert.strictEqual(storage.getVersionedState().state.onboarding.completed, true)
 console.log('✓ FCP-12 旧单科、复盘、学习、收藏、对比、状态和教程数据可备份、校验并恢复')
 
-console.log('FCP MP FIRST RELEASE VERIFY PASSED (12 TEST-ID)')
+installWxStorage()
+const minimalStorage = loadStorageFresh()
+assert.strictEqual(minimalStorage.ensureStorageMigrated().ok, true)
+assert.strictEqual(minimalStorage.saveScoreRecord(makeExam('minimal-exam', 650)).ok, true)
+assert.strictEqual(minimalStorage.saveTargetRecord({
+  id: 'minimal-target',
+  schoolId: schools[0].id,
+  schoolName: schools[0].name,
+  referenceScore: 650,
+  referenceYear: 2026,
+  createdAt: '2026-08-08T00:00:00.000Z',
+  updatedAt: '2026-08-08T00:00:00.000Z'
+}).ok, true)
+const minimalProfileId = minimalStorage.getActiveProfile().id
+const minimalData = minimalStorage.getVersionedState().state.profileData[minimalProfileId]
+const minimalExam = minimalData.scoreRecords.find((item) => item.id === 'minimal-exam')
+const minimalTarget = minimalData.targetRecords.find((item) => item.id === 'minimal-target')
+for (const field of [
+  'subjectScores', 'classRank', 'gradeRank', 'examType', 'examTemplateId', 'scoreSchemeId',
+  'scoreSchemeName', 'scoreSchemeSnapshot', 'totalMaxScore', 'metricType', 'admissionScaleMax',
+  'eligibilityRuleId', 'scoreRateBasisPoints', 'migrationSource', 'review'
+]) {
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(minimalExam, field), false, `new exam contains legacy field ${field}`)
+}
+assert.strictEqual(Object.prototype.hasOwnProperty.call(minimalTarget, 'level'), false)
+console.log('✓ FCP-13 新成绩与新目标的原始 storage 不再生成旧高级字段，旧数据仍可往返')
+
+console.log('FCP MP FIRST RELEASE VERIFY PASSED (13 TEST-ID)')

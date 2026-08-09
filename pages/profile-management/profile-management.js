@@ -93,6 +93,10 @@ Page({
           wx.showToast({ title: '档案昵称不能为空', icon: 'none' })
           return
         }
+        if (nickname.length > 20) {
+          wx.showToast({ title: '档案昵称最多 20 个字符', icon: 'none' })
+          return
+        }
         const result = updateStudentProfile(
           profile.id,
           { nickname },

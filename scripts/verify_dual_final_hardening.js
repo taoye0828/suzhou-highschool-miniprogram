@@ -1,11 +1,21 @@
 const assert = require('assert')
 const {
+  clone,
   installWxStorage,
   loadStorageFresh,
   makeExam
 } = require('./rc9_test_helpers')
 const { APP_CONFIG } = require('../config/app-config')
+const { schools } = require('../data/schools')
 const { PRODUCT_RULES } = require('../utils/generated/product-rules')
+
+function refreshChecksum(backup, envelope) {
+  envelope.backup.checksum.value = backup.checksumForPayload(
+    backup.backupPayload(envelope.backup),
+    envelope.backup.checksum.algorithm
+  )
+  return envelope.backup
+}
 
 console.log('DUAL-FINAL: 验证档案、成绩和备份安全边界...')
 
@@ -137,6 +147,84 @@ assert.strictEqual(targetBackupOverflow.ok, false)
 assert.ok(targetBackupOverflow.errors.some((message) => message.includes('目标学校超过数量限制')))
 console.log('✓ 含 101 条成绩或 101 个目标学校的备份在导入前拒绝')
 
+installWxStorage()
+storage = loadStorageFresh()
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
+for (let index = 1; index < PRODUCT_RULES.limits.maxProfiles; index += 1) {
+  assert.strictEqual(storage.createStudentProfile({ nickname: `合并档案 ${index}` }).ok, true)
+}
+let mergeBackup = require('../utils/backup-restore')
+let mergeEnvelope = mergeBackup.createBackupEnvelope({ exportedAt: '2026-08-08T00:00:00.000Z' })
+const sourceProfile = mergeEnvelope.backup.profiles[0]
+const sourceData = mergeEnvelope.backup.profileData[sourceProfile.id]
+const incomingProfileId = 'merge-profile-11'
+mergeEnvelope.backup.profiles = [{ ...sourceProfile, id: incomingProfileId, nickname: '第 11 个合并档案' }]
+mergeEnvelope.backup.activeProfileId = incomingProfileId
+mergeEnvelope.backup.profileData = {
+  [incomingProfileId]: { ...clone(sourceData), profileId: incomingProfileId }
+}
+refreshChecksum(mergeBackup, mergeEnvelope)
+let stateBeforeMerge = clone(storage.getVersionedState().state)
+let restorePointsBeforeMerge = clone(storage.listRestorePoints())
+let mergeOverflow = mergeBackup.importBackupEnvelope(mergeEnvelope.backup, { mode: 'merge' })
+assert.strictEqual(mergeOverflow.ok, false)
+assert.strictEqual(mergeOverflow.code, 'LIMIT_EXCEEDED')
+assert.deepStrictEqual(storage.getVersionedState().state, stateBeforeMerge)
+assert.deepStrictEqual(storage.listRestorePoints(), restorePointsBeforeMerge)
+
+installWxStorage()
+storage = loadStorageFresh()
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
+mergeBackup = require('../utils/backup-restore')
+mergeEnvelope = mergeBackup.createBackupEnvelope({ exportedAt: '2026-08-08T00:00:00.000Z' })
+const scoreProfileId = mergeEnvelope.backup.activeProfileId
+mergeEnvelope.backup.profileData[scoreProfileId].scoreRecords = [makeExam('merge-score-101', 700)]
+refreshChecksum(mergeBackup, mergeEnvelope)
+for (let index = 0; index < PRODUCT_RULES.limits.maxExamRecordsPerProfile; index += 1) {
+  assert.strictEqual(storage.saveScoreRecord(makeExam(`local-merge-score-${index}`, index % 741)).ok, true)
+}
+stateBeforeMerge = clone(storage.getVersionedState().state)
+restorePointsBeforeMerge = clone(storage.listRestorePoints())
+mergeOverflow = mergeBackup.importBackupEnvelope(mergeEnvelope.backup, { mode: 'merge' })
+assert.strictEqual(mergeOverflow.ok, false)
+assert.strictEqual(mergeOverflow.code, 'LIMIT_EXCEEDED')
+assert.deepStrictEqual(storage.getVersionedState().state, stateBeforeMerge)
+assert.deepStrictEqual(storage.listRestorePoints(), restorePointsBeforeMerge)
+
+installWxStorage()
+storage = loadStorageFresh()
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
+mergeBackup = require('../utils/backup-restore')
+mergeEnvelope = mergeBackup.createBackupEnvelope({ exportedAt: '2026-08-08T00:00:00.000Z' })
+const targetProfileId = mergeEnvelope.backup.activeProfileId
+mergeEnvelope.backup.profileData[targetProfileId].targetRecords = [{
+  id: 'merge-target-101',
+  schoolId: schools[0].id,
+  schoolName: schools[0].name,
+  createdAt: '2026-08-08T00:00:00.000Z'
+}]
+refreshChecksum(mergeBackup, mergeEnvelope)
+for (let index = 0; index < PRODUCT_RULES.limits.maxTargetRecordsPerProfile; index += 1) {
+  assert.strictEqual(storage.saveTargetRecord({
+    id: `local-merge-target-${index}`,
+    schoolId: `legacy-school-${index}`,
+    schoolName: `历史学校 ${index}`,
+    createdAt: '2026-08-08T00:00:00.000Z'
+  }).ok, true)
+}
+stateBeforeMerge = clone(storage.getVersionedState().state)
+restorePointsBeforeMerge = clone(storage.listRestorePoints())
+mergeOverflow = mergeBackup.importBackupEnvelope(mergeEnvelope.backup, { mode: 'merge' })
+assert.strictEqual(mergeOverflow.ok, false)
+assert.strictEqual(mergeOverflow.code, 'LIMIT_EXCEEDED')
+assert.deepStrictEqual(storage.getVersionedState().state, stateBeforeMerge)
+assert.deepStrictEqual(storage.listRestorePoints(), restorePointsBeforeMerge)
+console.log('✓ 合并后第 11 档案、第 101 成绩、第 101 目标均前置拒绝，且不创建恢复点')
+
+installWxStorage()
+storage = loadStorageFresh()
+assert.strictEqual(storage.ensureStorageMigrated().ok, true)
+const fileBackup = require('../utils/backup-restore')
 let statCalls = 0
 let readCalls = 0
 global.wx.getFileSystemManager = () => ({
@@ -149,13 +237,13 @@ global.wx.getFileSystemManager = () => ({
     throw new Error('超大文件不应被读取')
   }
 })
-const oversizedFile = backup.readBackupFile('/tmp/oversized-backup.json')
+const oversizedFile = fileBackup.readBackupFile('/tmp/oversized-backup.json')
 assert.strictEqual(oversizedFile.ok, false)
 assert.strictEqual(oversizedFile.code, 'FILE_TOO_LARGE')
 assert.strictEqual(statCalls, 1)
 assert.strictEqual(readCalls, 0)
 
-const validContent = JSON.stringify(backup.createBackupEnvelope({
+const validContent = JSON.stringify(fileBackup.createBackupEnvelope({
   exportedAt: '2026-08-05T00:00:00.000Z'
 }).backup)
 global.wx.getFileSystemManager = () => ({
@@ -167,7 +255,7 @@ global.wx.getFileSystemManager = () => ({
     return validContent
   }
 })
-const validFile = backup.readBackupFile('/tmp/valid-backup.json')
+const validFile = fileBackup.readBackupFile('/tmp/valid-backup.json')
 assert.strictEqual(validFile.ok, true)
 assert.strictEqual(readCalls, 1)
 console.log('✓ 4 MB 上限在 readFileSync 前检查；正常大小备份仍可读取校验')

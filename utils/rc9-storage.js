@@ -1000,18 +1000,23 @@ function saveTargetRecord(record) {
     return { ok: false, code: 'LIMIT_EXCEEDED', message: '每个学生档案最多添加 100 所目标学校，原记录未修改。' }
   }
   const merged = current ? normalizeTargetRecord({ ...current, ...record, id: current.id }, profileId) : normalized
-  const recordToSave = current
+  let recordToSave = current
     ? {
         ...merged,
         id: current.id,
-        level: record && (record.level || record.targetLevel)
-          ? normalizeTargetLevel(record.level || record.targetLevel)
-          : current.level,
         createdAt: current.createdAt,
         updatedAt: new Date().toISOString(),
         version: Number(current.version || 1) + 1
       }
     : normalized
+  if (current && (record && (record.level || record.targetLevel) || current.level)) {
+    recordToSave = {
+      ...recordToSave,
+      level: record && (record.level || record.targetLevel)
+        ? normalizeTargetLevel(record.level || record.targetLevel)
+        : current.level
+    }
+  }
   const records = [
     recordToSave,
     ...existing.records.filter((item) => item.schoolId !== recordToSave.schoolId)

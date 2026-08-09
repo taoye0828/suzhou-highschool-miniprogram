@@ -26,6 +26,7 @@ function scoreRows(schoolId) {
 Page({
   data: {
     school: null,
+    notFound: false,
     scores: [],
     targetRecord: null,
     aliasesText: '',
@@ -34,10 +35,17 @@ Page({
   },
 
   onLoad(options) {
-    this.schoolId = decodeURIComponent(options.id || '')
+    const rawId = String(options && options.id || '')
+    try {
+      this.schoolId = decodeURIComponent(rawId)
+    } catch (error) {
+      this.schoolId = ''
+    }
     const school = schoolById(this.schoolId)
     if (!school) {
-      wx.showToast({ title: '未找到学校', icon: 'none' })
+      this.schoolId = ''
+      wx.setNavigationBarTitle({ title: '学校不存在' })
+      this.setData({ notFound: true })
       return
     }
     wx.setNavigationBarTitle({ title: school.name })
@@ -48,6 +56,15 @@ Page({
       programsText: (school.programs || []).join('、'),
       mapSearchText: [school.name, school.address].filter(Boolean).join(' ')
     })
+  },
+
+  goBack() {
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+    if (pages.length > 1) {
+      wx.navigateBack({ delta: 1 })
+      return
+    }
+    wx.switchTab({ url: '/pages/schools/schools' })
   },
 
   onShow() {
@@ -64,7 +81,6 @@ Page({
       id: `target_${school.id}`,
       schoolId: school.id,
       schoolName: school.name,
-      level: 'target',
       referenceScore: reference ? referenceScoreValue(reference) : null,
       referenceYear: reference ? reference.year : null,
       createdAt: new Date().toISOString(),
