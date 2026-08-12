@@ -2,3 +2,7 @@
 .score { color: #0f766e; font-size: 38rpx; font-weight: 700; }
 .card-action { margin-top: 24rpx; }
 .target-names { margin-top: 10rpx; }
+.public-notice { color: #155e75; background: #edf9f7; }
+.announcement { border-left: 8rpx solid #0f766e; }
+.announcement-body { margin-top: 12rpx; white-space: pre-wrap; }
+.updated-at { margin-top: 32rpx; text-align: center; }

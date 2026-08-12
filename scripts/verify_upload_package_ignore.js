@@ -31,7 +31,8 @@ for (const rule of [
   '.idea/',
   'coverage/',
   'tmp/',
-  '*.tmp'
+  '*.tmp',
+  '*.bak_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]'
 ]) {
   assert.ok(gitignore.includes(rule), `.gitignore rule missing: ${rule}`)
 }
@@ -87,6 +88,7 @@ assert.ok(hasRule('file', 'package.json'), 'package.json ignore rule missing')
 assert.ok(hasRule('folder', '.vscode'), '.vscode ignore rule missing')
 assert.ok(hasRule('folder', '.idea'), '.idea ignore rule missing')
 assert.ok(hasRule('suffix', '.log'), '*.log ignore rule missing')
+assert.ok(hasRule('regexp', '\\.bak_[0-9]{8}_[0-9]{6}$'), 'timestamped backup ignore rule missing')
 
 ;[
   'docs/audit_fix_report.md',
@@ -111,7 +113,9 @@ assert.ok(hasRule('suffix', '.log'), '*.log ignore rule missing')
   'backups/project.config.json.bak_20260710_000000',
   'debug.log',
   '.vscode/settings.json',
-  '.idea/workspace.xml'
+  '.idea/workspace.xml',
+  'app.js.bak_20260812_093253',
+  'pages/home/home.wxml.bak_20260812_093253'
 ].forEach(assertIgnored)
 
 ;[

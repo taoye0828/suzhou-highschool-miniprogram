@@ -1,4 +1,12 @@
 <view class="page">
+  <view wx:if="{{publicNotice}}" class="card public-notice">{{publicNotice}}</view>
+  <view wx:if="{{announcements.length}}" class="announcement-list">
+    <view class="card announcement" wx:for="{{announcements}}" wx:key="id">
+      <view class="card-title">{{item.title}}</view>
+      <view class="muted announcement-body">{{item.body}}</view>
+    </view>
+  </view>
+
   <view class="card" bindtap="openProfiles">
     <view class="row between">
       <view>
@@ -47,4 +55,5 @@
     <button class="button" bindtap="openScores">记录成绩</button>
     <button class="button secondary" bindtap="openSchools">查找学校</button>
   </view>
+  <view wx:if="{{showUpdatedAt}}" class="muted small updated-at">数据更新至：{{dataUpdatedAt}}</view>
 </view>

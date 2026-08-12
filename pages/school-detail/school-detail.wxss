@@ -5,3 +5,6 @@
 .source-title { margin-top: 18rpx; color: #475569; font-size: 24rpx; line-height: 1.6; }
 .source-note { margin-top: 16rpx; }
 .source-button { margin-top: 20rpx; }
+.school-gallery { display: flex; gap: 16rpx; margin-bottom: 20rpx; overflow-x: auto; }
+.school-image { width: 100%; height: 340rpx; flex: 0 0 100%; border-radius: 22rpx; background: #e7f6f3; }
+.image-placeholder { display: flex; align-items: center; justify-content: center; color: #64748b; }

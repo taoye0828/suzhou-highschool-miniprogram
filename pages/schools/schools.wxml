@@ -27,6 +27,8 @@
   <view class="muted small result-count">找到 {{schoolRows.length}} 所学校</view>
   <view class="card school-card" wx:for="{{schoolRows}}" wx:key="id" data-id="{{item.id}}" bindtap="openSchool">
     <view class="row between">
+      <image wx:if="{{item.thumbnailUrl}}" class="school-thumb" src="{{item.thumbnailUrl}}" mode="aspectFill" lazy-load="true" data-id="{{item.id}}" catcherror="onImageError" />
+      <view wx:else class="school-thumb image-placeholder">校</view>
       <view class="grow">
         <view class="card-title">{{item.name}}</view>
         <view class="muted small">{{item.district}} · {{item.schoolType}}</view>

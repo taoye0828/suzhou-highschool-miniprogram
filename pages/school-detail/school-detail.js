@@ -1,5 +1,3 @@
-const { schools } = require('../../data/schools')
-const { admissionScores } = require('../../data/admission-scores')
 const {
   getTargetRecords,
   saveTargetRecord,
@@ -7,16 +5,18 @@ const {
 } = require('../../utils/storage')
 const { operationOptions } = require('../../utils/operation-context')
 const { selectLatestReference, referenceScoreValue } = require('../../utils/planning')
+const { publicDataService, effectiveContent } = require('../../utils/public-data-service')
 
-function schoolById(id) {
+function schoolById(schools, id) {
   return schools.find((item) => item.id === id) || null
 }
 
-function scoreRows(schoolId) {
-  return admissionScores
+function scoreRows(scores, schoolId, sortOrder) {
+  const direction = sortOrder === 'year_asc' ? 1 : -1
+  return scores
     .filter((item) => item.schoolId === schoolId)
     .slice()
-    .sort((left, right) => right.year - left.year || right.minScore - left.minScore)
+    .sort((left, right) => direction * (left.year - right.year) || direction * (Number(left.minScore) - Number(right.minScore)))
     .map((item) => ({
       ...item,
       detail: [item.region, item.batch, item.admissionType].filter(Boolean).join(' · ')
@@ -31,7 +31,8 @@ Page({
     targetRecord: null,
     aliasesText: '',
     programsText: '',
-    mapSearchText: ''
+    mapSearchText: '',
+    images: []
   },
 
   onLoad(options) {
@@ -41,21 +42,44 @@ Page({
     } catch (error) {
       this.schoolId = ''
     }
-    const school = schoolById(this.schoolId)
+    this.unsubscribePublicData = publicDataService.subscribe((snapshot) => this.applyPublicData(snapshot))
+    this.applyPublicData(publicDataService.getSnapshot())
+  },
+
+  onUnload() {
+    if (this.unsubscribePublicData) this.unsubscribePublicData()
+  },
+
+  applyPublicData(snapshot) {
+    if (!this.schoolId) return
+    const schools = Array.isArray(snapshot.schools) ? snapshot.schools : []
+    const scores = Array.isArray(snapshot.scores) ? snapshot.scores : []
+    const school = schoolById(schools, this.schoolId)
     if (!school) {
-      this.schoolId = ''
       wx.setNavigationBarTitle({ title: '学校不存在' })
-      this.setData({ notFound: true })
+      this.setData({ school: null, notFound: true, scores: [], images: [] })
       return
     }
+    const display = effectiveContent(snapshot.content).display
+    const images = (Array.isArray(snapshot.images) ? snapshot.images : [])
+      .filter((item) => item.schoolId === school.id)
+      .slice()
+      .sort((left, right) => Number(Boolean(right.isCover)) - Number(Boolean(left.isCover)) || Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
     wx.setNavigationBarTitle({ title: school.name })
     this.setData({
-      school,
-      scores: scoreRows(school.id),
+      school: { ...school, phone: school.phone || school.officialPhone || '' },
+      notFound: false,
+      scores: scoreRows(scores, school.id, display.scoreDefaultSort),
+      images,
       aliasesText: (school.aliases || []).join('、'),
       programsText: (school.programs || []).join('、'),
       mapSearchText: [school.name, school.address].filter(Boolean).join(' ')
     })
+  },
+
+  onImageError(event) {
+    const imageId = event.currentTarget.dataset.id
+    this.setData({ images: this.data.images.map((item) => item.imageId === imageId ? { ...item, failed: true } : item) })
   },
 
   goBack() {
@@ -76,7 +100,7 @@ Page({
   addTarget() {
     const school = this.data.school
     if (!school) return
-    const reference = selectLatestReference(admissionScores, { schoolId: school.id })
+    const reference = selectLatestReference(publicDataService.getSnapshot().scores, { schoolId: school.id })
     const result = saveTargetRecord({
       id: `target_${school.id}`,
       schoolId: school.id,

@@ -91,6 +91,10 @@
         "type": "suffix"
       },
       {
+        "value": "\\.bak_[0-9]{8}_[0-9]{6}$",
+        "type": "regexp"
+      },
+      {
         "value": ".vscode",
         "type": "folder"
       },

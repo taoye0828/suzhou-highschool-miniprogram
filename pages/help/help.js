@@ -1,5 +1,6 @@
 const CUSTOMER_EMAIL = '3341251927@qq.com'
 const CUSTOMER_WECHAT = 'shsz1610'
+const { publicDataService, effectiveContent } = require('../../utils/public-data-service')
 
 Page({
   data: {
@@ -14,6 +15,10 @@ Page({
       '在“我的 → 学生档案管理”创建或切换档案。',
       '在“我的 → 数据备份与恢复”导出备份并在需要时恢复。'
     ],
+    showFaq: true,
+    showContact: true,
+    showEmail: true,
+    showWechat: true,
     faqs: [
       {
         question: '学校和历史分数线来自哪里？',
@@ -42,9 +47,31 @@ Page({
     ]
   },
 
+  onLoad() {
+    this.unsubscribePublicData = publicDataService.subscribe((snapshot) => this.applyPublicData(snapshot))
+    this.applyPublicData(publicDataService.getSnapshot())
+  },
+
+  onUnload() {
+    if (this.unsubscribePublicData) this.unsubscribePublicData()
+  },
+
+  applyPublicData(snapshot) {
+    const content = effectiveContent(snapshot && snapshot.content)
+    this.setData({
+      email: content.contact.email || CUSTOMER_EMAIL,
+      wechat: content.contact.wechat || CUSTOMER_WECHAT,
+      showEmail: content.contact.showEmail,
+      showWechat: content.contact.showWechat,
+      showFaq: content.display.showFaq,
+      showContact: content.display.showContact,
+      faqs: content.faq
+    })
+  },
+
   copyEmail() {
     wx.setClipboardData({
-      data: CUSTOMER_EMAIL,
+      data: this.data.email,
       success: () => wx.showToast({ title: '邮箱已复制', icon: 'success' }),
       fail: () => wx.showToast({ title: '复制失败，请稍后重试', icon: 'none' })
     })
@@ -52,7 +79,7 @@ Page({
 
   copyWechat() {
     wx.setClipboardData({
-      data: CUSTOMER_WECHAT,
+      data: this.data.wechat,
       success: () => wx.showToast({ title: '微信号已复制', icon: 'success' }),
       fail: () => wx.showToast({ title: '复制失败，请稍后重试', icon: 'none' })
     })

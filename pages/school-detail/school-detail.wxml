@@ -1,4 +1,10 @@
 <view class="page" wx:if="{{school}}">
+  <view wx:if="{{images.length}}" class="school-gallery">
+    <block wx:for="{{images}}" wx:key="imageId">
+      <image wx:if="{{!item.failed}}" class="school-image" src="{{item.publicUrl}}" mode="aspectFill" lazy-load="true" data-id="{{item.imageId}}" catcherror="onImageError" />
+      <view wx:else class="school-image image-placeholder">图片暂时无法显示</view>
+    </block>
+  </view>
   <view class="card">
     <view class="card-title school-name">{{school.name}}</view>
     <view class="muted">{{school.district}} · {{school.schoolType}}{{school.ownership ? ' · ' + school.ownership : ''}}</view>

@@ -5,6 +5,12 @@ const {
   getExamYear
 } = require('../../utils/storage')
 const { calculateExamCountdown } = require('../../utils/countdown')
+const {
+  publicDataService,
+  activeAnnouncements,
+  effectiveContent,
+  publishedDateText
+} = require('../../utils/public-data-service')
 
 function orderedScores(records) {
   return (Array.isArray(records) ? records : []).slice().sort((left, right) => {
@@ -20,7 +26,16 @@ Page({
     countdown: null,
     latestScore: null,
     targetCount: 0,
-    targetNames: ''
+    targetNames: '',
+    announcements: [],
+    publicNotice: '',
+    showUpdatedAt: false,
+    dataUpdatedAt: ''
+  },
+
+  onLoad() {
+    this.unsubscribePublicData = publicDataService.subscribe((snapshot) => this.applyPublicData(snapshot))
+    this.applyPublicData(publicDataService.getSnapshot())
   },
 
   onShow() {
@@ -40,6 +55,26 @@ Page({
       } : null,
       targetCount: targets.length,
       targetNames: targets.slice(0, 3).map((item) => item.schoolName).join('、')
+    })
+  },
+
+  onUnload() {
+    if (this.unsubscribePublicData) this.unsubscribePublicData()
+  },
+
+  onPullDownRefresh() {
+    publicDataService.refresh({ force: true }).then((result) => {
+      wx.showToast({ title: result.ok ? '数据已更新。' : result.message, icon: 'none' })
+    }).finally(() => wx.stopPullDownRefresh())
+  },
+
+  applyPublicData(snapshot) {
+    const content = effectiveContent(snapshot && snapshot.content)
+    this.setData({
+      announcements: activeAnnouncements(snapshot),
+      publicNotice: content.display.publicNotice,
+      showUpdatedAt: content.display.showUpdatedAt && Boolean(publishedDateText(snapshot && snapshot.publishedAt)),
+      dataUpdatedAt: publishedDateText(snapshot && snapshot.publishedAt)
     })
   },
 

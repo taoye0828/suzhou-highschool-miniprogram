@@ -8,3 +8,5 @@
 .school-card { position: relative; }
 .reference-row { display: flex; justify-content: space-between; margin-top: 22rpx; color: #0f766e; font-weight: 600; }
 .view-detail { margin-top: 18rpx; color: #0f766e; font-size: 24rpx; }
+.school-thumb { width: 112rpx; height: 84rpx; flex-shrink: 0; border-radius: 14rpx; background: #e7f6f3; }
+.image-placeholder { display: flex; align-items: center; justify-content: center; color: #0f766e; font-size: 34rpx; font-weight: 700; }
