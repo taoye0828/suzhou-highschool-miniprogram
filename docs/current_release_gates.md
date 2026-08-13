@@ -14,7 +14,7 @@ node scripts/verify_production_release_candidate.js
 
 ## 当前现场状态（2026-08-13）
 
-- 本地自动门禁：远程公开数据 29 项、正式候选聚合门禁 35 项此前均通过；最终提交前必须重新运行并以本次输出为准。
+- 本地自动门禁：远程公开数据 29/29、正式候选聚合门禁 35/35、上传包排除和全部跟踪 JavaScript 语法检查已于 2026-08-13 重新运行并通过。
 - 微信开发者工具：Problems 为 0，首页、学校库、学校详情、成绩、目标、我的及设置页可使用包内正式数据加载；Storage 中现有 `mp1.*`、`rc9.*`、`rc11.*` 数据仍在。
 - 生产门禁未完成：ECS 系统盘没有成功快照，`api.royalcup.top` 尚无可用 DNS/HTTPS/公开接口，微信 request 合法域名尚未配置。
 - 因此当前 `PRODUCTION_API_STATUS` 为 `MANUAL_GATE`，`WECHAT_DEVTOOLS_STATUS` 为 `FAIL`；不得上传审核版本、不得关闭 URL 合法域名检查冒充通过，也不得输出 `READY_FOR_USER_FINAL_ACCEPTANCE`。
