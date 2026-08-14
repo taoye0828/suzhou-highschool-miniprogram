@@ -62,12 +62,6 @@ Page({
     if (this.unsubscribePublicData) this.unsubscribePublicData()
   },
 
-  onPullDownRefresh() {
-    publicDataService.refresh({ force: true }).then((result) => {
-      wx.showToast({ title: result.ok ? '数据已更新。' : result.message, icon: 'none' })
-    }).finally(() => wx.stopPullDownRefresh())
-  },
-
   applyPublicData(snapshot) {
     const oldDistrict = selectedValue(this.data.districts, this.data.districtIndex)
     const oldSchoolType = selectedValue(this.data.schoolTypes, this.data.schoolTypeIndex)

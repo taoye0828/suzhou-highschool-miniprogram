@@ -159,6 +159,7 @@ Page({
         if (!modal.confirm) return
         const result = clearCurrentProfileData(operationOptions('clear_profile_data', 'current'))
         if (!result.ok) wx.showToast({ title: '数据操作失败，原数据未被修改。', icon: 'none' })
+        else wx.showToast({ title: '当前档案数据已清除', icon: 'success' })
       }
     })
   },
@@ -173,6 +174,7 @@ Page({
         if (!modal.confirm) return
         const result = clearLocalData(operationOptions('clear_all_data', 'all'))
         if (!result.ok) wx.showToast({ title: '数据操作失败，原数据未被修改。', icon: 'none' })
+        else wx.showToast({ title: '本机数据已清除', icon: 'success' })
       }
     })
   }

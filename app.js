@@ -6,12 +6,12 @@ App({
   onLaunch() {
     const migration = ensureStorageMigrated()
     if (migration.ok) recoverStartupState()
-    publicDataService.loadInitial()
-    publicDataService.refresh()
+    publicDataService.loadInitial({ useCache: APP_CONFIG.schoolData.remotePublicDataEnabled })
+    if (APP_CONFIG.schoolData.remotePublicDataEnabled) publicDataService.refresh()
   },
 
   onShow() {
-    publicDataService.refresh()
+    if (APP_CONFIG.schoolData.remotePublicDataEnabled) publicDataService.refresh()
   },
 
   globalData: {

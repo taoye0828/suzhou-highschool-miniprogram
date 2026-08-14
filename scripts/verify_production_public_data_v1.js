@@ -208,8 +208,15 @@ async function main() {
   assert.ok(detailWxml.includes('图片暂时无法显示'), '图片失败必须显示中文占位')
 
   const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8')
+  const { APP_CONFIG } = require('../config/app-config')
   const serviceSource = fs.readFileSync(path.join(root, 'utils/public-data-service.js'), 'utf8')
-  assert.ok(app.includes('publicDataService.loadInitial()') && app.includes('publicDataService.refresh()'), '启动和回前台应检查数据')
+  assert.ok(app.includes('publicDataService.loadInitial({ useCache: APP_CONFIG.schoolData.remotePublicDataEnabled })'), '启动时必须按正式开关选择缓存或包内正式数据')
+  assert.strictEqual(APP_CONFIG.schoolData.remotePublicDataEnabled, false, '2.0 正式版必须关闭未上线的远程公开数据入口')
+  assert.strictEqual((app.match(/if \(APP_CONFIG\.schoolData\.remotePublicDataEnabled\) publicDataService\.refresh\(\)/g) || []).length, 2, '远程检查只能在显式开关启用时执行')
+  const disabledService = createPublicDataService({ storage: memoryStorage({ [PUBLIC_DATA_CACHE_KEY]: envelope(v1) }), transport: transportFor(v1) })
+  assert.strictEqual(disabledService.loadInitial({ useCache: false }).source, 'fallback', '关闭远程功能时不得加载历史远程缓存')
+  assert.strictEqual(disabledService.getSnapshot().schools.length, 55, '关闭远程功能时必须使用包内55校')
+  assert.strictEqual(disabledService.getSnapshot().scores.length, 146, '关闭远程功能时必须使用包内146条分数')
   assert.ok(serviceSource.includes('sucheng.publicData.lastKnownGood.v1'), '必须使用独立单一公开数据缓存Key')
   assert.strictEqual(/saveScore|saveTarget|profile|backup/i.test(serviceSource), false, '公开数据服务不得上传或修改个人数据')
 

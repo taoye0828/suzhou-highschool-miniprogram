@@ -32,6 +32,7 @@ const APP_CONFIG = Object.freeze({
   schoolData: {
     version: SOURCE_CHECKED_AT,
     sourceCheckedAt: SOURCE_CHECKED_AT,
+    remotePublicDataEnabled: false,
     publicApiBase: 'https://api.royalcup.top',
     supportedSchemaVersion: 2
   }

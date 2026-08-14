@@ -237,8 +237,11 @@ function createPublicDataService(options = {}) {
     })
   }
 
-  function loadInitial() {
-    try { snapshot = assertCachedSnapshot(storage.get(PUBLIC_DATA_CACHE_KEY), baseUrl) } catch (error) {
+  function loadInitial({ useCache = true } = {}) {
+    try {
+      if (!useCache) throw publicDataError('正式版使用包内数据', 'CACHE_DISABLED')
+      snapshot = assertCachedSnapshot(storage.get(PUBLIC_DATA_CACHE_KEY), baseUrl)
+    } catch (error) {
       snapshot = normalizeSnapshot(createFallbackSnapshot(), 'fallback', baseUrl)
     }
     emit()

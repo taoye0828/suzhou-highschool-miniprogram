@@ -11,6 +11,7 @@ const gates = [
   'verify_mp13_2026_scores.js',
   'verify_upload_package_ignore.js',
   'verify_production_public_data_v1.js',
+  'verify_real_user_functionality_v2.js',
   'verify_product_rules_generated.js',
   'verify_rc10_cross_platform_backup.js',
   'verify_rc10_transactional_storage.js',
