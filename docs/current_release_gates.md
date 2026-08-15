@@ -15,13 +15,14 @@ node scripts/verify_production_release_candidate.js
 ## 2.0 正式运行边界
 
 - 2.0 直接使用代码包中的 55 所学校和 146 条历史分数线，不依赖生产服务器或网络。
-- `remotePublicDataEnabled` 在正式配置中固定为 `false`；启动、回前台、首页和学校库均不会请求尚未上线的远程域名。
+- `remotePublicDataEnabled` 在正式配置中固定为 `false`；启动、回前台、首页和学校库均不会请求远程公开数据接口。
 - `urlCheck` 保持开启，未通过关闭合法域名校验来隐藏问题。
 - 远程公开数据服务代码继续由 29 场景验证其 manifest、SHA、原子缓存、last-known-good 和包内 fallback 行为，但不宣传为 2.0 用户功能。
 - 当前正式学校图片为 0、正式公告为 0；学校无图布局可用，公告区域隐藏；包内 6 项 FAQ 与客服联系方式可用。
 
-## 当前现场状态（2026-08-13）
+## 当前现场状态（2026-08-15）
 
+- `https://api.royalcup.top` 已通过 DNS、免费可信 HTTPS、Release V2、SHA、数量、缓存头和只读访问控制验收，作为未来远程公开数据能力保留。
+- 苏程记录 2.0 正式候选仍使用包内数据，不发起 `wx.request`；API 上线不会改变本版本运行链路，也不新增 request 合法域名依赖。
 - 自动门禁、微信开发者工具和 Git 状态以本次终审最终报告中的实测结果为准。
-- `api.royalcup.top` 当前无可用 DNS/HTTPS/公开接口，且 ECS 没有已确认的系统盘快照，因此本轮不做生产部署；这不再阻断 2.0 的包内正式数据版本。
 - 未购买或开通服务器、数据库、对象存储、CDN、证书、API、插件或 SaaS。
