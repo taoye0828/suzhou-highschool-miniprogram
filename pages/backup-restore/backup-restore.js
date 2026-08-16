@@ -1,5 +1,6 @@
 const {
   createBackupEnvelope,
+  createBackupScope,
   exportBackupFile,
   readBackupFile,
   importBackupEnvelope
@@ -10,13 +11,16 @@ const { operationOptions } = require('../../utils/operation-context')
 
 const fileShare = new FileShareAdapter()
 
-function corePreview(result) {
-  const profiles = result.backup.profiles
-  const profileData = result.backup.profileData
+function logTechnical(event, detail) {
+  if (typeof console === 'undefined' || typeof console.error !== 'function') return
+  const code = detail && (detail.code || detail.errMsg || detail.message)
+  console.error(`[backup-restore] ${event}`, code || 'UNKNOWN')
+}
+
+function exportState(result) {
   return {
-    profileCount: profiles.length,
-    scoreCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].scoreRecords.length, 0),
-    targetCount: profiles.reduce((sum, profile) => sum + profileData[profile.id].targetRecords.length, 0)
+    exportScope: result.scope || createBackupScope(result.backup),
+    exportFileName: result.fileName || ''
   }
 }
 
@@ -29,8 +33,9 @@ function safeImportMessage(validation) {
 
 Page({
   data: {
-    exportPreview: null,
-    exportReady: false,
+    exportScope: null,
+    exportFileName: '',
+    sharing: false,
     importPreview: null,
     importFileName: '',
     importError: '',
@@ -43,7 +48,8 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
-    this.setData({ exportPreview: corePreview(result) })
+    this.setData({ exportScope: createBackupScope(result.backup) })
+    wx.showToast({ title: '已显示本次备份范围', icon: 'none' })
   },
 
   exportBackup() {
@@ -52,32 +58,60 @@ Page({
       wx.showToast({ title: result.message, icon: 'none' })
       return
     }
-    this._exportPath = result.filePath
-    this.setData({
-      exportReady: true,
-      exportPreview: {
-        profileCount: result.preview.profileCount,
-        scoreCount: result.preview.scoreCount,
-        targetCount: result.preview.targetCount
-      }
-    })
+    this.setData(exportState(result))
     wx.showToast({ title: '备份已生成', icon: 'success' })
   },
 
   sendBackupFile() {
-    if (!this._exportPath) return
-    wx.showModal({
-      title: '发送备份文件',
-      content: '备份包含本机学生档案、考试成绩、目标学校和必要设置。请只发送给可信接收方。',
-      confirmText: '选择接收方',
-      success: (modal) => {
-        if (!modal.confirm) return
-        fileShare.shareFile({ filePath: this._exportPath, fileName: '苏程记录本地备份.json' })
-          .then((result) => wx.showToast({
-            title: result.ok ? '文件已发送' : result.message || '发送失败，可重试',
-            icon: result.ok ? 'success' : 'none'
-          }))
-      }
+    if (this.data.sharing) return Promise.resolve({ ok: false, status: 'busy', code: 'SHARE_IN_PROGRESS' })
+    const exported = exportBackupFile()
+    if (!exported.ok) {
+      logTechnical('export-before-share-failed', exported)
+      wx.showToast({ title: '备份文件生成失败，请稍后重试。', icon: 'none' })
+      return Promise.resolve(exported)
+    }
+    this.setData(exportState(exported))
+    return new Promise((resolve) => {
+      wx.showModal({
+        title: '发送最新备份',
+        content: `已生成并校验最新备份“${exported.fileName}”。文件只包含本机用户数据，请只发送给可信接收方。`,
+        confirmText: '去发送',
+        success: (modal) => {
+          if (!modal.confirm) {
+            resolve({ ok: false, status: 'cancelled', code: 'CONFIRM_CANCELLED' })
+            return
+          }
+          this.setData({ sharing: true })
+          fileShare.shareFile({ filePath: exported.filePath, fileName: exported.fileName })
+            .then((result) => {
+              if (result.ok) {
+                wx.showToast({ title: '微信发送界面已打开', icon: 'success' })
+              } else if (result.status === 'cancelled') {
+                wx.showToast({ title: '已取消发送', icon: 'none' })
+              } else {
+                logTechnical('share-file-failed', result)
+                wx.showToast({
+                  title: result.message || '备份文件没有发送成功，请稍后重试。',
+                  icon: 'none'
+                })
+              }
+              return result
+            }, (error) => {
+              logTechnical('share-file-rejected', error)
+              wx.showToast({ title: '备份文件没有发送成功，请稍后重试。', icon: 'none' })
+              return { ok: false, status: 'failed', code: 'SHARE_REJECTED' }
+            })
+            .then((result) => {
+              this.setData({ sharing: false })
+              resolve(result)
+            })
+        },
+        fail: (error) => {
+          logTechnical('share-confirm-failed', error)
+          wx.showToast({ title: '备份文件没有发送成功，请稍后重试。', icon: 'none' })
+          resolve({ ok: false, status: 'failed', code: 'CONFIRM_FAILED' })
+        }
+      })
     })
   },
 
@@ -115,6 +149,11 @@ Page({
           importError: '',
           hasPendingImport: true
         })
+      },
+      fail: (error) => {
+        if (/cancel/iu.test(String(error && error.errMsg || ''))) return
+        logTechnical('choose-import-file-failed', error)
+        wx.showToast({ title: '备份文件没有选择成功，请稍后重试。', icon: 'none' })
       }
     })
   },

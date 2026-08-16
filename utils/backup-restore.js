@@ -324,6 +324,158 @@ function backupPreview(payload) {
   }
 }
 
+const BACKUP_SCOPE_ROOT_GROUPS = Object.freeze({
+  profiles: ['profiles'],
+  scores: ['scoreRecords'],
+  targets: ['targetSchools'],
+  learning: ['scoreReviews', 'scoreLossReasons', 'stageGoals', 'learningTasks'],
+  schoolPersonal: ['favorites', 'sharedFavoriteSchoolIds'],
+  settings: [
+    'activeProfileId',
+    'recommendationSettings',
+    'onboardingState',
+    'recentHistory',
+    'onboarding',
+    'userSettings'
+  ],
+  container: ['profileData']
+})
+
+const BACKUP_SCOPE_PROFILE_GROUPS = Object.freeze({
+  association: ['profileId'],
+  scores: ['scoreRecords'],
+  targets: ['targetRecords'],
+  learning: [
+    'scoreReviews',
+    'scoreLossReasons',
+    'stageGoals',
+    'learningTasks',
+    'mistakeRecords',
+    'weeklyPlans',
+    'stageReviews'
+  ],
+  schoolPersonal: [
+    'favoriteSchoolIds',
+    'comparisonSchoolIds',
+    'recentViewedSchoolIds',
+    'schoolUserStates'
+  ],
+  customConfigs: ['examTemplates', 'scoreSchemes', 'subjectConfigs'],
+  settings: [
+    'recommendationSettings',
+    'scenarioSettings',
+    'schoolFilters',
+    'recentHistory',
+    'primaryTargetSchoolId',
+    'examYear',
+    'targetDraft',
+    'legacyExtensions',
+    'schemaVersion'
+  ]
+})
+
+const BACKUP_METADATA_FIELDS = Object.freeze([
+  'format',
+  'backupFormatVersion',
+  'storageSchemaVersion',
+  'appDataVersion',
+  'exportedAt',
+  'sourcePlatform',
+  'checksum'
+])
+
+function uniqueSorted(values) {
+  return [...new Set(values)].sort()
+}
+
+function profileSchemaFields(payload) {
+  const profiles = Array.isArray(payload.profiles) ? payload.profiles : []
+  const profileData = payload.profileData && typeof payload.profileData === 'object'
+    ? payload.profileData
+    : {}
+  return uniqueSorted(profiles.flatMap((profile) =>
+    Object.keys(profileData[profile.id] && typeof profileData[profile.id] === 'object'
+      ? profileData[profile.id]
+      : {})
+  ))
+}
+
+function sumProfileArrays(payload, fields) {
+  const profiles = Array.isArray(payload.profiles) ? payload.profiles : []
+  const profileData = payload.profileData && typeof payload.profileData === 'object'
+    ? payload.profileData
+    : {}
+  return profiles.reduce((total, profile) => {
+    const data = profileData[profile.id] || {}
+    return total + fields.reduce((subtotal, field) =>
+      subtotal + (Array.isArray(data[field]) ? data[field].length : 0), 0)
+  }, 0)
+}
+
+function createBackupScope(backup) {
+  const payload = backupPayload(backup)
+  const preview = backupPreview(payload)
+  const rootFields = Object.keys(backup && typeof backup === 'object' ? backup : {}).sort()
+  const payloadFields = Object.keys(payload).sort()
+  const nestedFields = profileSchemaFields(payload)
+  const payloadFieldSet = new Set(payloadFields)
+  const profileFieldSet = new Set(nestedFields)
+  const hasRootGroup = (name) => BACKUP_SCOPE_ROOT_GROUPS[name]
+    .some((field) => payloadFieldSet.has(field))
+  const hasProfileGroup = (name) => BACKUP_SCOPE_PROFILE_GROUPS[name]
+    .some((field) => profileFieldSet.has(field))
+  const countText = (count, unit) => `${count} ${unit}`
+  const items = []
+
+  if (hasRootGroup('profiles')) {
+    items.push({ key: 'profiles', label: '学生档案', count: preview.profileCount, countText: countText(preview.profileCount, '个') })
+  }
+  if (hasRootGroup('scores') || hasProfileGroup('scores')) {
+    items.push({ key: 'scores', label: '成绩记录', count: preview.scoreCount, countText: countText(preview.scoreCount, '条') })
+  }
+  if (hasRootGroup('targets') || hasProfileGroup('targets')) {
+    items.push({ key: 'targets', label: '目标学校', count: preview.targetCount, countText: countText(preview.targetCount, '所') })
+  }
+  if (hasRootGroup('learning') || hasProfileGroup('learning')) {
+    const count = sumProfileArrays(payload, BACKUP_SCOPE_PROFILE_GROUPS.learning)
+    items.push({ key: 'learning', label: '学习目标、任务、复盘与错题等历史数据', count, countText: countText(count, '项') })
+  }
+  if (hasRootGroup('schoolPersonal') || hasProfileGroup('schoolPersonal')) {
+    const sharedCount = Array.isArray(payload.sharedFavoriteSchoolIds)
+      ? payload.sharedFavoriteSchoolIds.length
+      : 0
+    const count = sumProfileArrays(payload, BACKUP_SCOPE_PROFILE_GROUPS.schoolPersonal) + sharedCount
+    items.push({ key: 'schoolPersonal', label: '收藏、对比、最近浏览等学校个人数据', count, countText: countText(count, '项') })
+  }
+  if (hasProfileGroup('customConfigs')) {
+    const count = sumProfileArrays(payload, BACKUP_SCOPE_PROFILE_GROUPS.customConfigs)
+    items.push({ key: 'customConfigs', label: '自定义考试、科目与分值配置', count, countText: countText(count, '项') })
+  }
+  if (hasRootGroup('settings') || hasProfileGroup('settings')) {
+    items.push({ key: 'settings', label: '当前档案、筛选、教程及其他本地设置', count: null, countText: '已包含' })
+  }
+
+  const describedRootFields = new Set([
+    ...BACKUP_METADATA_FIELDS,
+    ...Object.values(BACKUP_SCOPE_ROOT_GROUPS).flat()
+  ])
+  const describedProfileFields = new Set(Object.values(BACKUP_SCOPE_PROFILE_GROUPS).flat())
+  return {
+    items,
+    preview,
+    includedText: '备份只包含本机“苏程记录”支持导出的用户数据。',
+    metadataText: '文件还会包含导出时间、格式版本和完整性校验信息。',
+    excludedText: '不包含学校公开数据库、后台或远程数据、微信聊天记录和系统文件。',
+    schema: {
+      rootFields,
+      payloadFields,
+      profileDataFields: nestedFields,
+      undisclosedRootFields: rootFields.filter((field) => !describedRootFields.has(field)),
+      undisclosedProfileDataFields: nestedFields.filter((field) => !describedProfileFields.has(field))
+    }
+  }
+}
+
 function validateBackupEnvelope(input) {
   let backup = input
   if (typeof input === 'string') {
@@ -590,11 +742,22 @@ function exportBackupFile() {
       return { ok: false, code: 'FILE_TOO_LARGE', message: '备份文件超过 4 MB 限制，未写入文件。' }
     }
     wx.getFileSystemManager().writeFileSync(filePath, content, 'utf8')
+    const verification = readBackupFile(filePath)
+    if (!verification.ok) {
+      return {
+        ok: false,
+        code: 'FILE_VERIFY_FAILED',
+        message: '备份文件生成后校验失败，请稍后重试。',
+        backup: envelope.backup
+      }
+    }
     return {
       ok: true,
       filePath,
-      backup: envelope.backup,
-      preview: backupPreview(envelope.backup)
+      fileName: filePath.slice(filePath.lastIndexOf('/') + 1),
+      backup: verification.backup,
+      preview: verification.preview,
+      scope: createBackupScope(verification.backup)
     }
   } catch (error) {
     return { ok: false, message: '备份文件写入失败，现有数据未修改。', backup: envelope.backup }
@@ -657,6 +820,7 @@ module.exports = {
   createBackupEnvelope,
   validateBackupEnvelope,
   backupPreview,
+  createBackupScope,
   mergeBy,
   mergeProfileData,
   validateStateLimits,

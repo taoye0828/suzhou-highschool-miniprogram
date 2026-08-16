@@ -1,4 +1,13 @@
 .intro { margin-top: 10rpx; }
 .summary { margin-top: 22rpx; padding: 20rpx; background: #f1f7f5; border-radius: 16rpx; line-height: 1.65; }
 .send, .choose { margin-top: 20rpx; }
+.file-name { margin-top: 16rpx; word-break: break-all; }
+.scope-panel { margin-top: 22rpx; padding: 22rpx; background: #f1f7f5; border-radius: 16rpx; }
+.scope-title { margin-bottom: 8rpx; }
+.scope-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24rpx; padding: 10rpx 0; border-bottom: 1rpx solid #dbe8e4; line-height: 1.5; }
+.scope-row:last-of-type { border-bottom: 0; }
+.scope-label { flex: 1; color: #334155; }
+.scope-count { flex: none; color: #0f766e; font-weight: 600; }
+.scope-note { margin-top: 16rpx; line-height: 1.65; }
+.scope-excluded { margin-top: 14rpx; padding-top: 14rpx; border-top: 1rpx solid #dbe8e4; color: #475569; line-height: 1.65; }
 .error { margin-top: 20rpx; color: #b42318; line-height: 1.6; }

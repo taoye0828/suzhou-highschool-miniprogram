@@ -1,13 +1,23 @@
 <view class="page">
   <view class="card">
     <view class="card-title">备份本机数据</view>
-    <view class="muted small intro">备份当前设备中的学生档案、考试成绩和目标学校。</view>
-    <view wx:if="{{exportPreview}}" class="summary">档案 {{exportPreview.profileCount}} 个 · 成绩 {{exportPreview.scoreCount}} 条 · 目标学校 {{exportPreview.targetCount}} 所</view>
+    <view class="muted small intro">生成本机“苏程记录”用户数据备份，不会上传到服务器。</view>
     <view class="button-row">
       <button class="button secondary" bindtap="previewExport">查看备份范围</button>
       <button class="button" bindtap="exportBackup">导出备份</button>
     </view>
-    <button wx:if="{{exportReady}}" class="button secondary send" bindtap="sendBackupFile">发送备份</button>
+    <button class="button secondary send" bindtap="sendBackupFile" loading="{{sharing}}" disabled="{{sharing}}">{{sharing ? '正在打开微信发送界面' : '发送备份'}}</button>
+    <view wx:if="{{exportFileName}}" class="muted small file-name">最新生成：{{exportFileName}}</view>
+    <view wx:if="{{exportScope}}" class="scope-panel">
+      <view class="card-title scope-title">本次备份包含</view>
+      <view wx:for="{{exportScope.items}}" wx:key="key" class="scope-row">
+        <text class="scope-label">{{item.label}}</text>
+        <text class="scope-count">{{item.countText}}</text>
+      </view>
+      <view class="muted small scope-note">{{exportScope.includedText}}</view>
+      <view class="muted small scope-note">{{exportScope.metadataText}}</view>
+      <view class="scope-excluded small">{{exportScope.excludedText}}</view>
+    </view>
   </view>
 
   <view class="card">
