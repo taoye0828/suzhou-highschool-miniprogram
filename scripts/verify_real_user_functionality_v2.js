@@ -168,12 +168,14 @@ check('REAL-07 AppID 与正式项目安全配置正确', () => {
   assert.strictEqual(project.setting.uploadWithSourceMap, false)
 })
 
-check('REAL-08 远程数据能力在 2.0 正式运行链路中保持关闭', () => {
+check('REAL-08 远程数据能力在 1.2.0 正式运行链路中保持开启', () => {
   const appSource = read('app.js')
-  assert.strictEqual(APP_CONFIG.schoolData.remotePublicDataEnabled, false)
+  assert.strictEqual(APP_CONFIG.schoolData.remotePublicDataEnabled, true)
+  assert.strictEqual(APP_CONFIG.schoolData.publicApiBase, 'https://api.royalcup.top')
   assert.ok(appSource.includes('loadInitial({ useCache: APP_CONFIG.schoolData.remotePublicDataEnabled })'))
   assert.strictEqual((appSource.match(/publicDataService\.refresh\(\)/g) || []).length, 2)
   assert.strictEqual((appSource.match(/if \(APP_CONFIG\.schoolData\.remotePublicDataEnabled\) publicDataService\.refresh\(\)/g) || []).length, 2)
+  assert.ok(read('pages/targets/targets.js').includes("require('../../utils/public-data-service')"))
   for (const page of ['pages/home/home', 'pages/schools/schools']) {
     assert.strictEqual(Boolean(readJson(`${page}.json`).enablePullDownRefresh), false)
     assert.strictEqual(read(`${page}.js`).includes('onPullDownRefresh'), false)
@@ -217,21 +219,23 @@ check('REAL-11 成功提示只在真实成功分支出现且清理有明确反�
 
 check('REAL-12 备份真实创建、文件读取、修改后覆盖恢复全链路成功', backupRestoreEndToEnd)
 
-check('REAL-13 上传包排除和审核材料均与 2.0 实际能力一致', () => {
+check('REAL-13 上传包排除和审核材料均与 1.2.0 实际能力一致', () => {
   const project = readJson('project.config.json')
   for (const entry of ['docs', 'scripts', 'shared-spec', 'utils/generated']) {
     assert.ok(project.packOptions.ignore.some((rule) => rule.type === 'folder' && rule.value === entry), entry)
   }
-  const review = read('docs/wechat_review_2_0.md')
-  const releaseNotes = read('docs/release_notes_2_0.md')
+  const review = read('docs/wechat_review_1_2_0.md')
+  const releaseNotes = read('docs/release_notes_1_2_0.md')
   const legacyReview = read('docs/wechat_review_v1.md')
   const legacyReleaseNotes = read('docs/release_notes_v1.md')
   const checklist = read('docs/user_final_acceptance_checklist.md')
-  for (const text of [review, releaseNotes, checklist]) assert.ok(text.includes('2.0'))
-  assert.ok(review.includes('不访问远程公开数据接口'))
-  assert.ok(releaseNotes.includes('正式运行开关不启用远程接口'))
-  assert.ok(legacyReview.includes('wechat_review_2_0.md'))
-  assert.ok(legacyReleaseNotes.includes('release_notes_2_0.md'))
+  for (const text of [review, releaseNotes, checklist]) assert.ok(text.includes('1.2.0'))
+  assert.ok(review.includes('https://api.royalcup.top'))
+  assert.ok(review.includes('last-known-good'))
+  assert.ok(review.includes('urlCheck'))
+  assert.ok(releaseNotes.includes('https://api.royalcup.top'))
+  assert.ok(legacyReview.includes('wechat_review_1_2_0.md'))
+  assert.ok(legacyReleaseNotes.includes('release_notes_1_2_0.md'))
   assert.strictEqual(/正式上线前将通过|生产公开数据服务已完成时，能正常读取|必须完成生产公开数据服务/.test(`${review}\n${releaseNotes}\n${checklist}`), false)
 })
 

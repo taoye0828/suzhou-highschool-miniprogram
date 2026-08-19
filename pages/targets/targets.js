@@ -1,5 +1,3 @@
-const { schools } = require('../../data/schools')
-const { admissionScores } = require('../../data/admission-scores')
 const {
   getScoreRecords,
   getTargetRecords,
@@ -7,6 +5,7 @@ const {
 } = require('../../utils/storage')
 const { operationOptions } = require('../../utils/operation-context')
 const { selectLatestReference, referenceScoreValue } = require('../../utils/planning')
+const { publicDataService } = require('../../utils/public-data-service')
 
 function scoreValue(record) {
   return Number(record && (record.totalScore === undefined ? record.score : record.totalScore))
@@ -33,13 +32,31 @@ Page({
     targetCards: []
   },
 
+  onLoad() {
+    this.unsubscribePublicData = publicDataService.subscribe((snapshot) => this.applyPublicData(snapshot))
+    this.applyPublicData(publicDataService.getSnapshot())
+  },
+
   onShow() {
+    // 与学校列表/学校详情使用同一套公开数据 snapshot；目标记录本身仍只存本机。
+    this.applyPublicData(publicDataService.getSnapshot())
+  },
+
+  onUnload() {
+    if (this.unsubscribePublicData) this.unsubscribePublicData()
+  },
+
+  applyPublicData(snapshot) {
+    this.publicSchools = Array.isArray(snapshot.schools) ? snapshot.schools : []
+    this.publicScores = Array.isArray(snapshot.scores) ? snapshot.scores : []
     this.refresh()
   },
 
   refresh() {
     const latest = latestScore(getScoreRecords())
     const currentScore = latest ? scoreValue(latest) : null
+    const schools = this.publicSchools || []
+    const admissionScores = this.publicScores || []
     const schoolMap = new Map(schools.map((item) => [item.id, item]))
     const targetCards = getTargetRecords().map((record) => {
       const school = schoolMap.get(record.schoolId)

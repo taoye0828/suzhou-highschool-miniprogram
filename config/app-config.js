@@ -32,7 +32,8 @@ const APP_CONFIG = Object.freeze({
   schoolData: {
     version: SOURCE_CHECKED_AT,
     sourceCheckedAt: SOURCE_CHECKED_AT,
-    remotePublicDataEnabled: false,
+    // 1.2.0 正式版：后台发布内容通过远程公开数据链路到达小程序。
+    remotePublicDataEnabled: true,
     publicApiBase: 'https://api.royalcup.top',
     supportedSchemaVersion: 2
   }

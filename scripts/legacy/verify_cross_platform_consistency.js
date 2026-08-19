@@ -1,3 +1,17 @@
+/**
+ * 历史废弃脚本（RC11 阶段跨平台一致性检查，已归档，勿运行）。
+ *
+ * 废弃原因：
+ * 1. 本脚本读取 APP_CONFIG.policy.privacySections 等 RC11 阶段配置结构，
+ *    这些结构已在后续 FCP/正式发布阶段删除，脚本运行必然崩溃。
+ * 2. 本脚本同时校验 Flutter 应用（../suzhou_highschool_app）与小程序数据一致性；
+ *    1.2.0 正式验证体系不包含 Flutter 应用（Flutter 项目已冻结，禁止修改）。
+ * 3. 1.2.0 正式聚合门禁只有 scripts/verify_production_release_candidate.js
+ *    （详见 docs/current_release_gates.md），本脚本不属于其中。
+ *
+ * 仅作历史归档，不得作为恢复已删除功能的依据，也不得重新加入验证体系。
+ */
+
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
