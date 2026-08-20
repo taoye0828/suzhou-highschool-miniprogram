@@ -5,4 +5,3 @@
 .announcement-summary { margin-top: 28rpx; padding: 22rpx; color: #334155; line-height: 1.75; background: #f1f8f7; border-radius: 16rpx; }
 .announcement-content { margin-top: 30rpx; color: #1e293b; font-size: 30rpx; line-height: 1.9; white-space: pre-wrap; }
 .announcement-updated { margin-top: 28rpx; }
-
