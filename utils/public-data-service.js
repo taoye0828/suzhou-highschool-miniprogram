@@ -2,7 +2,7 @@ const { sha256 } = require('./checksum')
 const { FALLBACK_CONTENT, createFallbackSnapshot } = require('./public-data-fallback')
 
 const PUBLIC_DATA_CACHE_KEY = 'sucheng.publicData.lastKnownGood.v1'
-const SUPPORTED_SCHEMA_VERSION = 2
+const SUPPORTED_SCHEMA_VERSION = 3
 const DEFAULT_API_BASE = 'https://api.royalcup.top'
 const FOREGROUND_THROTTLE_MS = 30 * 60 * 1000
 const REQUEST_TIMEOUT_MS = 8000
@@ -30,6 +30,10 @@ function countRecords(value) {
   return Array.isArray(value)
     ? value.length
     : Object.values(value || {}).reduce((sum, item) => sum + (Array.isArray(item) ? item.length : 0), 0)
+}
+
+function cleanText(value) {
+  return value === undefined || value === null ? '' : String(value).trim()
 }
 
 function assertManifest(manifest) {
@@ -89,7 +93,9 @@ function assertPublicData(data, manifest) {
     }
   }
   for (const announcement of data.announcements) {
-    if (!announcement || typeof announcement.id !== 'string' || !announcement.id ||
+    const announcementId = cleanText(announcement && (announcement.announcementId || announcement.id))
+    const schoolId = cleanText(announcement && announcement.schoolId)
+    if (!announcement || !announcementId || (schoolId && !schoolIds.has(schoolId)) ||
         typeof announcement.title !== 'string' || !announcement.title) {
       throw publicDataError('公告内容无效', 'INVALID_ANNOUNCEMENT')
     }
@@ -142,15 +148,66 @@ function effectiveContent(content) {
 }
 
 function normalizeSnapshot(snapshot, source, baseUrl = DEFAULT_API_BASE) {
+  const schools = (snapshot.schools || []).map((item) => ({
+    ...item,
+    id: cleanText(item.id),
+    name: cleanText(item.name),
+    district: cleanText(item.district),
+    schoolType: cleanText(item.schoolType),
+    campus: cleanText(item.campus),
+    address: cleanText(item.address),
+    website: cleanText(item.website),
+    description: cleanText(item.description),
+    features: cleanText(item.features),
+    officialPhone: cleanText(item.officialPhone || item.phone),
+    sourceTitle: cleanText(item.sourceTitle),
+    sourceUrl: cleanText(item.sourceUrl),
+    sourceCheckedAt: cleanText(item.sourceCheckedAt),
+    sourceNote: cleanText(item.sourceNote),
+    aliases: Array.isArray(item.aliases) ? item.aliases.map(cleanText).filter(Boolean) : [],
+    historicalNames: Array.isArray(item.historicalNames) ? item.historicalNames.map(cleanText).filter(Boolean) : [],
+    tags: Array.isArray(item.tags) ? item.tags.map(cleanText).filter(Boolean) : [],
+    officialInfo: item.officialInfo && typeof item.officialInfo === 'object' && !Array.isArray(item.officialInfo)
+      ? item.officialInfo : {}
+  }))
+  const schoolNames = new Map(schools.map((item) => [item.id, item.name]))
   return {
     ...snapshot,
     source,
+    contentVersion: cleanText(snapshot.contentVersion || snapshot.releaseVersion),
+    schools,
     content: effectiveContent(snapshot.content),
     images: (snapshot.images || []).map((item) => ({
       ...item,
-      publicUrl: publicAssetUrl(item.publicPath, baseUrl),
-      thumbnailUrl: publicAssetUrl(item.thumbnailPath || item.publicPath, baseUrl)
-    }))
+      imageId: cleanText(item.imageId),
+      schoolId: cleanText(item.schoolId),
+      title: cleanText(item.title),
+      description: cleanText(item.description),
+      publicPath: cleanText(item.publicPath || item.imageUrl),
+      thumbnailPath: cleanText(item.thumbnailPath || item.thumbnailUrl || item.publicPath || item.imageUrl),
+      publicUrl: publicAssetUrl(item.imageUrl || item.publicPath, baseUrl),
+      thumbnailUrl: publicAssetUrl(item.thumbnailUrl || item.thumbnailPath || item.imageUrl || item.publicPath, baseUrl)
+    })),
+    announcements: (snapshot.announcements || []).map((item) => {
+      const announcementId = cleanText(item.announcementId || item.id)
+      const schoolId = cleanText(item.schoolId)
+      const content = cleanText(item.content || item.body)
+      return {
+        ...item,
+        id: announcementId,
+        announcementId,
+        schoolId,
+        schoolName: schoolNames.get(schoolId) || (schoolId ? '学校公告' : '学程记录'),
+        title: cleanText(item.title),
+        summary: cleanText(item.summary) || content.slice(0, 80),
+        body: content,
+        content,
+        publishTime: cleanText(item.publishTime || item.startsAt || item.createdAt),
+        startsAt: cleanText(item.startsAt || item.publishTime),
+        endsAt: cleanText(item.endsAt),
+        updatedAt: cleanText(item.updatedAt || item.createdAt)
+      }
+    })
   }
 }
 
@@ -180,6 +237,7 @@ function assertCachedSnapshot(value, baseUrl = DEFAULT_API_BASE) {
   const { data, hashes } = parseAndValidateFiles(value.rawFiles, manifest)
   return normalizeSnapshot({
     releaseVersion: manifest.releaseVersion,
+    contentVersion: manifest.contentVersion || manifest.releaseVersion,
     schemaVersion: manifest.schemaVersion,
     publishedAt: manifest.publishedAt,
     downloadedAt: value.downloadedAt,
@@ -264,7 +322,8 @@ function createPublicDataService(options = {}) {
     lastCheckAt = checkedAt
     try {
       const manifest = assertManifest(parseJson(await fetchTextWithRetry(`${baseUrl}/api/v1/manifest`), '版本信息'))
-      if (snapshot.releaseVersion === manifest.releaseVersion && snapshot.source === 'cache') {
+      const manifestContentVersion = manifest.contentVersion || manifest.releaseVersion
+      if (snapshot.releaseVersion === manifest.releaseVersion && snapshot.contentVersion === manifestContentVersion && snapshot.source === 'cache') {
         return { ok: true, changed: false, snapshot }
       }
       const rawFiles = {}
@@ -286,6 +345,7 @@ function createPublicDataService(options = {}) {
       storage.set(PUBLIC_DATA_CACHE_KEY, envelope)
       snapshot = normalizeSnapshot({
         releaseVersion: manifest.releaseVersion,
+        contentVersion: manifestContentVersion,
         schemaVersion: manifest.schemaVersion,
         publishedAt: manifest.publishedAt,
         downloadedAt: envelope.downloadedAt,
@@ -330,7 +390,9 @@ function activeAnnouncements(snapshot, timestamp = Date.now()) {
       return (!Number.isFinite(starts) || starts <= timestamp) && (!Number.isFinite(ends) || ends >= timestamp)
     })
     .slice()
-    .sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned)) || Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
+    .sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned)) ||
+      (Date.parse(right.publishTime || right.startsAt || 0) || 0) - (Date.parse(left.publishTime || left.startsAt || 0) || 0) ||
+      Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
 }
 
 function publishedDateText(value) {
@@ -350,6 +412,7 @@ module.exports = {
   DATASET_KEYS,
   utf8Size,
   countRecords,
+  cleanText,
   assertManifest,
   assertPublicData,
   assertCachedSnapshot,

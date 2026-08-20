@@ -73,8 +73,12 @@ Page({
 
   applyPublicData(snapshot) {
     const content = effectiveContent(snapshot && snapshot.content)
+    const announcements = activeAnnouncements(snapshot).slice(0, 5).map((item) => ({
+      ...item,
+      dateText: publishedDateText(item.publishTime || item.startsAt || item.createdAt)
+    }))
     this.setData({
-      announcements: activeAnnouncements(snapshot),
+      announcements,
       publicNotice: content.display.publicNotice,
       showUpdatedAt: content.display.showUpdatedAt && Boolean(publishedDateText(snapshot && snapshot.publishedAt)),
       dataUpdatedAt: publishedDateText(snapshot && snapshot.publishedAt)
@@ -95,5 +99,10 @@ Page({
 
   openSchools() {
     wx.switchTab({ url: '/pages/schools/schools' })
+  },
+
+  openAnnouncement(event) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) wx.navigateTo({ url: `/pages/announcement-detail/announcement-detail?id=${encodeURIComponent(id)}` })
   }
 })

@@ -15,6 +15,7 @@ const expectedPages = [
   'pages/home/home',
   'pages/schools/schools',
   'pages/school-detail/school-detail',
+  'pages/announcement-detail/announcement-detail',
   'pages/score-trend/score-trend',
   'pages/targets/targets',
   'pages/profile/profile',
@@ -54,7 +55,7 @@ const actualPageDirs = fs.readdirSync(path.join(root, 'pages'), { withFileTypes:
   .sort()
 assert.deepStrictEqual(actualPageDirs, expectedPages.slice().sort())
 for (const name of removedPages) assert.strictEqual(exists(`pages/${name}`), false)
-console.log('✓ FCP-01 正式页面为 10 页，五个 Tab 保持稳定')
+console.log('✓ FCP-01 正式页面为 11 页，五个 Tab 保持稳定')
 
 const runtimeSurface = [
   'app.js',

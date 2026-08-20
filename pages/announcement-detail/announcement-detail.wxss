@@ -1,0 +1,8 @@
+.announcement-detail { padding: 34rpx; }
+.announcement-school { color: #0f766e; font-size: 26rpx; font-weight: 700; }
+.announcement-title { margin-top: 16rpx; color: #0f172a; font-size: 40rpx; font-weight: 700; line-height: 1.45; }
+.announcement-time { margin-top: 14rpx; }
+.announcement-summary { margin-top: 28rpx; padding: 22rpx; color: #334155; line-height: 1.75; background: #f1f8f7; border-radius: 16rpx; }
+.announcement-content { margin-top: 30rpx; color: #1e293b; font-size: 30rpx; line-height: 1.9; white-space: pre-wrap; }
+.announcement-updated { margin-top: 28rpx; }
+

@@ -5,7 +5,7 @@ const {
 } = require('../../utils/storage')
 const { operationOptions } = require('../../utils/operation-context')
 const { selectLatestReference, referenceScoreValue } = require('../../utils/planning')
-const { publicDataService, effectiveContent } = require('../../utils/public-data-service')
+const { publicDataService, effectiveContent, activeAnnouncements, publishedDateText } = require('../../utils/public-data-service')
 const { shareConfig } = require('../../utils/share')
 
 function schoolById(schools, id) {
@@ -33,7 +33,10 @@ Page({
     aliasesText: '',
     programsText: '',
     mapSearchText: '',
-    images: []
+    images: [],
+    announcements: [],
+    officialInfoRows: [],
+    dataUpdatedAt: ''
   },
 
   onShareAppMessage() {
@@ -70,7 +73,7 @@ Page({
     const school = schoolById(schools, this.schoolId)
     if (!school) {
       wx.setNavigationBarTitle({ title: '学校不存在' })
-      this.setData({ school: null, notFound: true, scores: [], images: [] })
+      this.setData({ school: null, notFound: true, scores: [], images: [], announcements: [] })
       return
     }
     const display = effectiveContent(snapshot.content).display
@@ -78,12 +81,22 @@ Page({
       .filter((item) => item.schoolId === school.id)
       .slice()
       .sort((left, right) => Number(Boolean(right.isCover)) - Number(Boolean(left.isCover)) || Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
+    const announcements = activeAnnouncements(snapshot)
+      .filter((item) => item.schoolId === school.id)
+      .map((item) => ({ ...item, dateText: publishedDateText(item.publishTime || item.startsAt || item.createdAt) }))
+    const officialLabels = { principal: '校长', founded: '创办时间', schoolCode: '学校代码', officialName: '官方名称' }
+    const officialInfoRows = Object.entries(school.officialInfo || {})
+      .filter(([, value]) => ['string', 'number'].includes(typeof value) && String(value).trim())
+      .map(([key, value]) => ({ key, label: officialLabels[key] || key, value: String(value).trim() }))
     wx.setNavigationBarTitle({ title: school.name })
     this.setData({
       school: { ...school, phone: school.phone || school.officialPhone || '' },
       notFound: false,
       scores: scoreRows(scores, school.id, display.scoreDefaultSort),
       images,
+      announcements,
+      officialInfoRows,
+      dataUpdatedAt: publishedDateText(snapshot && snapshot.publishedAt),
       aliasesText: (school.aliases || []).join('、'),
       programsText: (school.programs || []).join('、'),
       mapSearchText: [school.name, school.address].filter(Boolean).join(' ')
@@ -93,6 +106,11 @@ Page({
   onImageError(event) {
     const imageId = event.currentTarget.dataset.id
     this.setData({ images: this.data.images.map((item) => item.imageId === imageId ? { ...item, failed: true } : item) })
+  },
+
+  openAnnouncement(event) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) wx.navigateTo({ url: `/pages/announcement-detail/announcement-detail?id=${encodeURIComponent(id)}` })
   },
 
   goBack() {

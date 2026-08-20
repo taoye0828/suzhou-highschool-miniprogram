@@ -212,7 +212,7 @@ async function main() {
   const serviceSource = fs.readFileSync(path.join(root, 'utils/public-data-service.js'), 'utf8')
   assert.ok(app.includes('publicDataService.loadInitial({ useCache: APP_CONFIG.schoolData.remotePublicDataEnabled })'), '启动时必须按正式开关选择缓存或包内正式数据')
   assert.strictEqual(APP_CONFIG.schoolData.remotePublicDataEnabled, true, '1.2.0 正式版必须开启远程公开数据入口')
-  assert.strictEqual((app.match(/if \(APP_CONFIG\.schoolData\.remotePublicDataEnabled\) publicDataService\.refresh\(\)/g) || []).length, 2, '远程检查只能在显式开关启用时执行')
+  assert.strictEqual((app.match(/if \(APP_CONFIG\.schoolData\.remotePublicDataEnabled\) publicDataService\.refresh\((?:\{ force: true \})?\)/g) || []).length, 2, '远程检查只能在显式开关启用时执行')
   const disabledService = createPublicDataService({ storage: memoryStorage({ [PUBLIC_DATA_CACHE_KEY]: envelope(v1) }), transport: transportFor(v1) })
   assert.strictEqual(disabledService.loadInitial({ useCache: false }).source, 'fallback', '无缓存回退时不得加载历史远程缓存')
   assert.strictEqual(disabledService.getSnapshot().schools.length, 55, '无缓存回退时必须使用包内55校')

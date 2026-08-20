@@ -10,7 +10,7 @@ const service = fs.readFileSync(path.join(root, 'utils/public-data-service.js'),
 const storage = fs.readFileSync(path.join(root, 'utils/storage.js'), 'utf8')
 const localStore = fs.readFileSync(path.join(root, 'utils/rc9-storage.js'), 'utf8') + fs.readFileSync(path.join(root, 'utils/rc9-models.js'), 'utf8')
 
-assert.strictEqual(app.pages.length, 10, '正式页面必须为10个')
+assert.strictEqual(app.pages.length, 11, '正式页面必须为11个')
 assert.strictEqual(app.tabBar.list.length, 5, 'Tab必须为5个')
 assert.strictEqual(project.appid, 'wxc2a2a94f767438dd')
 assert.strictEqual(project.setting.ignoreDevUnusedFiles, false)

@@ -5,4 +5,6 @@
 .public-notice { color: #155e75; background: #edf9f7; }
 .announcement { border-left: 8rpx solid #0f766e; }
 .announcement-body { margin-top: 12rpx; white-space: pre-wrap; }
+.announcement-school { color: #0f766e; font-size: 24rpx; font-weight: 700; }
+.announcement-title { margin-top: 12rpx; }
 .updated-at { margin-top: 32rpx; text-align: center; }

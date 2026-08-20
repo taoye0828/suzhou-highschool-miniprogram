@@ -18,6 +18,7 @@ const shareablePages = [
   'pages/home/home',
   'pages/schools/schools',
   'pages/school-detail/school-detail',
+  'pages/announcement-detail/announcement-detail',
   'pages/score-trend/score-trend',
   'pages/targets/targets'
 ]

@@ -5,6 +5,10 @@
 .source-title { margin-top: 18rpx; color: #475569; font-size: 24rpx; line-height: 1.6; }
 .source-note { margin-top: 16rpx; }
 .source-button { margin-top: 20rpx; }
-.school-gallery { display: flex; gap: 16rpx; margin-bottom: 20rpx; overflow-x: auto; }
-.school-image { width: 100%; height: 340rpx; flex: 0 0 100%; border-radius: 22rpx; background: #e7f6f3; }
+.school-gallery { height: 340rpx; margin-bottom: 20rpx; border-radius: 22rpx; overflow: hidden; }
+.school-gallery swiper-item { position: relative; }
+.school-image { width: 100%; height: 340rpx; border-radius: 22rpx; background: #e7f6f3; }
 .image-placeholder { display: flex; align-items: center; justify-content: center; color: #64748b; }
+.image-caption { position: absolute; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; gap: 4rpx; padding: 18rpx 22rpx; color: white; background: rgba(15, 23, 42, .66); }
+.announcement-summary { margin-top: 12rpx; white-space: pre-wrap; }
+.updated-at { margin: 28rpx 0 8rpx; text-align: center; }

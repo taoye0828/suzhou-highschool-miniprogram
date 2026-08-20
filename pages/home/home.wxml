@@ -1,9 +1,12 @@
 <view class="page">
   <view wx:if="{{publicNotice}}" class="card public-notice">{{publicNotice}}</view>
   <view wx:if="{{announcements.length}}" class="announcement-list">
-    <view class="card announcement" wx:for="{{announcements}}" wx:key="id">
-      <view class="card-title">{{item.title}}</view>
-      <view class="muted announcement-body">{{item.body}}</view>
+    <view class="section-title">最新公告</view>
+    <view class="card announcement" wx:for="{{announcements}}" wx:key="id" data-id="{{item.id}}" bindtap="openAnnouncement">
+      <view class="row between"><view class="announcement-school">{{item.schoolName}}</view><view class="muted small">{{item.dateText}}</view></view>
+      <view class="card-title announcement-title">{{item.title}}</view>
+      <view wx:if="{{item.summary}}" class="muted announcement-body">{{item.summary}}</view>
+      <view class="view-detail">查看公告 ›</view>
     </view>
   </view>
 

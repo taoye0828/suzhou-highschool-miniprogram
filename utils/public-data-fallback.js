@@ -30,6 +30,7 @@ function createFallbackSnapshot() {
   return {
     source: 'fallback',
     releaseVersion: 'bundled-v1',
+    contentVersion: 'bundled-v1',
     schemaVersion: 1,
     publishedAt: '2026-07-09T00:00:00+08:00',
     downloadedAt: null,

@@ -17,6 +17,7 @@ const expectedPages = [
   'pages/home/home',
   'pages/schools/schools',
   'pages/school-detail/school-detail',
+  'pages/announcement-detail/announcement-detail',
   'pages/score-trend/score-trend',
   'pages/targets/targets',
   'pages/profile/profile',
@@ -104,7 +105,7 @@ function backupRestoreEndToEnd() {
   }
 }
 
-check('REAL-01 正式页面严格为 10 页且四类页面文件齐全', () => {
+check('REAL-01 正式页面严格为 11 页且四类页面文件齐全', () => {
   const app = readJson('app.json')
   assert.deepStrictEqual(app.pages, expectedPages)
   for (const page of expectedPages) {
@@ -173,8 +174,7 @@ check('REAL-08 远程数据能力在 1.2.0 正式运行链路中保持开启', (
   assert.strictEqual(APP_CONFIG.schoolData.remotePublicDataEnabled, true)
   assert.strictEqual(APP_CONFIG.schoolData.publicApiBase, 'https://api.royalcup.top')
   assert.ok(appSource.includes('loadInitial({ useCache: APP_CONFIG.schoolData.remotePublicDataEnabled })'))
-  assert.strictEqual((appSource.match(/publicDataService\.refresh\(\)/g) || []).length, 2)
-  assert.strictEqual((appSource.match(/if \(APP_CONFIG\.schoolData\.remotePublicDataEnabled\) publicDataService\.refresh\(\)/g) || []).length, 2)
+  assert.strictEqual((appSource.match(/if \(APP_CONFIG\.schoolData\.remotePublicDataEnabled\) publicDataService\.refresh\((?:\{ force: true \})?\)/g) || []).length, 2)
   assert.ok(read('pages/targets/targets.js').includes("require('../../utils/public-data-service')"))
   for (const page of ['pages/home/home', 'pages/schools/schools']) {
     assert.strictEqual(Boolean(readJson(`${page}.json`).enablePullDownRefresh), false)
@@ -239,7 +239,7 @@ check('REAL-13 上传包排除和审核材料均与 1.2.0 实际能力一致', (
   assert.strictEqual(/正式上线前将通过|生产公开数据服务已完成时，能正常读取|必须完成生产公开数据服务/.test(`${review}\n${releaseNotes}\n${checklist}`), false)
 })
 
-check('REAL-14 十个正式页面关键按钮连接真实导航、Storage 或微信系统能力', () => {
+check('REAL-14 十一个正式页面关键按钮连接真实导航、Storage 或微信系统能力', () => {
   const contracts = {
     'pages/home/home.js': ['wx.navigateTo', 'wx.switchTab'],
     'pages/schools/schools.js': ['this.refresh()', 'wx.navigateTo'],

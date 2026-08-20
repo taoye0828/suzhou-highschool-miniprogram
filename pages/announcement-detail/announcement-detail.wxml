@@ -1,0 +1,19 @@
+<view class="page" wx:if="{{announcement}}">
+  <view class="card announcement-detail">
+    <view class="announcement-school" bindtap="openSchool">{{announcement.schoolName}}{{announcement.hasSchool ? ' ›' : ''}}</view>
+    <view class="announcement-title">{{announcement.title}}</view>
+    <view class="muted small announcement-time">发布时间：{{announcement.dateText || '以公告内容为准'}}</view>
+    <view wx:if="{{announcement.summary}}" class="announcement-summary">{{announcement.summary}}</view>
+    <view class="announcement-content">{{announcement.content}}</view>
+    <view wx:if="{{announcement.updatedText && announcement.updatedText !== announcement.dateText}}" class="muted small announcement-updated">更新于 {{announcement.updatedText}}</view>
+  </view>
+  <button wx:if="{{announcement.hasSchool}}" class="button secondary" bindtap="openSchool">查看学校详情</button>
+</view>
+
+<view class="page" wx:elif="{{notFound}}">
+  <view class="card empty">
+    <view class="card-title">未找到这条公告</view>
+    <view class="muted">公告可能已结束展示或被管理员撤下。</view>
+    <button class="button" bindtap="goHome">返回首页</button>
+  </view>
+</view>

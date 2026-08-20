@@ -1,10 +1,12 @@
 <view class="page" wx:if="{{school}}">
-  <view wx:if="{{images.length}}" class="school-gallery">
-    <block wx:for="{{images}}" wx:key="imageId">
+  <swiper wx:if="{{images.length}}" class="school-gallery" indicator-dots="{{images.length > 1}}" circular="{{images.length > 1}}" autoplay="{{images.length > 1}}" interval="5000">
+    <swiper-item wx:for="{{images}}" wx:key="imageId">
       <image wx:if="{{!item.failed}}" class="school-image" src="{{item.publicUrl}}" mode="aspectFill" lazy-load="true" data-id="{{item.imageId}}" catcherror="onImageError" />
       <view wx:else class="school-image image-placeholder">图片暂时无法显示</view>
-    </block>
-  </view>
+      <view wx:if="{{item.title || item.description}}" class="image-caption"><text>{{item.title}}</text><text wx:if="{{item.description}}" class="small">{{item.description}}</text></view>
+    </swiper-item>
+  </swiper>
+  <view wx:else class="school-image image-placeholder school-gallery">暂无校园图片</view>
   <view class="card">
     <view class="card-title school-name">{{school.name}}</view>
     <view class="muted">{{school.district}} · {{school.schoolType}}{{school.ownership ? ' · ' + school.ownership : ''}}</view>
@@ -13,6 +15,8 @@
     <view wx:if="{{school.phone}}" class="info-row"><text class="info-label">电话</text><text class="info-value">{{school.phone}}</text></view>
     <view wx:if="{{aliasesText}}" class="info-row"><text class="info-label">别名</text><text class="info-value">{{aliasesText}}</text></view>
     <view wx:if="{{school.description}}" class="info-row"><text class="info-label">简介</text><text class="info-value">{{school.description}}</text></view>
+    <view wx:if="{{school.features}}" class="info-row"><text class="info-label">办学特色</text><text class="info-value">{{school.features}}</text></view>
+    <view wx:for="{{officialInfoRows}}" wx:key="key" class="info-row"><text class="info-label">{{item.label}}</text><text class="info-value">{{item.value}}</text></view>
     <view wx:if="{{programsText}}" class="info-row"><text class="info-label">课程/项目</text><text class="info-value">{{programsText}}</text></view>
     <view class="button-row">
       <button class="button secondary small-button" data-value="{{school.name}}" data-success="学校名称已复制" bindtap="copyText">复制学校名称</button>
@@ -24,6 +28,15 @@
 
   <button wx:if="{{!targetRecord}}" class="button target-action" bindtap="addTarget">加入目标学校</button>
   <button wx:else class="button danger target-action" bindtap="removeTarget">移出目标学校</button>
+
+  <block wx:if="{{announcements.length}}">
+    <view class="section-title">学校公告</view>
+    <view class="card announcement-card" wx:for="{{announcements}}" wx:key="id" data-id="{{item.id}}" bindtap="openAnnouncement">
+      <view class="row between"><view class="card-title">{{item.title}}</view><view class="muted small">{{item.dateText}}</view></view>
+      <view wx:if="{{item.summary}}" class="muted announcement-summary">{{item.summary}}</view>
+      <view class="view-detail">查看公告 ›</view>
+    </view>
+  </block>
 
   <view class="section-title">历史公开录取分数线</view>
   <view class="muted small score-notice">历史数据仅供了解，不代表未来录取结果。</view>
@@ -43,6 +56,7 @@
     <view wx:if="{{school.sourceNote}}" class="muted source-note">{{school.sourceNote}}</view>
     <button class="button secondary source-button" data-value="{{school.sourceUrl}}" data-success="来源链接已复制" bindtap="copyText">复制来源链接</button>
   </view>
+  <view wx:if="{{dataUpdatedAt}}" class="muted small updated-at">内容更新时间：{{dataUpdatedAt}}</view>
 </view>
 <view class="page" wx:elif="{{notFound}}">
   <view class="card empty">

@@ -9,6 +9,7 @@ const expectedPages = [
   'pages/home/home',
   'pages/schools/schools',
   'pages/school-detail/school-detail',
+  'pages/announcement-detail/announcement-detail',
   'pages/score-trend/score-trend',
   'pages/targets/targets',
   'pages/profile/profile',
@@ -25,7 +26,7 @@ const expectedTabs = [
   'pages/profile/profile'
 ]
 
-assert.deepStrictEqual(app.pages, expectedPages, 'FCP 正式版必须保持10个页面')
+assert.deepStrictEqual(app.pages, expectedPages, 'FCP 正式版必须保持11个页面')
 assert.deepStrictEqual(app.tabBar.list.map((item) => item.pagePath), expectedTabs, 'FCP 正式版必须保持5个Tab')
 for (const page of expectedPages) {
   for (const extension of ['js', 'json', 'wxml', 'wxss']) {
@@ -57,4 +58,4 @@ assert.ok(privacy.includes('不需要微信登录') && /openid/i.test(privacy) &
 assert.strictEqual(/wx\.login|getUserProfile|getPhoneNumber|wx\.getLocation|wx\.requestPayment|wx\.cloud/.test(service), false)
 
 require('./smoke_page_logic')
-console.log('MP4 STATIC VERIFY PASSED（FCP 10页面 + 公开只读数据兼容规则）')
+console.log('MP4 STATIC VERIFY PASSED（FCP 11页面 + 公开只读数据兼容规则）')

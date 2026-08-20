@@ -11,7 +11,7 @@ App({
   },
 
   onShow() {
-    if (APP_CONFIG.schoolData.remotePublicDataEnabled) publicDataService.refresh()
+    if (APP_CONFIG.schoolData.remotePublicDataEnabled) publicDataService.refresh({ force: true })
   },
 
   globalData: {
