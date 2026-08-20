@@ -463,7 +463,7 @@ function createBackupScope(backup) {
   return {
     items,
     preview,
-    includedText: '备份只包含本机“苏程记录”支持导出的用户数据。',
+    includedText: `备份只包含本机“${PRODUCT_RULES.productName}”支持导出的用户数据。`,
     metadataText: '文件还会包含导出时间、格式版本和完整性校验信息。',
     excludedText: '不包含学校公开数据库、后台或远程数据、微信聊天记录和系统文件。',
     schema: {

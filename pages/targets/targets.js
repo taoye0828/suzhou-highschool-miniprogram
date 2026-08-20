@@ -6,6 +6,7 @@ const {
 const { operationOptions } = require('../../utils/operation-context')
 const { selectLatestReference, referenceScoreValue } = require('../../utils/planning')
 const { publicDataService } = require('../../utils/public-data-service')
+const { shareConfig } = require('../../utils/share')
 
 function scoreValue(record) {
   return Number(record && (record.totalScore === undefined ? record.score : record.totalScore))
@@ -30,6 +31,14 @@ Page({
     currentScore: null,
     latestExamName: '',
     targetCards: []
+  },
+
+  onShareAppMessage() {
+    return shareConfig('pages/targets/targets')
+  },
+
+  onShareTimeline() {
+    return shareConfig('pages/targets/targets')
   },
 
   onLoad() {

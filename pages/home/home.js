@@ -11,6 +11,7 @@ const {
   effectiveContent,
   publishedDateText
 } = require('../../utils/public-data-service')
+const { shareConfig } = require('../../utils/share')
 
 function orderedScores(records) {
   return (Array.isArray(records) ? records : []).slice().sort((left, right) => {
@@ -31,6 +32,14 @@ Page({
     publicNotice: '',
     showUpdatedAt: false,
     dataUpdatedAt: ''
+  },
+
+  onShareAppMessage() {
+    return shareConfig('pages/home/home')
+  },
+
+  onShareTimeline() {
+    return shareConfig('pages/home/home')
   },
 
   onLoad() {

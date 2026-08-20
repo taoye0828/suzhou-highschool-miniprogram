@@ -4,6 +4,7 @@ const {
   deleteScoreRecord
 } = require('../../utils/storage')
 const { operationOptions } = require('../../utils/operation-context')
+const { shareConfig } = require('../../utils/share')
 
 function twoDigits(value) {
   return String(value).padStart(2, '0')
@@ -70,6 +71,14 @@ Page({
     trendItems: [],
     chartWidth: 320,
     statistics: statistics([])
+  },
+
+  onShareAppMessage() {
+    return shareConfig('pages/score-trend/score-trend')
+  },
+
+  onShareTimeline() {
+    return shareConfig('pages/score-trend/score-trend')
   },
 
   onShow() {

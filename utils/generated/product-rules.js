@@ -3,7 +3,7 @@
 // Generated from shared-spec/product_rules_v1.json. Do not edit by hand.
 const PRODUCT_RULES = Object.freeze({
   "productVersion": "1.0.0",
-  "productName": "苏程记录",
+  "productName": "学程记录",
   "officialAppId": "wxc2a2a94f767438dd",
   "releaseStatus": "V1 功能冻结版",
   "productStage": "pre_release_ux_freeze",

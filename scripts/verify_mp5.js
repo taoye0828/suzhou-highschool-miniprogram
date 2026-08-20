@@ -4,7 +4,7 @@ const { schools } = require('../data/schools')
 const { admissionScores } = require('../data/admission-scores')
 const { MP13_2026_VERIFIED_COUNT } = require('../data/admission-scores-2026')
 
-assert.strictEqual(APP_CONFIG.name, '苏程记录')
+assert.strictEqual(APP_CONFIG.name, '学程记录')
 assert.strictEqual(APP_CONFIG.schoolData.publicApiBase, 'https://api.royalcup.top')
 assert.strictEqual(APP_CONFIG.schoolData.supportedSchemaVersion, 2)
 assert.strictEqual(EXAM_TOTAL_SCORE, 740)

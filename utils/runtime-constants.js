@@ -2,7 +2,7 @@
 
 // Only constants required by the offline runtime and legacy-data compatibility.
 const PRODUCT_RULES = Object.freeze({
-  productName: '苏程记录',
+  productName: '学程记录',
   officialAppId: 'wxc2a2a94f767438dd',
   storageSchemaVersion: 5,
   backupFormatVersion: 3,

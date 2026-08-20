@@ -1,6 +1,6 @@
 # FCP 微信发布前人工验收清单
 
-- 正式产品：苏程记录
+- 正式产品：学程记录
 - 正式 AppID：`wxc2a2a94f767438dd`
 - 项目路径：`/Users/tom/Dev/suzhou_highschool_miniprogram`
 - 当前范围：10 个正式页面、5 个 Tab，不包含历史已移除功能。
@@ -58,7 +58,7 @@
 
 - 微信隐私保护指引中的实际接口应为 Clipboard 和 MessageFile。
 - Clipboard 仅由用户点击复制触发，不得存在 `wx.getClipboardData`。
-- MessageFile 仅由用户主动选择苏程记录备份触发；不后台扫描、不自动上传。
+- MessageFile 仅由用户主动选择学程记录备份触发；不后台扫描、不自动上传。
 - 导出备份只在用户主动确认后调用微信文件发送界面。
 - 不应出现登录、头像昵称、手机号、定位、支付、广告、云开发、统计 SDK、远程成绩上传或业务 `wx.request`。
 

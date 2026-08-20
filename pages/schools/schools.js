@@ -1,6 +1,7 @@
 const { getTargetRecords } = require('../../utils/storage')
 const { selectLatestReference, referenceScoreValue } = require('../../utils/planning')
 const { publicDataService, effectiveContent } = require('../../utils/public-data-service')
+const { shareConfig } = require('../../utils/share')
 
 const SORTS = [
   { value: 'default', label: '默认' },
@@ -47,6 +48,14 @@ Page({
     maxScore: '',
     showMoreFilters: false,
     schoolRows: []
+  },
+
+  onShareAppMessage() {
+    return shareConfig('pages/schools/schools')
+  },
+
+  onShareTimeline() {
+    return shareConfig('pages/schools/schools')
   },
 
   onLoad() {

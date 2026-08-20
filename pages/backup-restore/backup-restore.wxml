@@ -1,7 +1,7 @@
 <view class="page">
   <view class="card">
     <view class="card-title">备份本机数据</view>
-    <view class="muted small intro">生成本机“苏程记录”用户数据备份，不会上传到服务器。</view>
+    <view class="muted small intro">生成本机“学程记录”用户数据备份，不会上传到服务器。</view>
     <view class="button-row">
       <button class="button secondary" bindtap="previewExport">查看备份范围</button>
       <button class="button" bindtap="exportBackup">导出备份</button>

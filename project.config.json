@@ -1,5 +1,5 @@
 {
-  "description": "苏程记录",
+  "description": "学程记录",
   "packOptions": {
     "ignore": [
       {
@@ -137,7 +137,7 @@
   "compileType": "miniprogram",
   "libVersion": "3.7.12",
   "appid": "wxc2a2a94f767438dd",
-  "projectname": "苏程记录",
+  "projectname": "学程记录",
   "miniprogramRoot": "./",
   "condition": {},
   "simulatorPluginLibVersion": {},

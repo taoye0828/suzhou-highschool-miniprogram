@@ -6,6 +6,7 @@ const {
 const { operationOptions } = require('../../utils/operation-context')
 const { selectLatestReference, referenceScoreValue } = require('../../utils/planning')
 const { publicDataService, effectiveContent } = require('../../utils/public-data-service')
+const { shareConfig } = require('../../utils/share')
 
 function schoolById(schools, id) {
   return schools.find((item) => item.id === id) || null
@@ -33,6 +34,18 @@ Page({
     programsText: '',
     mapSearchText: '',
     images: []
+  },
+
+  onShareAppMessage() {
+    return this.schoolId
+      ? shareConfig('pages/school-detail/school-detail', `id=${encodeURIComponent(this.schoolId)}`)
+      : shareConfig('pages/school-detail/school-detail')
+  },
+
+  onShareTimeline() {
+    return this.schoolId
+      ? shareConfig('pages/school-detail/school-detail', `id=${encodeURIComponent(this.schoolId)}`)
+      : shareConfig('pages/school-detail/school-detail')
   },
 
   onLoad(options) {
